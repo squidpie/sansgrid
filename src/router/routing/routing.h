@@ -23,7 +23,6 @@
  * facilitates creating/moving/deleting IP addresses.
  */
 
-#include <stdint.h>
 
 #define ROUTING_UNIQUE_BITS	8				// Number of unique bits for the IP address
 
@@ -34,6 +33,6 @@
 #define ROUTING_ARRAYSIZE		1 << ROUTING_UNIQUE_BITS
 
 
-uint32_t *routing_table[ROUTING_ARRAYSIZE];
+
 
 // vim: ft=c ts=4 noet sw=4:
