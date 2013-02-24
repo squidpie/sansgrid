@@ -41,7 +41,7 @@
 #include <pthread.h>				// POSIX threads
 #include <time.h>					// nanosleep()
 
-#include "sync_queue.h"
+#include "../sync_queue.h"
 
 
 #define NUM_DATA 		100			// Amount of data to send through
