@@ -24,20 +24,29 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 #include "../routing.h"
 
 void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 	// Print the IP address like an IPv6 address
 	int i;
-	const uint32_t masklength = 4*sizeof(uint32_t);
+	union WordToByte {
+		uint32_t word[IP_SIZE];
+		uint8_t byte[IP_SIZE*4];
+	} wtb;
 
 	for (i=0; i<IP_SIZE; i++) {
-		// upper half
-		printf("%.2X:", ip_addr[i] >> masklength);
-		// lower half
-		printf("%.2X", ip_addr[i] & (~0 >> masklength));
-		if (i < (IP_SIZE-1))
+		if (littleEndian())
+			wtb.word[i] = htonl(ip_addr[i]);
+		else
+			wtb.word[i] = ip_addr[i];
+	}
+
+	for (i=0; i<4*IP_SIZE; i++) {
+		printf("%.2X", wtb.byte[i]);
+		if (i < 4*IP_SIZE-1)
 			printf(":");
 	}	
 	printf("\n");
@@ -50,6 +59,8 @@ int main(void) {
 	uint32_t ip_addr[IP_SIZE];
 
 	routingTableInit();
+
+	printf("%i\n", littleEndian());
 
 	for (i=0; i<32; i++) {
 		routingTableAssignIP(ip_addr);

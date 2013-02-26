@@ -42,6 +42,24 @@ struct DeviceIP *routing_table[ROUTING_ARRAYSIZE];
 static uint32_t tableptr = 0;
 static uint32_t table_alloc = 0;
 
+static void createBase(uint32_t base[IP_SIZE]) {
+	int i;
+	base[0] = ROUTING_ARRAYSIZE;
+	for (i=1; i<IP_SIZE; i++)
+		base[i] = 0;
+	return;
+}
+
+int littleEndian(void) {
+	// Tests endianness
+	// Returns 1 if little endian
+	// Returns 0 if big endian
+	int i = 1;
+	char *p = (char*)&i;
+	return (p[0] == 1);
+}
+
+
 void routingTableInit(void) {
 	// Initialize the routing table
 	
@@ -92,7 +110,9 @@ uint32_t locationToTablePtr(uint32_t ip_addr[IP_SIZE], uint32_t base[IP_SIZE]) {
 int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
-	uint32_t base[4] = {0, 0, 0, 0};		// dummy base
+	uint32_t base[IP_SIZE];
+
+	createBase(base);
 
 	if (table_alloc >= ROUTING_ARRAYSIZE)
 		return -1;
@@ -117,8 +137,10 @@ int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]) {
 int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]) {
 	// Release IP Address
 	
-	uint32_t base[4] = {0, 0, 0, 0};	// dummy base
+	uint32_t base[IP_SIZE];
 	uint32_t index;
+
+	createBase(base);
 
 	if (!table_alloc)
 		return -1;
@@ -145,8 +167,10 @@ int routingTableLookup(uint32_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
 	
-	uint32_t base[4] = {0, 0, 0, 0};	// dummy base
+	uint32_t base[IP_SIZE];
 	uint32_t index;
+
+	createBase(base);
 
 	if (!table_alloc)
 		return 0;

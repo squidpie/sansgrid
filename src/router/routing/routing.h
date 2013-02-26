@@ -39,6 +39,7 @@
 typedef struct DeviceIP DeviceIP;
 
 
+int littleEndian(void);
 void routingTableInit(void);
 void routingTableDestroy(void);
 int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]);
