@@ -28,10 +28,14 @@
 #include "../routing.h"
 
 void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
+	// Print the IP address like an IPv6 address
 	int i;
 	const uint32_t masklength = 4*sizeof(uint32_t);
+
 	for (i=0; i<IP_SIZE; i++) {
+		// upper half
 		printf("%.2X:", ip_addr[i] >> masklength);
+		// lower half
 		printf("%.2X", ip_addr[i] & (~0 >> masklength));
 		if (i < (IP_SIZE-1))
 			printf(":");
