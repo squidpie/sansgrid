@@ -123,11 +123,28 @@ int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]) {
 }
 
 
-//int routingTableLookup(uint32_t ip_addr[IP_SIZE]) {
+int routingTableLookup(uint32_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
 	
-	//int i;
+	uint32_t base[4] = {0, 0, 0, 0};
+	uint32_t index;
+
+	if (!table_alloc)
+		return 0;
+
+	index = locationToTablePtr(ip_addr, base);
+
+	if (index >= ROUTING_ARRAYSIZE)
+		return 0;
+
+	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint32_t))) {
+		return 0;
+	}
+
+	return 1;
+}
+
 
 
 // vim: ft=c ts=4 noet sw=4:

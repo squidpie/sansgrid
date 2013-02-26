@@ -43,6 +43,7 @@ void routingTableInit(void);
 void routingTableDestroy(void);
 int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]);
 int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]);
+int routingTableLookup(uint32_t ip_addr[IP_SIZE]);
 
 
 

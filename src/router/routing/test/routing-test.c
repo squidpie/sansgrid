@@ -52,6 +52,11 @@ int main(void) {
 		routingTablePrint(ip_addr);
 	}
 
+	if (routingTableLookup(ip_addr)) {
+		printf("IP Address is resident: ");
+		routingTablePrint(ip_addr);
+	}
+
 	if (routingTableFreeIP(ip_addr))
 		printf("Oops!\n");
 
