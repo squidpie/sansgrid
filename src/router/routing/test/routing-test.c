@@ -1,5 +1,4 @@
-/* A quick implementation for a statically-defined
- * dynamic routing table.
+/* A quick implementation for a statically-defined table.
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -23,28 +22,43 @@
  * facilitates creating/moving/deleting IP addresses.
  */
 
-
-#define ROUTING_UNIQUE_BITS	8			// Number of unique bits for the IP address
-
-#if ROUTING_UNIQUE_BITS > 20			// Don't let the routing table be too big
-#error "Routing Table too Large!"
-#endif
-
-#define ROUTING_ARRAYSIZE		(1 << ROUTING_UNIQUE_BITS)
-#define IP_SIZE 4
-
+#include <stdio.h>
 #include <stdint.h>
 
+#include "../routing.h"
 
-typedef struct DeviceIP DeviceIP;
+void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
+	int i;
+	const uint32_t masklength = 4*sizeof(uint32_t);
+	for (i=0; i<IP_SIZE; i++) {
+		printf("%.2X:", ip_addr[i] >> masklength);
+		printf("%.2X", ip_addr[i] & (~0 >> masklength));
+		if (i < (IP_SIZE-1))
+			printf(":");
+	}	
+	printf("\n");
+	return;
+}
 
 
-void routingTableInit(void);
-void routingTableDestroy(void);
-int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]);
-int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]);
+int main(void) {
+	int i;
+	uint32_t ip_addr[IP_SIZE];
+
+	routingTableInit();
+
+	for (i=0; i<32; i++) {
+		routingTableAssignIP(ip_addr);
+		routingTablePrint(ip_addr);
+	}
+
+	if (routingTableFreeIP(ip_addr))
+		printf("Oops!\n");
 
 
+	routingTableDestroy();
+	return 0;
+}
 
 
 // vim: ft=c ts=4 noet sw=4:
