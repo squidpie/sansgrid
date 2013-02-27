@@ -30,8 +30,10 @@
 #endif
 
 void radioStubRuntime(int fildes[2]) {
+	int i;
 	char lptr[5] = "1";
 	FILE *F_HANDLE;
+	char filedata[101];
 
 	if (!(F_HANDLE = fopen("test/rstubin.fifo", "w"))) {
 		printf("ERROR: Can't open rstubin.fifo\n");
@@ -39,9 +41,14 @@ void radioStubRuntime(int fildes[2]) {
 	}
 	close(fildes[0]);
 
+	for (i=0; i<10; i++) {
+		snprintf(filedata, 100, "Ping");
+		fwrite(filedata, sizeof(char), 100, F_HANDLE);
+	}
 
 
 	write(fildes[1], lptr, 5);
+	close(fildes[1]);
 	return;
 }
 

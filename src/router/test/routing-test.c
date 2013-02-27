@@ -47,10 +47,7 @@ void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 	} wtb;
 
 	for (i=0; i<IP_SIZE; i++) {
-		if (littleEndian())
-			wtb.word[i] = htonl(ip_addr[i]);
-		else
-			wtb.word[i] = ip_addr[i];
+		wtb.word[i] = htonl(ip_addr[i]);
 	}
 
 	for (i=0; i<4*IP_SIZE; i++) {
@@ -63,24 +60,57 @@ void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 }
 
 void *routingTableRuntime(void *arg) {
-	// TODO: Separate this into two threads!
-	// 			Reader, and dispatch
-	Queue *queue = (Queue*)arg;
-	FILE *fptr;
-	uint8_t *serial_data;
 
-	if (!(fptr = fopen("test/rstubin.fifo", "r"))) {
+	Queue *queue = (Queue*)arg;
+	uint8_t *serial_data;
+	int oldstate;
+
+	while (1) {
+		queueDequeue(queue, &serial_data);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+		free(serial_data);
+		printf("Data\n");
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	}
+
+	pthread_exit(arg);
+}
+
+
+void *spiReader(void *arg) {
+	// reads from a named pipe and sends info to the dispatch queue
+	int timeout = 0;
+	Queue *queue = (Queue*)arg;
+	FILE *FPTR;
+	uint8_t *serial_data;
+	char filedata[101];
+	int oldstate;
+
+	if (!(FPTR = fopen("test/rstubin.fifo", "r"))) {
 		printf("Error: Cannot open rstubin.fifo!\n");
 		exit(EXIT_FAILURE);
 	}
 
 	while (1) {
-		queueDequeue(queue, &serial_data);
-		free(serial_data);
+		// Read from the pipe forever
+		while (fgets(filedata, 100*sizeof(char), FPTR) == NULL) {
+			timeout++;
+			if (timeout > 10000)
+				pthread_exit(arg);
+			sched_yield();
+		}
+		timeout = 0;
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+		serial_data = (uint8_t*)malloc(101*sizeof(uint8_t));
+		memcpy(serial_data, filedata, 100*sizeof(char));
+		//printf("Queuing\n");
+		queueEnqueue(queue, serial_data);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
 	pthread_exit(arg);
 }
+	
 
 
 int main(void) {
@@ -88,7 +118,8 @@ int main(void) {
 	uint32_t ip_addr[IP_SIZE];
 	pid_t chpid;
 	Queue *queue;
-	pthread_t rtable_thread;
+	pthread_t rtable_thread,
+			  spi_thread;
 	int fildes[2];
 	char lptr[5];
 	void *arg;
@@ -132,11 +163,19 @@ int main(void) {
 		printf("Oops!\n");
 
 	pthread_create(&rtable_thread, NULL, &routingTableRuntime, queue);
+	pthread_create(&spi_thread, NULL, &spiReader, queue);
+
+	
+	// wait until radio stub is done writing
 	close(fildes[1]);
 	read(fildes[0], lptr, 5);
-
-
 	close(fildes[0]);
+	while (queueSize(queue) > 0)
+		sched_yield();
+
+
+	//pthread_cancel(spi_thread);
+	pthread_join(spi_thread, &arg);
 	pthread_cancel(rtable_thread);
 	pthread_join(rtable_thread, &arg);
 
