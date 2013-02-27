@@ -126,7 +126,8 @@ static void *heartbeatFunc(void *arg) {
 		datastring = (char*)malloc(DATA_LENGTH*sizeof(char));
 		sprintf(datastring, "H %i", i);
 		data = (uint8_t*)datastring;
-		excode = queueEnqueue(queue, data);
+		if ((excode = queueEnqueue(queue, data)) == -1)
+			break;
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
 
 	}

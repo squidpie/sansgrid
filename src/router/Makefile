@@ -55,6 +55,7 @@ OBS = $(MAIN).o $(ROUTING).o $(DISPATCH).o
 
 
 all: sansgrid route_test dispatch_test
+test: route_test dispatch_test
 sansgrid: $(OBS)
 	$(CC) $(LFLAGS) $(OBS) -o $(NAME)
 route_test: $(TEST_ROUTE_OBS)
