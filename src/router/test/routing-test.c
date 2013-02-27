@@ -31,11 +31,11 @@
 
 #ifndef __H_RADIO_STUB__
 #define __H_RADIO_STUB__
-#include "radio-stub.h"
+#include "stubs/radio-stub.h"
 #endif
 
-#include "../routing.h"
-#include "../../synchronous_queue/sync_queue.h"
+#include "../routing/routing.h"
+#include "../synchronous_queue/sync_queue.h"
 
 void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 	// Print the IP address like an IPv6 address
