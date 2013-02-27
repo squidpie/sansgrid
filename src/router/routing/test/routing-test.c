@@ -26,8 +26,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+#ifndef __H_RADIO_STUB__
+#define __H_RADIO_STUB__
+#include "radio-stub.h"
+#endif
 
 #include "../routing.h"
+#include "../../synchronous_queue/sync_queue.h"
 
 void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 	// Print the IP address like an IPv6 address
@@ -57,10 +65,30 @@ void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 int main(void) {
 	int i;
 	uint32_t ip_addr[IP_SIZE];
+	pid_t chpid;
+	Queue *queue;
 
+	chpid = fork();
+
+	if (chpid < 0)
+		exit(EXIT_FAILURE);
+	else if (chpid == 0) {
+		// child
+		radioStubRuntime();
+		exit(EXIT_SUCCESS);
+	}
+	// parent
+
+	queue = queueInit(200);
 	routingTableInit();
 
-	printf("%i\n", littleEndian());
+	if (littleEndian()) {
+		printf("Machine is Little Endian\n");
+		printf("Conversion is required.\n");
+	} else {
+		printf("Machine is Big Endian\n");
+		printf("No Conversion is required.\n");
+	}
 
 	for (i=0; i<32; i++) {
 		routingTableAssignIP(ip_addr);
@@ -74,6 +102,8 @@ int main(void) {
 
 	if (routingTableFreeIP(ip_addr))
 		printf("Oops!\n");
+
+
 
 
 	routingTableDestroy();
