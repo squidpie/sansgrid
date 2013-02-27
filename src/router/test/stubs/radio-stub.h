@@ -19,7 +19,7 @@
  */
 
 
-void radioStubRuntime(void);
+void radioStubRuntime(int fildes[2]);
 
 
 // vim: ft=c ts=4 noet sw=4:

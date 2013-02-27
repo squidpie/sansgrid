@@ -22,19 +22,26 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifndef __H_ROUTING__
 #define __H_ROUTING__
 #include "../../routing/routing.h"
 #endif
 
-void radioStubRuntime(void) {
+void radioStubRuntime(int fildes[2]) {
+	char lptr[5] = "1";
 	FILE *F_HANDLE;
 
 	if (!(F_HANDLE = fopen("test/rstubin.fifo", "w"))) {
-		printf("ERROR: rstubin.fifo doesn't exist!\n");
+		printf("ERROR: Can't open rstubin.fifo\n");
 		exit(EXIT_FAILURE);
 	}
+	close(fildes[0]);
+
+
+
+	write(fildes[1], lptr, 5);
 	return;
 }
 

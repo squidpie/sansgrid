@@ -28,6 +28,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #ifndef __H_RADIO_STUB__
 #define __H_RADIO_STUB__
@@ -61,12 +62,38 @@ void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
 	return;
 }
 
+void *routingTableRuntime(void *arg) {
+	// TODO: Separate this into two threads!
+	// 			Reader, and dispatch
+	Queue *queue = (Queue*)arg;
+	FILE *fptr;
+	uint8_t *serial_data;
+
+	if (!(fptr = fopen("test/rstubin.fifo", "r"))) {
+		printf("Error: Cannot open rstubin.fifo!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	while (1) {
+		queueDequeue(queue, &serial_data);
+		free(serial_data);
+	}
+
+	pthread_exit(arg);
+}
+
 
 int main(void) {
 	int i;
 	uint32_t ip_addr[IP_SIZE];
 	pid_t chpid;
 	Queue *queue;
+	pthread_t rtable_thread;
+	int fildes[2];
+	char lptr[5];
+	void *arg;
+
+	pipe(fildes);
 
 	chpid = fork();
 
@@ -74,9 +101,10 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	else if (chpid == 0) {
 		// child
-		radioStubRuntime();
+		radioStubRuntime(fildes);
 		exit(EXIT_SUCCESS);
 	}
+
 	// parent
 
 	queue = queueInit(200);
@@ -103,6 +131,14 @@ int main(void) {
 	if (routingTableFreeIP(ip_addr))
 		printf("Oops!\n");
 
+	pthread_create(&rtable_thread, NULL, &routingTableRuntime, queue);
+	close(fildes[1]);
+	read(fildes[0], lptr, 5);
+
+
+	close(fildes[0]);
+	pthread_cancel(rtable_thread);
+	pthread_join(rtable_thread, &arg);
 
 
 
