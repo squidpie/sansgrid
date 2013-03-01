@@ -28,7 +28,7 @@
 #define SANSGRID_UNION(type, name) union name { \
 	type formdata; \
 	uint8_t serialdata[sizeof(type)]; \
-};
+}
 
 struct SansgridFly {
 	// Datatype: 0xF0
@@ -43,7 +43,8 @@ union SansgridFlyConv {
 };
 */
 
-SANSGRID_UNION(struct SansgridFly, SansgridFlyConv)
+SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
+
 
 
 struct SansgridEyeball {
@@ -60,14 +61,8 @@ struct SansgridEyeball {
 	unsigned mode:4;
 };
 
-/*
-union SansgridEyeballConv {
-	struct SansgridEyeball formdata;
-	uint8_t serialdata[sizeof(struct SansgridEyeball)];
-};
-*/
+SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
 
-SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv)
 
 
 struct SansgridPeck {
@@ -84,15 +79,8 @@ struct SansgridPeck {
 	uint8_t padding[47];
 };
 
+SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
 
-SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv)
-
-/*
-union SansgridPeckConv {
-	struct SansgridPeck formdata;
-	uint8_t serialdata[sizeof(struct SansgridPeck)];
-};
-*/
 
 
 struct SansgridSing {
@@ -102,7 +90,8 @@ struct SansgridSing {
 	uint8_t pubkey[80];
 };
 
-SANSGRID_UNION(struct SansgridSing, SansgridSingConv)
+SANSGRID_UNION(struct SansgridSing, SansgridSingConv);
+
 
 
 struct SansgridMock {
@@ -112,7 +101,9 @@ struct SansgridMock {
 	uint8_t pubkey[80];
 };
 
-SANSGRID_UNION(struct SansgridMock, SansgridMockConv)
+SANSGRID_UNION(struct SansgridMock, SansgridMockConv);
+
+
 
 struct SansgridPeacock {
 	// Datatype:	0x0C
@@ -120,7 +111,9 @@ struct SansgridPeacock {
 	uint8_t capabilities[80];
 };
 
-SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv)
+SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv);
+
+
 
 struct SansgridNest {
 	// Datatype:	0x10
@@ -128,7 +121,9 @@ struct SansgridNest {
 	uint8_t padding[80];
 };
 
-SANSGRID_UNION(struct SansgridNest, SansgridNestConv)
+SANSGRID_UNION(struct SansgridNest, SansgridNestConv);
+
+
 
 struct SansgridSquawk {
 	// Datatypes:
@@ -143,8 +138,8 @@ struct SansgridSquawk {
 	uint8_t data[80];
 };
 
+SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv);
 
-SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv)
 
 
 struct SansgridHeartbeat {
@@ -155,8 +150,9 @@ struct SansgridHeartbeat {
 	uint8_t padding[80];
 };
 
+SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv);
 
-SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv)
+
 
 struct SansgridChirp {
 	// Datatypes
@@ -169,6 +165,6 @@ struct SansgridChirp {
 	uint8_t data[80];
 };
 
-SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv)
+SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);
 
 // vim: ft=c ts=4 noet sw=4:
