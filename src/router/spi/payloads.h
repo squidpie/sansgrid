@@ -25,16 +25,25 @@
 
 #include <stdint.h>
 
+#define SANSGRID_UNION(type, name) union name { \
+	type formdata; \
+	uint8_t serialdata[sizeof(type)]; \
+};
+
 struct SansgridFly {
 	// Datatype: 0xF0
 	uint8_t datatype;
 	char network_name[80];
 };
 
+/*
 union SansgridFlyConv {
 	struct SansgridFly formdata;
 	uint8_t serialdata[sizeof(struct SansgridFly)];
 };
+*/
+
+SANSGRID_UNION(struct SansgridFly, SansgridFlyConv)
 
 
 struct SansgridEyeball {
@@ -51,10 +60,14 @@ struct SansgridEyeball {
 	unsigned mode:4;
 };
 
+/*
 union SansgridEyeballConv {
 	struct SansgridEyeball formdata;
 	uint8_t serialdata[sizeof(struct SansgridEyeball)];
 };
+*/
+
+SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv)
 
 
 struct SansgridPeck {
@@ -72,10 +85,14 @@ struct SansgridPeck {
 };
 
 
+SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv)
+
+/*
 union SansgridPeckConv {
 	struct SansgridPeck formdata;
 	uint8_t serialdata[sizeof(struct SansgridPeck)];
 };
+*/
 
 
 struct SansgridSing {
@@ -85,6 +102,8 @@ struct SansgridSing {
 	uint8_t pubkey[80];
 };
 
+SANSGRID_UNION(struct SansgridSing, SansgridSingConv)
+
 
 struct SansgridMock {
 	// Datatype:	0x07	- Ack, sensor gives pubkey
@@ -93,17 +112,23 @@ struct SansgridMock {
 	uint8_t pubkey[80];
 };
 
+SANSGRID_UNION(struct SansgridMock, SansgridMockConv)
+
 struct SansgridPeacock {
 	// Datatype:	0x0C
 	uint8_t datatype;
 	uint8_t capabilities[80];
 };
 
+SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv)
+
 struct SansgridNest {
 	// Datatype:	0x10
 	uint8_t datatype;
 	uint8_t padding[80];
 };
+
+SANSGRID_UNION(struct SansgridNest, SansgridNestConv)
 
 struct SansgridSquawk {
 	// Datatypes:
@@ -118,6 +143,10 @@ struct SansgridSquawk {
 	uint8_t data[80];
 };
 
+
+SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv)
+
+
 struct SansgridHeartbeat {
 	// Datatypes:
 	// 		0x1E: Router Pings Sensor
@@ -125,6 +154,9 @@ struct SansgridHeartbeat {
 	uint8_t datatype;
 	uint8_t padding[80];
 };
+
+
+SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv)
 
 struct SansgridChirp {
 	// Datatypes
@@ -136,5 +168,7 @@ struct SansgridChirp {
 	uint8_t datatype;
 	uint8_t data[80];
 };
+
+SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv)
 
 // vim: ft=c ts=4 noet sw=4:
