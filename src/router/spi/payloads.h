@@ -167,4 +167,6 @@ struct SansgridChirp {
 
 SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);
 
+
+#undef SANSGRID_UNION
 // vim: ft=c ts=4 noet sw=4:
