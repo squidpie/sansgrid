@@ -19,9 +19,6 @@
  *
  */
 
-// TODO: Which is better, using all uint8_t, 
-// 				or using largest divisible register? (e.g. uint32_t)
-// 		Depends on how complicated endian encoding is
 
 #include <stdint.h>
 
