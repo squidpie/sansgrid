@@ -38,23 +38,30 @@
 #include "../routing/routing.h"
 #include "../synchronous_queue/sync_queue.h"
 
-void routingTablePrint(uint32_t ip_addr[IP_SIZE]) {
+void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
 	// Print the IP address like an IPv6 address
 	int i;
+	/*
 	union WordToByte {
-		uint32_t word[IP_SIZE];
-		uint8_t byte[IP_SIZE*4];
+		uint32_t word[IP_SIZE/4];
+		uint8_t byte[IP_SIZE];
 	} wtb;
 
-	for (i=0; i<IP_SIZE; i++) {
+	for (i=0; i<IP_SIZE/4; i++) {
 		wtb.word[i] = htonl(ip_addr[i]);
 	}
 
-	for (i=0; i<4*IP_SIZE; i++) {
+	for (i=0; i<IP_SIZE; i++) {
 		printf("%.2X", wtb.byte[i]);
-		if (i < 4*IP_SIZE-1)
+		if (i < IP_SIZE-1)
 			printf(":");
 	}	
+	*/
+	for (i=0; i<IP_SIZE; i++) {
+		printf("%.2X", ip_addr[i]);
+		if (i < IP_SIZE-1)
+			printf(":");
+	}
 	printf("\n");
 	return;
 }
@@ -115,7 +122,7 @@ void *spiReader(void *arg) {
 
 int main(void) {
 	int i;
-	uint32_t ip_addr[IP_SIZE];
+	uint8_t ip_addr[IP_SIZE];
 	pid_t chpid;
 	Queue *queue;
 	pthread_t rtable_thread,

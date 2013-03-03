@@ -31,7 +31,7 @@
 #endif
 
 #define ROUTING_ARRAYSIZE		(1 << ROUTING_UNIQUE_BITS)
-#define IP_SIZE 4
+#define IP_SIZE 16
 
 #include <stdint.h>
 
@@ -43,9 +43,9 @@ typedef struct DeviceIP DeviceIP;
 int littleEndian(void);
 void routingTableInit(void);
 void routingTableDestroy(void);
-int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]);
-int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]);
-int routingTableLookup(uint32_t ip_addr[IP_SIZE]);
+int routingTableAssignIP(uint8_t ip_addr[IP_SIZE]);
+int routingTableFreeIP(uint8_t ip_addr[IP_SIZE]);
+int routingTableLookup(uint8_t ip_addr[IP_SIZE]);
 
 
 

@@ -28,12 +28,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "routing.h"
 
 
 struct DeviceIP {
-	uint32_t ip[IP_SIZE];		// IP address
+	uint8_t ip[IP_SIZE];		// IP address
 	uint32_t clkdiff;			// ping offset
 };
 
@@ -42,12 +43,47 @@ struct DeviceIP *routing_table[ROUTING_ARRAYSIZE];
 static uint32_t tableptr = 0;
 static uint32_t table_alloc = 0;
 
-static void createBase(uint32_t base[IP_SIZE]) {
+static void createBase(uint8_t base[IP_SIZE]) {
 	int i;
-	base[0] = ROUTING_ARRAYSIZE;
-	for (i=1; i<IP_SIZE; i++)
+	//base[0] = ROUTING_ARRAYSIZE;
+	uint32_t arrsize = ROUTING_ARRAYSIZE;
+
+	for (i=0; i<IP_SIZE; i++)
 		base[i] = 0;
+	memcpy(base, &arrsize, sizeof(uint32_t));
+
 	return;
+}
+
+
+void wordToByte(uint8_t *bytes, uint32_t *words, size_t wordsize) {
+	// converts an array of words to an array of bytes
+	// Note: bytes[] isn't size-checked! it must be 4x the size of wordsize!
+
+	uint32_t i;
+	uint32_t endianconv;
+	for (i=0; i<wordsize; i++) {
+		endianconv = htonl(words[i]);
+		memcpy(&bytes[4*i], &endianconv, sizeof(uint32_t));
+	}
+	return;
+}
+
+
+int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
+	// converts an array of bytes into an array of words
+	// Note: words[] isn't size-checked! it must be >= (bytesize/4)+1
+	
+	uint32_t i;
+	uint32_t endianconv;
+	if (bytesize % 4)
+		return -1;
+	for (i=0; i<(bytesize/4); i++) {
+		memcpy(&endianconv, &bytes[i*4], sizeof(uint32_t));
+		words[i] = ntohl(endianconv);
+		//memcpy(&words[i], &bytes[i*4], sizeof(uint32_t));
+	}
+	return 0;
 }
 
 int littleEndian(void) {
@@ -85,32 +121,40 @@ void routingTableDestroy(void) {
 	return;
 }
 
-int maskip(uint32_t ip_addr[IP_SIZE], uint32_t base[IP_SIZE], uint32_t tableptr) {
+int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
 	// Mask the tableptr with the base to make an ip address
 	
-	memcpy(ip_addr, base, IP_SIZE*sizeof(uint32_t));
-	ip_addr[IP_SIZE-1] = base[IP_SIZE-1] | tableptr;
+	int i;
+	uint8_t tablebyteptr[4];
+	wordToByte(tablebyteptr, &tableptr, 1);
+
+	memcpy(ip_addr, base, IP_SIZE*sizeof(uint8_t));
+	for (i=0; i<4; i++)
+		ip_addr[IP_SIZE-(4-i)] = base[IP_SIZE-(4-i)] | tablebyteptr[i];
+	//ip_addr[IP_SIZE-1] = base[IP_SIZE-1] | tableptr;
 
 	return 0;
 }
 
 
-uint32_t locationToTablePtr(uint32_t ip_addr[IP_SIZE], uint32_t base[IP_SIZE]) {
+uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE]) {
 	// Take a location and show where it should be in the routing table
 
 	int i;
-	uint32_t offset[IP_SIZE];
+	uint8_t offset[IP_SIZE];
+	uint32_t location[IP_SIZE/4];
 
 	for (i=0; i<IP_SIZE; i++)
 		offset[i] = ip_addr[i] - base[i];
+	byteToWord(location, offset, IP_SIZE);
 
-	return offset[IP_SIZE-1];
+	return location[IP_SIZE/4-1];
 }
 
-int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]) {
+int routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
-	uint32_t base[IP_SIZE];
+	uint8_t base[IP_SIZE];
 
 	createBase(base);
 
@@ -128,16 +172,16 @@ int routingTableAssignIP(uint32_t ip_addr[IP_SIZE]) {
 	table_alloc++;
 
 	// copy the IP address to the new slot
-	memcpy(routing_table[tableptr]->ip, ip_addr, IP_SIZE*sizeof(uint32_t));
+	memcpy(routing_table[tableptr]->ip, ip_addr, IP_SIZE*sizeof(uint8_t));
 
 	return 0;
 }
 
 
-int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]) {
+int routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
 	// Release IP Address
 	
-	uint32_t base[IP_SIZE];
+	uint8_t base[IP_SIZE];
 	uint32_t index;
 
 	createBase(base);
@@ -150,7 +194,7 @@ int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]) {
 
 	if (index >= ROUTING_ARRAYSIZE)
 		return -1;
-	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint32_t))) {
+	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint8_t))) {
 		return -1;
 	}
 
@@ -163,11 +207,11 @@ int routingTableFreeIP(uint32_t ip_addr[IP_SIZE]) {
 }
 
 
-int routingTableLookup(uint32_t ip_addr[IP_SIZE]) {
+int routingTableLookup(uint8_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
 	
-	uint32_t base[IP_SIZE];
+	uint8_t base[IP_SIZE];
 	uint32_t index;
 
 	createBase(base);
@@ -181,7 +225,7 @@ int routingTableLookup(uint32_t ip_addr[IP_SIZE]) {
 	if (index >= ROUTING_ARRAYSIZE)
 		return 0;
 
-	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint32_t))) {
+	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint8_t))) {
 		return 0;
 	}
 
