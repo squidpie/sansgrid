@@ -40,8 +40,10 @@
 #include <stdint.h>					// Exact-Width Integers
 #include <pthread.h>				// POSIX threads
 #include <time.h>					// nanosleep()
+#include <check.h>
 
 #include "../synchronous_queue/sync_queue.h"
+#include "tests.h"
 
 
 #define NUM_DATA 		100			// Amount of data to send through
@@ -85,11 +87,15 @@ static void *writerFunc(void *arg) {
 		datastring = (char*)malloc(DATA_LENGTH*sizeof(char));
 		sprintf(datastring, "%i", i);
 		data = (uint8_t*)datastring;
+#if TESTS_DEBUG_LEVEL > 0
 		printf("W");
+#endif
 
 		// queue data onto the queue
 		if ((excode = queueTryEnqueue(queue, data)) == -1) {
+#if TESTS_DEBUG_LEVEL > 0
 			printf("F\n");
+#endif
 			excode = queueEnqueue(queue, data);
 		}
 
@@ -155,17 +161,21 @@ static void *readerFunc(void *arg) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
 		if (queueTryDequeue(queue, &data) == -1) {
 			// queue is empty. Block until data is available
+#if TESTS_DEBUG_LEVEL > 0
 			printf("E\n");
+#endif
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
 			queueDequeue(queue, &data);
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
 		}
 
+#if TESTS_DEBUG_LEVEL > 0
 		if (data[0] == 'H') {
 			printf(" %s ", data);
 		} else {
 			printf("R");
 		}
+#endif
 
 		free(data);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
@@ -176,7 +186,8 @@ static void *readerFunc(void *arg) {
 
 
 
-int main(void) {
+//int main(void) {
+START_TEST (testBasicDispatch) {
 	// Main function
 	
 	// Thread Variables
@@ -194,15 +205,13 @@ int main(void) {
 	if (sizeof(char) != sizeof(uint8_t)) {
 		// We do direct conversions from uint8_t to char.
 		// If these aren't the same size, just stop right here.
-		printf("ERROR: sizeof(char) != sizeof(uint8_t)\n");
-		exit(EXIT_FAILURE);
+		fail("ERROR: sizeof(char) != sizeof(uint8_t)");
 	}
 
 	// Create the queue
 	queue = queueInit(QUEUE_SIZE);
 	if (!queue) {
-		printf("ERROR: Invalid queue size!\n");
-		exit(EXIT_FAILURE);
+		fail("ERROR: Invalid queue size!");
 	}
 
 	// Create all threads
@@ -230,7 +239,19 @@ int main(void) {
 	// Clean up
 	queueDestroy(queue);
 	
-	return EXIT_SUCCESS;
+	//return EXIT_SUCCESS;
+}
+END_TEST
+
+Suite *dispatchBasicTesting (void) {
+	Suite *s = suite_create("Basic Dispatch testing");
+
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testBasicDispatch);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
 }
 
 

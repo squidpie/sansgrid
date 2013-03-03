@@ -1,4 +1,4 @@
-/* A quick implementation for a statically-defined table.
+/* Advanced Dispatch Tests
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <check.h>
 
 #ifndef __H_RADIO_STUB__
 #define __H_RADIO_STUB__
@@ -37,34 +38,8 @@
 
 #include "../routing/routing.h"
 #include "../synchronous_queue/sync_queue.h"
+#include "tests.h"
 
-void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
-	// Print the IP address like an IPv6 address
-	int i;
-	/*
-	union WordToByte {
-		uint32_t word[IP_SIZE/4];
-		uint8_t byte[IP_SIZE];
-	} wtb;
-
-	for (i=0; i<IP_SIZE/4; i++) {
-		wtb.word[i] = htonl(ip_addr[i]);
-	}
-
-	for (i=0; i<IP_SIZE; i++) {
-		printf("%.2X", wtb.byte[i]);
-		if (i < IP_SIZE-1)
-			printf(":");
-	}	
-	*/
-	for (i=0; i<IP_SIZE; i++) {
-		printf("%.2X", ip_addr[i]);
-		if (i < IP_SIZE-1)
-			printf(":");
-	}
-	printf("\n");
-	return;
-}
 
 void *routingTableRuntime(void *arg) {
 
@@ -76,7 +51,7 @@ void *routingTableRuntime(void *arg) {
 		queueDequeue(queue, &serial_data);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		free(serial_data);
-		printf("Data\n");
+		//printf("Data\n");
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
@@ -94,8 +69,8 @@ void *spiReader(void *arg) {
 	int oldstate;
 
 	if (!(FPTR = fopen("test/rstubin.fifo", "r"))) {
-		printf("Error: Cannot open rstubin.fifo!\n");
-		exit(EXIT_FAILURE);
+		fail("Error: Cannot open rstubin.fifo!");
+		//exit(EXIT_FAILURE);
 	}
 
 	while (1) {
@@ -119,10 +94,8 @@ void *spiReader(void *arg) {
 }
 	
 
-
-int main(void) {
-	int i;
-	uint8_t ip_addr[IP_SIZE];
+START_TEST (testAdvancedDispatch) {
+	// unit test code for more dispatch testing
 	pid_t chpid;
 	Queue *queue;
 	pthread_t rtable_thread,
@@ -135,9 +108,8 @@ int main(void) {
 
 	chpid = fork();
 
-	if (chpid < 0)
-		exit(EXIT_FAILURE);
-	else if (chpid == 0) {
+	fail_unless((chpid >= 0), "Error: Fork Failed!");
+	if (chpid == 0) {
 		// child
 		radioStubRuntime(fildes);
 		exit(EXIT_SUCCESS);
@@ -146,28 +118,7 @@ int main(void) {
 	// parent
 
 	queue = queueInit(200);
-	routingTableInit();
-
-	if (littleEndian()) {
-		printf("Machine is Little Endian\n");
-		printf("Conversion is required.\n");
-	} else {
-		printf("Machine is Big Endian\n");
-		printf("No Conversion is required.\n");
-	}
-
-	for (i=0; i<32; i++) {
-		routingTableAssignIP(ip_addr);
-		routingTablePrint(ip_addr);
-	}
-
-	if (routingTableLookup(ip_addr)) {
-		printf("IP Address is resident: ");
-		routingTablePrint(ip_addr);
-	}
-
-	if (routingTableFreeIP(ip_addr))
-		printf("Oops!\n");
+	fail_unless((queue != NULL), "Error: Queue not allocated!");
 
 	pthread_create(&rtable_thread, NULL, &routingTableRuntime, queue);
 	pthread_create(&spi_thread, NULL, &spiReader, queue);
@@ -181,15 +132,22 @@ int main(void) {
 		sched_yield();
 
 
-	//pthread_cancel(spi_thread);
 	pthread_join(spi_thread, &arg);
 	pthread_cancel(rtable_thread);
 	pthread_join(rtable_thread, &arg);
 
+}
+END_TEST
 
+Suite *dispatchAdvancedTesting (void) {
+	Suite *s = suite_create("Advanced Dispatch testing");
 
-	routingTableDestroy();
-	return 0;
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testAdvancedDispatch);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
 }
 
 

@@ -15,15 +15,21 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-
-ROUTING=routing-test
-STUBS=stubs/radio-stub
+TEST_CORE=test-core
+DISPATCH_ADVANCED=dispatch-advanced
+ROUTING_BASIC=routing-basic-test
 SYNC_QUEUE=sync_queue_main
+STUBS=stubs/radio-stub
 
-all: $(ROUTING).o $(SYNC_QUEUE).o
-$(ROUTING).o: $(ROUTING).c $(STUBS).c
-	$(CC) $(CFLAGS) $(ROUTING).c $(STUBS).c
-$(SYNC_QUEUE).o: $(SYNC_QUEUE).c
+
+all: $(TEST_CORE).o $(ROUTING_BASIC).o $(ROUTING).o $(SYNC_QUEUE).o 
+$(ROUTING_BASIC).o: $(ROUTING_BASIC).c tests.h
+	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
+$(DISPATCH_ADVANCED).o: $(DISPATCH_ADVANCED).c $(STUBS).c  tests.h
+	$(CC) $(CFLAGS) $(DISPATCH_ADVANCED).c $(STUBS).c 
+$(SYNC_QUEUE).o: $(SYNC_QUEUE).c tests.h
 	$(CC) $(CFLAGS) $(SYNC_QUEUE).c
+$(TEST_CORE).o: $(TEST_CORE).c tests.h 
+	$(CC) $(CFLAGS) $(TEST_CORE).c
 clean-test:
 	rm *.o
