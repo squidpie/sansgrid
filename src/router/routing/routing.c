@@ -45,7 +45,6 @@ static uint32_t table_alloc = 0;
 
 static void createBase(uint8_t base[IP_SIZE]) {
 	int i;
-	//base[0] = ROUTING_ARRAYSIZE;
 	uint32_t arrsize = ROUTING_ARRAYSIZE;
 
 	for (i=0; i<IP_SIZE; i++)
@@ -56,12 +55,13 @@ static void createBase(uint8_t base[IP_SIZE]) {
 }
 
 
-void wordToByte(uint8_t *bytes, uint32_t *words, size_t wordsize) {
+void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
 	// converts an array of words to an array of bytes
 	// Note: bytes[] isn't size-checked! it must be 4x the size of wordsize!
 
 	uint32_t i;
 	uint32_t endianconv;
+	size_t wordsize = (bytesize * sizeof(uint8_t)) / sizeof(uint32_t);
 	for (i=0; i<wordsize; i++) {
 		endianconv = htonl(words[i]);
 		memcpy(&bytes[4*i], &endianconv, sizeof(uint32_t));
@@ -81,12 +81,11 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 	for (i=0; i<(bytesize/4); i++) {
 		memcpy(&endianconv, &bytes[i*4], sizeof(uint32_t));
 		words[i] = ntohl(endianconv);
-		//memcpy(&words[i], &bytes[i*4], sizeof(uint32_t));
 	}
 	return 0;
 }
 
-int littleEndian(void) {
+int32_t littleEndian(void) {
 	// Tests endianness
 	// Returns 1 if little endian
 	// Returns 0 if big endian
@@ -124,14 +123,16 @@ void routingTableDestroy(void) {
 int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
 	// Mask the tableptr with the base to make an ip address
 	
-	int i;
+	int i, ioffset;
 	uint8_t tablebyteptr[4];
-	wordToByte(tablebyteptr, &tableptr, 1);
+
+	wordToByte(tablebyteptr, &tableptr, 1*sizeof(uint32_t));
 
 	memcpy(ip_addr, base, IP_SIZE*sizeof(uint8_t));
-	for (i=0; i<4; i++)
-		ip_addr[IP_SIZE-(4-i)] = base[IP_SIZE-(4-i)] | tablebyteptr[i];
-	//ip_addr[IP_SIZE-1] = base[IP_SIZE-1] | tableptr;
+	for (i=0; i<4; i++) {
+		ioffset = IP_SIZE-(4-i);
+		ip_addr[ioffset] = base[ioffset] | tablebyteptr[i];
+	}
 
 	return 0;
 }
@@ -140,18 +141,18 @@ int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
 uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE]) {
 	// Take a location and show where it should be in the routing table
 
-	int i;
+	int32_t i;
 	uint8_t offset[IP_SIZE];
 	uint32_t location[IP_SIZE/4];
 
 	for (i=0; i<IP_SIZE; i++)
 		offset[i] = ip_addr[i] - base[i];
-	byteToWord(location, offset, IP_SIZE);
+	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
 
 	return location[IP_SIZE/4-1];
 }
 
-int routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
 	uint8_t base[IP_SIZE];
@@ -178,7 +179,7 @@ int routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
 }
 
 
-int routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
 	// Release IP Address
 	
 	uint8_t base[IP_SIZE];
@@ -207,7 +208,7 @@ int routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
 }
 
 
-int routingTableLookup(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableLookup(uint8_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
 	

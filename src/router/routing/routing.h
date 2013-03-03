@@ -40,12 +40,12 @@
 typedef struct DeviceIP DeviceIP;
 
 
-int littleEndian(void);
+int32_t littleEndian(void);
 void routingTableInit(void);
 void routingTableDestroy(void);
-int routingTableAssignIP(uint8_t ip_addr[IP_SIZE]);
-int routingTableFreeIP(uint8_t ip_addr[IP_SIZE]);
-int routingTableLookup(uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableLookup(uint8_t ip_addr[IP_SIZE]);
 
 
 
