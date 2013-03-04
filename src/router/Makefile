@@ -25,40 +25,49 @@ export CFLAGS = -std=c99 -Wall -c $(DEBUG)
 export LFLAGS = -Wall -lpthread $(DEBUG)
 export TEST_LFLAGS = $(LFLAGS) -lcheck
 
+
 # Directories
+DAEMON_DIR = daemon
+DISPATCH_DIR = dispatch
 ROUTE_DIR = routing
-DISPATCH_DIR = synchronous_queue
+
+# Test Directories
 TEST_DIR = test
-TEST_STUBS_DIR = $(TEST_DIR)/stubs
 TEST_DISPATCH_DIR = $(TEST_DIR)/dispatch
 TEST_ROUTING_DIR = $(TEST_DIR)/routing
-DAEMON_DIR = daemon
+TEST_STUBS_DIR = $(TEST_DIR)/stubs
 
 # Files
+MAIN = $(DAEMON_DIR)/pi-runtime
+DISPATCH = $(DISPATCH_DIR)/dispatch
+ROUTING = $(ROUTE_DIR)/routing
+
+# Test Files
 TEST_CORE = $(TEST_DIR)/test-core
 DISPATCH_ADVANCED_TEST = $(TEST_DISPATCH_DIR)/dispatch-advanced
-ROUTE_BASIC_TEST = $(TEST_ROUTING_DIR)/routing-basic-test
 DISPATCH_BASIC_TEST = $(TEST_DISPATCH_DIR)/dispatch-basic
+ROUTE_BASIC_TEST = $(TEST_ROUTING_DIR)/routing-basic-test
 STUBS = $(TEST_STUBS_DIR)/radio-stub
-ROUTING = $(ROUTE_DIR)/routing
-DISPATCH = $(DISPATCH_DIR)/sync_queue
-MAIN = $(DAEMON_DIR)/pi-runtime
 
 
-# Files that are compiled
+# Object File Compilations
 OBS = $(ROUTING).o $(DISPATCH).o
-TEST_OBS = $(TEST_CORE).o $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_BASIC_TEST).o $(STUBS).o
+TEST_OBS = $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_BASIC_TEST).o $(STUBS).o
+
+# Object File Builds
+SANSGRID_OBS = $(OBS) $(MAIN).o
+TESTSUITE_OBS = $(OBS) $(TEST_OBS) $(TEST_CORE).o
 
 
-sansgrid: $(OBS) $(MAIN).o
-	$(CC) $(LFLAGS) $(OBS) $(MAIN).o -o $(NAME)
-tests: $(TEST_OBS) $(OBS)
-	$(CC) $(TEST_LFLAGS) $(TEST_OBS) $(OBS) -o tests
+sansgrid: $(SANSGRID_OBS)
+	$(CC) $(LFLAGS) $(SANSGRID_OBS) -o $(NAME)
+tests: $(TESTSUITE_OBS)
+	$(CC) $(TEST_LFLAGS) $(TESTSUITE_OBS) -o tests
 all: sansgrid tests
 clean: 
 	-rm ./sansgrid
 	-rm ./tests
 	-cd $(DAEMON_DIR) && make clean-daemon
-	-cd $(DISPATCH_DIR) && make clean-sync-queue
+	-cd $(DISPATCH_DIR) && make clean-dispatch
 	-cd $(ROUTE_DIR) && make clean-routing
 	-cd $(TEST_DIR) && make clean-test

@@ -17,9 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
- * This implementation defines the table size at compile-time instead of at run-time,
- * making the system less prone to bugs. The table is an array of pointers, which
- * facilitates creating/moving/deleting IP addresses.
+ * This dispatch test uses a named pipe as a stub to read from.
+ * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
 #include <stdio.h>
@@ -36,8 +35,7 @@
 #include "../stubs/radio-stub.h"
 #endif
 
-#include "../../routing/routing.h"
-#include "../../synchronous_queue/sync_queue.h"
+#include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
 
@@ -135,6 +133,7 @@ START_TEST (testAdvancedDispatch) {
 	pthread_join(spi_thread, &arg);
 	pthread_cancel(rtable_thread);
 	pthread_join(rtable_thread, &arg);
+	queueDestroy(queue);
 
 }
 END_TEST

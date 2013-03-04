@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "sync_queue.h"
+#include "dispatch.h"
 
 struct Queue {
 	uint8_t **list;					// actual data storage

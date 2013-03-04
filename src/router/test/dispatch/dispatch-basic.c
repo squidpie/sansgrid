@@ -17,10 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
+ *
+ * A test to make sure the queue really is atomic.
+ *
  * Has multiple writers, one heartbeat, and one reader.
  * All of these atomically access the queue.
  *
- * This is ultimately a test of a possible solution to having
+ * This is ultimately a test of a solution to having
  * 2 inputs (one from apache, one from SPI)
  * 2 outputs (one to apache, one to SPI)
  * with a heartbeat going out over SPI periodically.
@@ -42,7 +45,7 @@
 #include <time.h>					// nanosleep()
 #include <check.h>
 
-#include "../../synchronous_queue/sync_queue.h"
+#include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
 
@@ -185,10 +188,38 @@ static void *readerFunc(void *arg) {
 }
 
 
+START_TEST (testDispatchBasic) {
+	// Simple tests for the queue
+	int i;
+	Queue *queue;
+	uint8_t *in_data, *out_data;
+	int excode;
 
-//int main(void) {
-START_TEST (testBasicDispatch) {
-	// Main function
+	queue = queueInit(QUEUE_SIZE);
+	fail_unless((queue != NULL), "Error: Queue not initialized!");
+
+	for (i=0; i<QUEUE_SIZE-1; i++) {
+		out_data = (uint8_t*)malloc(1*sizeof(uint8_t));
+		*out_data = (i & 0xFF);
+		queueEnqueue(queue, out_data);
+	}
+
+	for (i=0; i<QUEUE_SIZE-1; i++) {
+		excode = queueTryDequeue(queue, &in_data);
+		fail_unless((excode == 0), "Error: No data to read!");
+		fail_unless((in_data != NULL), "Error: invalid pointer!");
+		fail_unless((*in_data == (i & 0xFF)), 
+				"Error: Expected %i, got %i", (i & 0xFF), *in_data);
+		free(in_data);
+	}
+	queueDestroy(queue);
+
+}
+END_TEST
+
+
+START_TEST (testDispatchWithLotsOfThreads) {
+	// Throw a lot of threads at the queue
 	
 	// Thread Variables
 	pthread_t writer_thread_1,
@@ -239,15 +270,17 @@ START_TEST (testBasicDispatch) {
 	// Clean up
 	queueDestroy(queue);
 	
-	//return EXIT_SUCCESS;
 }
 END_TEST
+
+
 
 Suite *dispatchBasicTesting (void) {
 	Suite *s = suite_create("Basic Dispatch testing");
 
 	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, testBasicDispatch);
+	tcase_add_test(tc_core, testDispatchBasic);
+	tcase_add_test(tc_core, testDispatchWithLotsOfThreads);
 
 	suite_add_tcase(s, tc_core);
 

@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-sync_queue.o: sync_queue.c sync_queue.h 
-	$(CC) $(CFLAGS) sync_queue.c
-clean-sync-queue:
+dispatch.o: dispatch.c dispatch.h 
+	$(CC) $(CFLAGS) dispatch.c
+clean-dispatch:
 	rm *.o

@@ -32,18 +32,6 @@
 
 
 
-void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
-	// Print the IP address like an IPv6 address
-	int i;
-	for (i=0; i<IP_SIZE; i++) {
-		printf("%.2X", ip_addr[i]);
-		if (i < IP_SIZE-1)
-			printf(":");
-	}
-	printf("\n");
-	return;
-}
-
 
 START_TEST (testEndianness) {
 	// unit test code for checking endianness of the machine
