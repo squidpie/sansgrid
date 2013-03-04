@@ -16,10 +16,11 @@
 
 
 ROUTING_BASIC=routing-basic-test
+TEST_HEADER = tests.h
 
 
 all: $(ROUTING_BASIC).o
 $(ROUTING_BASIC).o: $(ROUTING_BASIC).c ../$(TEST_HEADER)
-	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
+	$(CC) $(CFLAGS) $(ROUTING_BASIC).c ../$(TEST_HEADER)
 clean-routing-test:
 	rm *.o

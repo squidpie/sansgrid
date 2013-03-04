@@ -44,6 +44,7 @@ ROUTING = $(ROUTE_DIR)/routing
 
 # Test Files
 TEST_CORE = $(TEST_DIR)/test-core
+TEST_HEADER = $(TEST_DIR)/tests.h
 DISPATCH_ADVANCED_TEST = $(TEST_DISPATCH_DIR)/dispatch-advanced
 DISPATCH_BASIC_TEST = $(TEST_DISPATCH_DIR)/dispatch-basic
 ROUTE_BASIC_TEST = $(TEST_ROUTING_DIR)/routing-basic-test
@@ -62,8 +63,9 @@ TESTSUITE_OBS = $(OBS) $(TEST_OBS) $(TEST_CORE).o
 sgrouter: $(SANSGRID_OBS)
 	$(CC) $(LFLAGS) $(SANSGRID_OBS) -o $(NAME)
 tests: sgrouter-tests
-sgrouter-tests: $(TESTSUITE_OBS)
-	$(CC) $(TEST_LFLAGS) $(TESTSUITE_OBS) -o tests
+sgrouter-tests: $(TESTSUITE_OBS) $(TEST_HEADER)
+	cd $(TEST_DIR) && make all
+	$(CC) $(TEST_LFLAGS) $(TESTSUITE_OBS) $(TEST_HEADER) -o tests
 all: sgrouter sgrouter-tests
 clean: 
 	-rm ./sgrouter

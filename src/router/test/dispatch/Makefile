@@ -19,6 +19,16 @@ DISPATCH_ADVANCED = dispatch-advanced
 DISPATCH_BASIC = dispatch-basic
 STUBS = ../stubs/radio-stub
 
+TEST_HEADER = tests.h
+
+ifndef CFLAGS
+	export CFLAGS = -std=c99 -Wall -c -g
+endif
+
+ifndef CC
+	export CC = gcc
+endif
+
 
 all: $(DISPATCH_BASIC).o $(DISPATCH_ADVANCED).o
 $(DISPATCH_ADVANCED).o: $(DISPATCH_ADVANCED).c $(STUBS).c ../$(TEST_HEADER)

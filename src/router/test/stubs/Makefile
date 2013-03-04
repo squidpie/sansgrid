@@ -14,8 +14,16 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+ifndef CC
+	export CC = gcc
+endif
+
+ifndef CFLAGS
+	export CFLAGS = -std=c99 -Wall -c -g
+endif
 
 
+all: radio-stub.o
 radio-stub.o: radio-stub.c radio-stub.h
 	$(CC) $(CFLAGS) radio-stub.c
 clean-stubs-test:

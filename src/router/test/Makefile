@@ -16,11 +16,22 @@
 
 
 TEST_CORE = test-core
-export TEST_HEADER = tests.h
+TEST_HEADER = tests.h
+
+ifndef CC
+	export CC = gcc
+endif
+
+ifndef CFLAGS
+	export CFLAGS = -std=c99 -Wall -c -g
+endif
 
 all: $(TEST_CORE).o 
 $(TEST_CORE).o: $(TEST_CORE).c $(TEST_HEADER)
-	$(CC) $(CFLAGS) $(TEST_CORE).c
+	$(CC) $(CFLAGS) $(TEST_CORE).c $(TEST_HEADER)
+	-cd routing && make all
+	-cd dispatch && make all
+	-cd stubs && make all
 clean-test:
 	-rm *.o
 	-cd routing && make clean-routing-test
