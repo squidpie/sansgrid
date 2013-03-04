@@ -15,8 +15,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
+ROUTING_BASIC=routing-basic-test
 
-radio-stub.o: radio-stub.c radio-stub.h
-	$(CC) $(CFLAGS) radio-stub.c
-clean-stubs-test:
-	-rm *.o
+
+all: $(ROUTING_BASIC).o
+$(ROUTING_BASIC).o: $(ROUTING_BASIC).c ../tests.h
+	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
+clean-routing-test:
+	rm *.o

@@ -27,8 +27,8 @@
 #include <check.h>
 #include <stdlib.h>
 
-#include "../routing/routing.h"
-#include "tests.h"
+#include "../../routing/routing.h"
+#include "../tests.h"
 
 
 

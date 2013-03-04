@@ -15,8 +15,15 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
+DISPATCH_ADVANCED=dispatch-advanced
+DISPATCH_BASIC=dispatch-basic
+STUBS=../stubs/radio-stub
 
-radio-stub.o: radio-stub.c radio-stub.h
-	$(CC) $(CFLAGS) radio-stub.c
-clean-stubs-test:
-	-rm *.o
+
+all: $(DISPATCH_BASIC).o $(DISPATCH_ADVANCED).o
+$(DISPATCH_ADVANCED).o: $(DISPATCH_ADVANCED).c $(STUBS).c  ../tests.h
+	$(CC) $(CFLAGS) $(DISPATCH_ADVANCED).c $(STUBS).c 
+$(DISPATCH_BASIC).o: $(DISPATCH_BASIC).c ../tests.h
+	$(CC) $(CFLAGS) $(DISPATCH_BASIC).c
+clean-dispatch-test:
+	rm *.o

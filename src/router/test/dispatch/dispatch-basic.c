@@ -42,8 +42,8 @@
 #include <time.h>					// nanosleep()
 #include <check.h>
 
-#include "../synchronous_queue/sync_queue.h"
-#include "tests.h"
+#include "../../synchronous_queue/sync_queue.h"
+#include "../tests.h"
 
 
 #define NUM_DATA 		100			// Amount of data to send through

@@ -16,20 +16,24 @@
 
 
 TEST_CORE=test-core
-DISPATCH_ADVANCED=dispatch-advanced
-ROUTING_BASIC=routing-basic-test
-SYNC_QUEUE=sync_queue_main
+DISPATCH_ADVANCED=dispatch/dispatch-advanced
+ROUTING_BASIC=routing/routing-basic-test
+SYNC_QUEUE=dispatch/dispatch-basic
 STUBS=stubs/radio-stub
 
 
-all: $(TEST_CORE).o $(ROUTING_BASIC).o $(ROUTING).o $(SYNC_QUEUE).o 
-$(ROUTING_BASIC).o: $(ROUTING_BASIC).c tests.h
-	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
-$(DISPATCH_ADVANCED).o: $(DISPATCH_ADVANCED).c $(STUBS).c  tests.h
-	$(CC) $(CFLAGS) $(DISPATCH_ADVANCED).c $(STUBS).c 
-$(SYNC_QUEUE).o: $(SYNC_QUEUE).c tests.h
-	$(CC) $(CFLAGS) $(SYNC_QUEUE).c
+#all: $(TEST_CORE).o $(ROUTING_BASIC).o $(ROUTING).o $(SYNC_QUEUE).o 
+all: $(TEST_CORE).o 
+#$(ROUTING_BASIC).o: $(ROUTING_BASIC).c tests.h
+#	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
+#$(DISPATCH_ADVANCED).o: $(DISPATCH_ADVANCED).c $(STUBS).c  tests.h
+#	$(CC) $(CFLAGS) $(DISPATCH_ADVANCED).c $(STUBS).c 
+#$(SYNC_QUEUE).o: $(SYNC_QUEUE).c tests.h
+#	$(CC) $(CFLAGS) $(SYNC_QUEUE).c
 $(TEST_CORE).o: $(TEST_CORE).c tests.h 
 	$(CC) $(CFLAGS) $(TEST_CORE).c
 clean-test:
-	rm *.o
+	-rm *.o
+	-cd routing && make clean-routing-test
+	-cd dispatch && make clean-dispatch-test
+	-cd stubs && make clean-stubs-test

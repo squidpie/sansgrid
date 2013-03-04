@@ -33,12 +33,12 @@
 
 #ifndef __H_RADIO_STUB__
 #define __H_RADIO_STUB__
-#include "stubs/radio-stub.h"
+#include "../stubs/radio-stub.h"
 #endif
 
-#include "../routing/routing.h"
-#include "../synchronous_queue/sync_queue.h"
-#include "tests.h"
+#include "../../routing/routing.h"
+#include "../../synchronous_queue/sync_queue.h"
+#include "../tests.h"
 
 
 void *routingTableRuntime(void *arg) {

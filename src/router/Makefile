@@ -29,15 +29,17 @@ export TEST_LFLAGS = $(LFLAGS) -lcheck
 ROUTE_DIR = routing
 DISPATCH_DIR = synchronous_queue
 TEST_DIR = test
-STUBS_DIR = $(TEST_DIR)/stubs
+TEST_STUBS_DIR = $(TEST_DIR)/stubs
+TEST_DISPATCH_DIR = $(TEST_DIR)/dispatch
+TEST_ROUTING_DIR = $(TEST_DIR)/routing
 DAEMON_DIR = daemon
 
 # Files
 TEST_CORE = $(TEST_DIR)/test-core
-DISPATCH_ADVANCED_TEST = $(TEST_DIR)/dispatch-advanced
-ROUTE_BASIC_TEST = $(TEST_DIR)/routing-basic-test
-DISPATCH_TEST = $(TEST_DIR)/sync_queue_main
-STUBS = $(TEST_DIR)/stubs/radio-stub
+DISPATCH_ADVANCED_TEST = $(TEST_DISPATCH_DIR)/dispatch-advanced
+ROUTE_BASIC_TEST = $(TEST_ROUTING_DIR)/routing-basic-test
+DISPATCH_BASIC_TEST = $(TEST_DISPATCH_DIR)/dispatch-basic
+STUBS = $(TEST_STUBS_DIR)/radio-stub
 ROUTING = $(ROUTE_DIR)/routing
 DISPATCH = $(DISPATCH_DIR)/sync_queue
 MAIN = $(DAEMON_DIR)/pi-runtime
@@ -45,7 +47,7 @@ MAIN = $(DAEMON_DIR)/pi-runtime
 
 # Files that are compiled
 OBS = $(ROUTING).o $(DISPATCH).o
-TEST_OBS = $(TEST_CORE).o $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_TEST).o $(STUBS).o
+TEST_OBS = $(TEST_CORE).o $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_BASIC_TEST).o $(STUBS).o
 
 
 sansgrid: $(OBS) $(MAIN).o
@@ -60,4 +62,3 @@ clean:
 	-cd $(DISPATCH_DIR) && make clean-sync-queue
 	-cd $(ROUTE_DIR) && make clean-routing
 	-cd $(TEST_DIR) && make clean-test
-	-cd $(STUBS_DIR) && make clean-stubs
