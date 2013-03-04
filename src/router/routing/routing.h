@@ -37,17 +37,18 @@
 
 
 
-typedef struct DeviceIP DeviceIP;
+//typedef struct DeviceIP DeviceIP;
+typedef struct RoutingTable RoutingTable;
 
 
 //int32_t littleEndian(void);
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
-void routingTableInit(void);
-void routingTableDestroy(void);
-int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]);
-int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]);
-int32_t routingTableLookup(uint8_t ip_addr[IP_SIZE]);
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE]);
+RoutingTable *routingTableDestroy(RoutingTable *table);
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 
 
 

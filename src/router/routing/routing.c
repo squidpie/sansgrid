@@ -33,16 +33,33 @@
 #include "routing.h"
 
 
-struct DeviceIP {
-	uint8_t ip[IP_SIZE];		// IP address
-	uint32_t clkdiff;			// ping offset
+
+struct DeviceProperties {
+	// A device's general properties
+	uint8_t manid[4];
+	uint8_t modnum[4];
+	uint8_t serial_number[8];
+	uint8_t profile;
 };
 
-struct DeviceIP *routing_table[ROUTING_ARRAYSIZE];
 
-static uint32_t tableptr = 0;
-static uint32_t table_alloc = 0;
+typedef struct RoutingNode {
+	// A device that has an assigned IP address
+	// For now, this is separate from properties.
+	// Later, it may be combined with DeviceProperties
+	struct DeviceProperties properties;
+} RoutingNode;
+	
 
+struct RoutingTable {
+	uint32_t tableptr;
+	uint32_t table_alloc;
+	uint8_t base[IP_SIZE];
+	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+};
+
+
+/*
 static void createBase(uint8_t base[IP_SIZE]) {
 	// Return a base IP based on some attributes
 	
@@ -55,6 +72,7 @@ static void createBase(uint8_t base[IP_SIZE]) {
 
 	return;
 }
+*/
 
 
 
@@ -135,112 +153,120 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 
 
 
-void routingTableInit(void) {
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
 	// Initialize the routing table
 	
 	int i;
+	RoutingTable *table;
+
+	table = (RoutingTable*)malloc(sizeof(RoutingTable));
+	table->tableptr = 0;
+	table->table_alloc = 0;
+	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
+	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
+	
 
 	for (i=0; i<ROUTING_ARRAYSIZE; i++)
-		routing_table[i] = NULL;
+		table->routing_table[i] = NULL;
 
-	return;
+	return table;
 }
 
 
-void routingTableDestroy(void) {
+RoutingTable *routingTableDestroy(RoutingTable *table) {
 	// Free any memory associated with the routing table
 	
 	int i;
 
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
-		if (routing_table[i])
-			free(routing_table[i]);
+		if (table->routing_table[i])
+			free(table->routing_table[i]);
 	}
 
-	return;
+	free(table);
+	table = NULL;
+	return table;
 }
 
 
 
-int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
-	uint8_t base[IP_SIZE];
+	uint32_t tableptr;
 
-	createBase(base);
-
-	if (table_alloc >= ROUTING_ARRAYSIZE)
+	if (table == NULL)
+		return -1;
+	if (table->table_alloc >= ROUTING_ARRAYSIZE)
 		return -1;
 
+	tableptr = table->tableptr;
+
 	// Find next available slot
-	while (routing_table[tableptr]) {
+	while (table->routing_table[tableptr]) {
 		tableptr = (tableptr + 1) % ROUTING_ARRAYSIZE;
 	}
-	maskip(ip_addr, base, tableptr);	// create IP address
+	maskip(ip_addr, table->base, tableptr);	// create IP address
+	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	routing_table[tableptr] = (DeviceIP*)malloc(sizeof(DeviceIP));
-	table_alloc++;
-
-	// copy the IP address to the new slot
-	memcpy(routing_table[tableptr]->ip, ip_addr, IP_SIZE*sizeof(uint8_t));
+	table->routing_table[tableptr] = (RoutingNode*) malloc(sizeof(RoutingNode));
+	table->table_alloc++;
 
 	return 0;
 }
 
 
 
-int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Release IP Address
 	
-	uint8_t base[IP_SIZE];
 	uint32_t index;
 
-	createBase(base);
 
-	if (!table_alloc)
+	if (table == NULL)
+		return -1;
+	if (!table->table_alloc)
 		return -1;
 
 	// table lookup
-	index = locationToTablePtr(ip_addr, base);
+	index = locationToTablePtr(ip_addr, table->base);
 
 	if (index >= ROUTING_ARRAYSIZE)
 		return -1;
-	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint8_t))) {
+	if (table->routing_table[index] == NULL)
 		return -1;
-	}
 
 	// Release slot
-	free(routing_table[index]);
-	routing_table[index] = NULL;
-	table_alloc--;
+	free(table->routing_table[index]);
+	table->routing_table[index] = NULL;
+	table->table_alloc--;
 
 	return 0;
 }
 
 
 
-int32_t routingTableLookup(uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
 	
-	uint8_t base[IP_SIZE];
 	uint32_t index;
 
-	createBase(base);
 
-	if (!table_alloc)
+	if (table == NULL)
+		return 0;
+	if (!table->table_alloc)
 		return 0;
 
 	// table lookup
-	index = locationToTablePtr(ip_addr, base);
+	index = locationToTablePtr(ip_addr, table->base);
 
 	if (index >= ROUTING_ARRAYSIZE)
 		return 0;
 
-	if (memcmp(ip_addr, routing_table[index]->ip, IP_SIZE*sizeof(uint8_t))) {
+	if (table->routing_table[index] == NULL)
 		return 0;
-	}
 
 	return 1;
 }

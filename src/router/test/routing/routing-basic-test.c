@@ -58,40 +58,55 @@ END_TEST
 START_TEST (testRoutingTableAdd) {
 	int i;
 	uint8_t ip_addr[IP_SIZE];
-	routingTableInit();
+	uint8_t base[IP_SIZE];
+	RoutingTable *table;
+	
+	for (i=0; i<IP_SIZE; i++)
+		base[i] = 0x0;
+
+	table = routingTableInit(base);
 
 
 	for (i=0; i<32; i++) {
-		routingTableAssignIP(ip_addr);
+		routingTableAssignIP(table, ip_addr);
 #if TESTS_DEBUG_LEVEL > 0
 		routingTablePrint(ip_addr);
 #endif
 	}
-	routingTableDestroy();
+	table = routingTableDestroy(table);
 }
 END_TEST
+
+
+
 
 START_TEST (testRoutingTableLookup) {
 	int i;
 	uint8_t ip_addr[IP_SIZE];
-	routingTableInit();
+	uint8_t base[IP_SIZE];
+	RoutingTable *table;
+
+	for (i=0; i<IP_SIZE; i++)
+		base[i] = 0x0;
+
+	table = routingTableInit(base);
 
 
 	for (i=0; i<32; i++) {
-		routingTableAssignIP(ip_addr);
+		routingTableAssignIP(table, ip_addr);
 #if TESTS_DEBUG_LEVEL > 0
 		routingTablePrint(ip_addr);
 #endif
 	}
-	fail_unless((routingTableLookup(ip_addr)),
+	fail_unless((routingTableLookup(table, ip_addr)),
 			"Error: IP Address not Resident!");
 #if TESTS_DEBUG_LEVEL > 0
-	if (routingTableLookup(ip_addr)) {
+	if (routingTableLookup(table, ip_addr)) {
 		printf("IP Address is resident: ");
 		routingTablePrint(ip_addr);
 	}
 #endif
-	routingTableDestroy();
+	table = routingTableDestroy(table);
 }
 END_TEST
 
