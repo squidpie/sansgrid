@@ -42,7 +42,6 @@
 #include <stdlib.h>					// malloc(), free()
 #include <stdint.h>					// Exact-Width Integers
 #include <pthread.h>				// POSIX threads
-#include <time.h>					// nanosleep()
 #include <check.h>
 
 #include "../../dispatch/dispatch.h"
@@ -188,6 +187,7 @@ static void *readerFunc(void *arg) {
 }
 
 
+
 START_TEST (testDispatchBasic) {
 	// Simple tests for the queue
 	int i;
@@ -199,12 +199,15 @@ START_TEST (testDispatchBasic) {
 	fail_unless((queue != NULL), "Error: Queue not initialized!");
 
 	for (i=0; i<QUEUE_SIZE-1; i++) {
+		// Write data to the queue
 		out_data = (uint8_t*)malloc(1*sizeof(uint8_t));
 		*out_data = (i & 0xFF);
-		queueEnqueue(queue, out_data);
+		excode = queueTryEnqueue(queue, out_data);
+		fail_unless((excode == 0), "Error: Queue Full!");
 	}
 
 	for (i=0; i<QUEUE_SIZE-1; i++) {
+		// Read data from the queue
 		excode = queueTryDequeue(queue, &in_data);
 		fail_unless((excode == 0), "Error: No data to read!");
 		fail_unless((in_data != NULL), "Error: invalid pointer!");
@@ -233,17 +236,14 @@ START_TEST (testDispatchWithLotsOfThreads) {
 	Queue *queue;
 
 
-	if (sizeof(char) != sizeof(uint8_t)) {
-		// We do direct conversions from uint8_t to char.
-		// If these aren't the same size, just stop right here.
-		fail("ERROR: sizeof(char) != sizeof(uint8_t)");
-	}
+	// We do direct conversions from uint8_t to char.
+	// If these aren't the same size, just stop right here.
+	fail_unless((sizeof(char) == sizeof(uint8_t)),
+			"ERROR: sizeof(char) != sizeof(uint8_t)");
 
 	// Create the queue
 	queue = queueInit(QUEUE_SIZE);
-	if (!queue) {
-		fail("ERROR: Invalid queue size!");
-	}
+	fail_unless((queue != NULL), "ERROR: Invalid queue size!");
 
 	// Create all threads
 	pthread_create(&reader_thread, NULL, readerFunc, (void*)queue);

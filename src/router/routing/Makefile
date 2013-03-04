@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-routing.o: routing.c routing.h ../synchronous_queue/sync_queue.h
+routing.o: routing.c routing.h 
 	$(CC) $(CFLAGS) routing.c
 clean-routing:
 	rm *.o

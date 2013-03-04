@@ -1,3 +1,22 @@
+/* Core Test File
+ *
+ * Copyright (C) 2013 SansGrid
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #include <stdio.h>
 #include <check.h>
 #include <stdlib.h>
@@ -24,10 +43,6 @@ void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
 Suite *makeMasterSuite (void) {
 	Suite *s = suite_create("Master Testing Suite");
 
-	//TCase *tc_core = tcase_create("Core");
-	//tcase_add_test(tc_core, testAdvancedDispatch);
-
-	//suite_add_tcase(s, tc_core);
 
 	return s;
 }
@@ -37,8 +52,6 @@ Suite *makeMasterSuite (void) {
 int main(void) {
 	int number_failed;
 
-	//Suite *s = routingBasicTestSuite();
-	//Suite *dispatch_advanced_s = dispatchAdvancedTesting();
 	SRunner *sr = srunner_create(makeMasterSuite());
 	srunner_add_suite(sr, routingBasicTestSuite());
 	srunner_add_suite(sr, dispatchBasicTesting());
@@ -48,30 +61,6 @@ int main(void) {
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-	/*
-	int i;
-	uint8_t ip_addr[IP_SIZE];
-
-	routingTableInit();
-
-
-	for (i=0; i<32; i++) {
-		routingTableAssignIP(ip_addr);
-		routingTablePrint(ip_addr);
-	}
-
-	if (routingTableLookup(ip_addr)) {
-		printf("IP Address is resident: ");
-		routingTablePrint(ip_addr);
-	}
-
-	if (routingTableFreeIP(ip_addr))
-		printf("Oops!\n");
-
-
-	routingTableDestroy();
-	return 0;
-	*/
 }
 
 

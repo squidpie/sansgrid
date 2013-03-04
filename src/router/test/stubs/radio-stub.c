@@ -29,7 +29,12 @@
 #include "../../routing/routing.h"
 #endif
 
+#include "radio-stub.h"
+
 void radioStubRuntime(int fildes[2]) {
+	// Stub for the radio module
+	// Write to a named pipe
+
 	int i;
 	char lptr[5] = "1";
 	FILE *F_HANDLE;
@@ -42,6 +47,8 @@ void radioStubRuntime(int fildes[2]) {
 	close(fildes[0]);
 
 	for (i=0; i<10; i++) {
+		// write ping 10 times, then signal exiting using 
+		// the unnamed pipe
 		snprintf(filedata, 100, "Ping");
 		fwrite(filedata, sizeof(char), 100, F_HANDLE);
 	}
@@ -49,6 +56,7 @@ void radioStubRuntime(int fildes[2]) {
 
 	write(fildes[1], lptr, 5);
 	close(fildes[1]);
+
 	return;
 }
 

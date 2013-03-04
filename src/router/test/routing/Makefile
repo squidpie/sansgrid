@@ -19,7 +19,7 @@ ROUTING_BASIC=routing-basic-test
 
 
 all: $(ROUTING_BASIC).o
-$(ROUTING_BASIC).o: $(ROUTING_BASIC).c ../tests.h
+$(ROUTING_BASIC).o: $(ROUTING_BASIC).c ../$(TEST_HEADER)
 	$(CC) $(CFLAGS) $(ROUTING_BASIC).c 
 clean-routing-test:
 	rm *.o

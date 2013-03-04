@@ -16,7 +16,7 @@
 
 
 # Executable Name
-NAME=sansgrid
+NAME=sgrouter
 
 # Global Variables
 export CC = gcc
@@ -59,13 +59,14 @@ SANSGRID_OBS = $(OBS) $(MAIN).o
 TESTSUITE_OBS = $(OBS) $(TEST_OBS) $(TEST_CORE).o
 
 
-sansgrid: $(SANSGRID_OBS)
+sgrouter: $(SANSGRID_OBS)
 	$(CC) $(LFLAGS) $(SANSGRID_OBS) -o $(NAME)
-tests: $(TESTSUITE_OBS)
+tests: sgrouter-tests
+sgrouter-tests: $(TESTSUITE_OBS)
 	$(CC) $(TEST_LFLAGS) $(TESTSUITE_OBS) -o tests
-all: sansgrid tests
+all: sgrouter sgrouter-tests
 clean: 
-	-rm ./sansgrid
+	-rm ./sgrouter
 	-rm ./tests
 	-cd $(DAEMON_DIR) && make clean-daemon
 	-cd $(DISPATCH_DIR) && make clean-dispatch

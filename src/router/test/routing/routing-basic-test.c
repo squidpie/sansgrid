@@ -1,4 +1,4 @@
-/* A quick implementation for a statically-defined table.
+/* Tests for the routing table
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -15,11 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
- *
- * This implementation defines the table size at compile-time instead of at run-time,
- * making the system less prone to bugs. The table is an array of pointers, which
- * facilitates creating/moving/deleting IP addresses.
  */
 
 #include <stdio.h>
@@ -30,6 +25,18 @@
 #include "../../routing/routing.h"
 #include "../tests.h"
 
+
+
+int32_t littleEndian(void) {
+	// Tests endianness
+	// Returns 1 if little endian
+	// Returns 0 if big endian
+
+	int i = 1;
+	char *p = (char*)&i;
+
+	return (p[0] == 1);
+}
 
 
 

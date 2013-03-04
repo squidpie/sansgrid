@@ -1,5 +1,4 @@
-/* A quick implementation for a statically-defined
- * dynamic routing table.
+/* A statically-defined routing table.
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -34,13 +33,16 @@
 #define IP_SIZE 16
 
 #include <stdint.h>
+#include <stdlib.h>
 
 
 
 typedef struct DeviceIP DeviceIP;
 
 
-int32_t littleEndian(void);
+//int32_t littleEndian(void);
+void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
+int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
 void routingTableInit(void);
 void routingTableDestroy(void);
 int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]);

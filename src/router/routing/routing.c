@@ -44,6 +44,8 @@ static uint32_t tableptr = 0;
 static uint32_t table_alloc = 0;
 
 static void createBase(uint8_t base[IP_SIZE]) {
+	// Return a base IP based on some attributes
+	
 	int i;
 	uint32_t arrsize = ROUTING_ARRAYSIZE;
 
@@ -55,44 +57,82 @@ static void createBase(uint8_t base[IP_SIZE]) {
 }
 
 
+
+static int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
+	// Mask the tableptr with the base to make an ip address
+	
+	int i, ioffset;
+	uint8_t tablebyteptr[4];
+
+	wordToByte(tablebyteptr, &tableptr, 1*sizeof(uint32_t));
+
+	memcpy(ip_addr, base, IP_SIZE*sizeof(uint8_t));
+	for (i=0; i<4; i++) {
+		ioffset = IP_SIZE-(4-i);
+		ip_addr[ioffset] = base[ioffset] | tablebyteptr[i];
+	}
+
+	return 0;
+}
+
+
+
+static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE]) {
+	// Take a location and show where it should be in the routing table
+
+	int32_t i;
+	uint8_t offset[IP_SIZE];
+	uint32_t location[IP_SIZE/4];
+
+	for (i=0; i<IP_SIZE; i++)
+		offset[i] = ip_addr[i] - base[i];
+	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
+
+	return location[IP_SIZE/4-1];
+}
+
+
+
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
 	// converts an array of words to an array of bytes
-	// Note: bytes[] isn't size-checked! it must be 4x the size of wordsize!
+	// This is an unsafe function. It does no bounds checking.
+	// bytes[] isn't size-checked. it must be 4x the size of wordsize.
 
 	uint32_t i;
 	uint32_t endianconv;
 	size_t wordsize = (bytesize * sizeof(uint8_t)) / sizeof(uint32_t);
+
 	for (i=0; i<wordsize; i++) {
 		endianconv = htonl(words[i]);
 		memcpy(&bytes[4*i], &endianconv, sizeof(uint32_t));
 	}
+
 	return;
 }
 
 
+
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 	// converts an array of bytes into an array of words
-	// Note: words[] isn't size-checked! it must be >= (bytesize/4)+1
+	// This is an unsafe function. It does no bounds checking.
+	// bytesize must be a multiple of 4.
+	// words[] isn't size-checked. it must be >= (bytesize/4)+1.
 	
 	uint32_t i;
 	uint32_t endianconv;
+
 	if (bytesize % 4)
 		return -1;
+
 	for (i=0; i<(bytesize/4); i++) {
 		memcpy(&endianconv, &bytes[i*4], sizeof(uint32_t));
 		words[i] = ntohl(endianconv);
 	}
+
 	return 0;
 }
 
-int32_t littleEndian(void) {
-	// Tests endianness
-	// Returns 1 if little endian
-	// Returns 0 if big endian
-	int i = 1;
-	char *p = (char*)&i;
-	return (p[0] == 1);
-}
+
 
 
 void routingTableInit(void) {
@@ -120,37 +160,7 @@ void routingTableDestroy(void) {
 	return;
 }
 
-int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
-	// Mask the tableptr with the base to make an ip address
-	
-	int i, ioffset;
-	uint8_t tablebyteptr[4];
 
-	wordToByte(tablebyteptr, &tableptr, 1*sizeof(uint32_t));
-
-	memcpy(ip_addr, base, IP_SIZE*sizeof(uint8_t));
-	for (i=0; i<4; i++) {
-		ioffset = IP_SIZE-(4-i);
-		ip_addr[ioffset] = base[ioffset] | tablebyteptr[i];
-	}
-
-	return 0;
-}
-
-
-uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE]) {
-	// Take a location and show where it should be in the routing table
-
-	int32_t i;
-	uint8_t offset[IP_SIZE];
-	uint32_t location[IP_SIZE/4];
-
-	for (i=0; i<IP_SIZE; i++)
-		offset[i] = ip_addr[i] - base[i];
-	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
-
-	return location[IP_SIZE/4-1];
-}
 
 int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
@@ -177,6 +187,7 @@ int32_t routingTableAssignIP(uint8_t ip_addr[IP_SIZE]) {
 
 	return 0;
 }
+
 
 
 int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
@@ -206,6 +217,7 @@ int32_t routingTableFreeIP(uint8_t ip_addr[IP_SIZE]) {
 
 	return 0;
 }
+
 
 
 int32_t routingTableLookup(uint8_t ip_addr[IP_SIZE]) {

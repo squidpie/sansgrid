@@ -23,8 +23,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -40,7 +38,7 @@
 
 
 void *routingTableRuntime(void *arg) {
-
+	// Dispatch read/execute
 	Queue *queue = (Queue*)arg;
 	uint8_t *serial_data;
 	int oldstate;
@@ -68,7 +66,6 @@ void *spiReader(void *arg) {
 
 	if (!(FPTR = fopen("test/rstubin.fifo", "r"))) {
 		fail("Error: Cannot open rstubin.fifo!");
-		//exit(EXIT_FAILURE);
 	}
 
 	while (1) {
@@ -83,7 +80,6 @@ void *spiReader(void *arg) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		serial_data = (uint8_t*)malloc(101*sizeof(uint8_t));
 		memcpy(serial_data, filedata, 100*sizeof(char));
-		//printf("Queuing\n");
 		queueEnqueue(queue, serial_data);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
@@ -91,6 +87,7 @@ void *spiReader(void *arg) {
 	pthread_exit(arg);
 }
 	
+
 
 START_TEST (testAdvancedDispatch) {
 	// unit test code for more dispatch testing
@@ -134,9 +131,10 @@ START_TEST (testAdvancedDispatch) {
 	pthread_cancel(rtable_thread);
 	pthread_join(rtable_thread, &arg);
 	queueDestroy(queue);
-
 }
 END_TEST
+
+
 
 Suite *dispatchAdvancedTesting (void) {
 	Suite *s = suite_create("Advanced Dispatch testing");
