@@ -35,6 +35,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "../../payloads.h"
+
 
 
 //typedef struct DeviceIP DeviceIP;
@@ -46,7 +48,7 @@ void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE]);
 RoutingTable *routingTableDestroy(RoutingTable *table);
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 

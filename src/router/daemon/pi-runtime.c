@@ -30,6 +30,8 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#include "../dispatch/dispatch.h"
+#include "../routing/routing.h"
 
 #if defined(SYSLOG) && defined(LOG_FILE)
 #undef LOG_FILE

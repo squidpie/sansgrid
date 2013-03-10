@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 
 #include "routing.h"
+#include "../../payloads.h"
 
 
 
@@ -47,7 +48,8 @@ typedef struct RoutingNode {
 	// A device that has an assigned IP address
 	// For now, this is separate from properties.
 	// Later, it may be combined with DeviceProperties
-	struct DeviceProperties properties;
+	//struct DeviceProperties properties;
+	SansgridEyeball *properties;
 } RoutingNode;
 	
 
@@ -190,10 +192,11 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 
 
 
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball) {
 	// Allocate the next available block and give it an IP address
 
 	uint32_t tableptr;
+	SansgridEyeball *dev_prop;
 
 	if (table == NULL)
 		return -1;
@@ -211,6 +214,10 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 
 	// Allocate space for the device
 	table->routing_table[tableptr] = (RoutingNode*) malloc(sizeof(RoutingNode));
+	dev_prop = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
+	memcpy(dev_prop, sgeyeball, sizeof(SansgridEyeball));
+	table->routing_table[tableptr]->properties = dev_prop;
+
 	table->table_alloc++;
 
 	return 0;
@@ -238,6 +245,7 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 		return -1;
 
 	// Release slot
+	free(table->routing_table[index]->properties);
 	free(table->routing_table[index]);
 	table->routing_table[index] = NULL;
 	table->table_alloc--;

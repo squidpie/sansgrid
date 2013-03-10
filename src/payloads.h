@@ -22,9 +22,16 @@
 
 #include <stdint.h>
 
+/*
 #define SANSGRID_UNION(type, name) union name { \
 	type formdata; \
 	uint8_t serialdata[sizeof(type)]; \
+}
+*/
+
+#define SANSGRID_UNION(type, name) union name { \
+	type *formdata; \
+	uint8_t *serialdata; \
 }
 
 
@@ -57,7 +64,7 @@ SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
 
 
 
-struct SansgridEyeball {
+typedef struct SansgridEyeball {
 	// Datatype: 0x00
 	uint8_t datatype;
 	uint8_t manid[4];
@@ -69,7 +76,7 @@ struct SansgridEyeball {
 	// 	00 - Standard mode
 	// 	01 - Sensor Ready to mate
 	unsigned mode:4;
-};
+} SansgridEyeball;
 
 SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
 
@@ -221,5 +228,5 @@ enum SansgridDataTypeEnum {
 	SG_CHIRP_SENSOR_DISCONNECT = 0x26
 };
 
-#undef SANSGRID_UNION
+//#undef SANSGRID_UNION
 // vim: ft=c ts=4 noet sw=4:
