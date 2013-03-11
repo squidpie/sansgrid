@@ -22,6 +22,15 @@ int routerHandleHatching(RoutingTable *routing_table,
 	return -1;
 }
 
+
+int routerHandleFly(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridFly)]) {
+	// Handle a Fly data type
+	
+	// TODO: multicast network existence
+}
+
+
 int routerHandleEyeball(RoutingTable *routing_table, 
 		uint8_t serialdata[sizeof(SansgridEyeball)]) {
 	// Handle an Eyeball data type
@@ -42,6 +51,8 @@ int routerHandleEyeball(RoutingTable *routing_table,
 
 	return 0;
 }
+
+
 
 
 
