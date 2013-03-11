@@ -53,6 +53,38 @@ int routerHandleEyeball(RoutingTable *routing_table,
 }
 
 
+int routerHandlePeck(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridPeck)]) {
+	// Handle a Peck data type
+	SansgridPeck *sg_peck;
+	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
+	
+	// Convert serial data to formatted data
+	sg_peck_union.serialdata = serialdata;
+	sg_peck = sg_peck_union.formdata;
+
+	switch (sg_peck->recognition) {
+		case SG_PECK_RECOGNIZED:
+			// Sensor Recognized
+			break;
+		case SG_PECK_MATE:
+			// Sensor Not Recognized;
+			// Server will mate
+			break;
+		case SG_PECK_SERVER_REFUSES_MATE:
+			// Sensor Not Recognized;
+			// Server refuses mate
+			break;
+		case SG_PECK_SENSOR_REFUSES_MATE:
+			// Sensor Not Recognized;
+			// Sensor refuses mate
+			break;
+		default:
+			// error
+			break;
+	}
+	return -1;
+}
 
 
 

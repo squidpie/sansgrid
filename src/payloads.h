@@ -230,6 +230,13 @@ enum SansgridDataTypeEnum {
 	SG_CHIRP_SENSOR_DISCONNECT = 0x26
 };
 
+enum SansgridPeckRecognitionEnum {
+	SG_PECK_RECOGNIZED = 0x0,
+	SG_PECK_MATE = 0x01,
+	SG_PECK_SERVER_REFUSES_MATE = 0x02,
+	SG_PECK_SENSOR_REFUSES_MATE = 0x03
+};
+
 #endif
 
 //#undef SANSGRID_UNION
