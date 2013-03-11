@@ -8,8 +8,17 @@ int routerHandleHatching(RoutingTable *routing_table,
 		uint8_t serialdata[sizeof(SansgridHatching)]) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
-	
-	// TODO: Implement me
+	SANSGRID_UNION(SansgridHatching, SansgridHatchingConv) sg_hatching_union;
+	SansgridHatching *sg_hatching;
+	SansgridEyeball *sg_eyeball;
+
+	sg_hatching_union.serialdata = serialdata;
+	sg_hatching = sg_hatching_union.formdata;
+
+	// TODO: Add information to eyeball structure
+	sg_eyeball = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
+	routingTableAssignIPStatic(routing_table, sg_hatching->ip, sg_eyeball);
+
 	return -1;
 }
 

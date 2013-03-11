@@ -191,12 +191,38 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 }
 
 
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball) {
+	// Statically assign IP Address if possible
+	// return 0 if success, -1 if failure
+	
+	SansgridEyeball *dev_prop;
+	int32_t index;
+
+	if (table == NULL)
+		return -1;
+	if (table->table_alloc >= ROUTING_ARRAYSIZE)
+		return -1;
+
+	index = locationToTablePtr(ip_addr, table->base);
+
+	if (routingTableLookup(table, ip_addr) == 0) {
+		// TODO: statically assign IP
+		// Allocate space for the device
+		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
+		dev_prop = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
+		memcpy(dev_prop, sgeyeball, sizeof(SansgridEyeball));
+		table->routing_table[index]->properties = dev_prop;
+	}
+
+	return 0;
+}
+
+
 
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball) {
 	// Allocate the next available block and give it an IP address
 
 	uint32_t tableptr;
-	SansgridEyeball *dev_prop;
 
 	if (table == NULL)
 		return -1;
@@ -213,14 +239,12 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], Sans
 	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	table->routing_table[tableptr] = (RoutingNode*) malloc(sizeof(RoutingNode));
-	dev_prop = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
-	memcpy(dev_prop, sgeyeball, sizeof(SansgridEyeball));
-	table->routing_table[tableptr]->properties = dev_prop;
-
-	table->table_alloc++;
-
-	return 0;
+	if (!routingTableAssignIPStatic(table, ip_addr, sgeyeball)) {
+		table->table_alloc++;
+		return 0;
+	}
+	else
+		return -1;
 }
 
 
