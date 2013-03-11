@@ -38,22 +38,22 @@
 
 
 
-struct SansgridHatching {
+typedef struct SansgridHatching {
 	// Datatype: 0xF1
 	uint8_t datatype;
 	uint8_t ip[16];
 	uint8_t padding[64];
-};
+} SansgridHatching;
 
-SANSGRID_UNION(struct SansgridHatching, SansgridHatchingConv);
+//SANSGRID_UNION(struct SansgridHatching, SansgridHatchingConv);
 
 
 
-struct SansgridFly {
+typedef struct SansgridFly {
 	// Datatype: 0xF0
 	uint8_t datatype;
 	char network_name[80];
-};
+} SansgridFly;
 
 /*
 union SansgridFlyConv {
@@ -62,7 +62,7 @@ union SansgridFlyConv {
 };
 */
 
-SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
+//SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
 
 
 
@@ -80,11 +80,11 @@ typedef struct SansgridEyeball {
 	unsigned mode:4;
 } SansgridEyeball;
 
-SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
+//SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
 
 
 
-struct SansgridPeck {
+typedef struct SansgridPeck {
 	// Datatype: 0x01
 	uint8_t datatype;
 	uint8_t ip[16];
@@ -96,55 +96,55 @@ struct SansgridPeck {
 	// 	0x03	- Not Recognized, sensor refuses mate
 	uint8_t recognition;
 	uint8_t padding[47];
-};
+} SansgridPeck;
 
-SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
+//SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
 
 
 
-struct SansgridSing {
+typedef struct SansgridSing {
 	// Datatype: 	0x02	- Ack, valid pubkey
 	// 				0x03	- Ack, no pubkey
 	uint8_t datatype;
 	uint8_t pubkey[80];
-};
+} SansgridSing;
 
-SANSGRID_UNION(struct SansgridSing, SansgridSingConv);
+//SANSGRID_UNION(struct SansgridSing, SansgridSingConv);
 
 
 
-struct SansgridMock {
+typedef struct SansgridMock {
 	// Datatype:	0x07	- Ack, sensor gives pubkey
 	// 				0x08	- Ack, no pubkey
 	uint8_t datatype;
 	uint8_t pubkey[80];
-};
+} SansgridMock;
 
-SANSGRID_UNION(struct SansgridMock, SansgridMockConv);
+//SANSGRID_UNION(struct SansgridMock, SansgridMockConv);
 
 
 
-struct SansgridPeacock {
+typedef struct SansgridPeacock {
 	// Datatype:	0x0C
 	uint8_t datatype;
 	uint8_t capabilities[80];
-};
+} SansgridPeacock;
 
-SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv);
+//SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv);
 
 
 
-struct SansgridNest {
+typedef struct SansgridNest {
 	// Datatype:	0x10
 	uint8_t datatype;
 	uint8_t padding[80];
-};
+} SansgridNest;
 
-SANSGRID_UNION(struct SansgridNest, SansgridNestConv);
+//SANSGRID_UNION(struct SansgridNest, SansgridNestConv);
 
 
 
-struct SansgridSquawk {
+typedef struct SansgridSquawk {
 	// Datatypes:
 	// 		0x11: Server Challenge to sensor
 	// 		0x15: Sensor completes server challenge. No sensor challenge
@@ -155,25 +155,25 @@ struct SansgridSquawk {
 	// 		0x1D: Sensor accepts server's response
 	uint8_t datatype;
 	uint8_t data[80];
-};
+} SansgridSquawk;
 
-SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv);
+//SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv);
 
 
 
-struct SansgridHeartbeat {
+typedef struct SansgridHeartbeat {
 	// Datatypes:
 	// 		0x1E: Router Pings Sensor
 	// 		0x1F: Sensor responds to ping
 	uint8_t datatype;
 	uint8_t padding[80];
-};
+} SansgridHeartbeat;
 
-SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv);
+//SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv);
 
 
 
-struct SansgridChirp {
+typedef struct SansgridChirp {
 	// Datatypes
 	// 		0x20: Command sent from server to sensor
 	// 		0x21: Data sent from sensor to server
@@ -185,9 +185,9 @@ struct SansgridChirp {
 	uint8_t datatype;
 	uint8_t datasize;	// Used to truncate data
 	uint8_t data[80];
-};
+} SansgridChirp;
 
-SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);
+//SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);
 
 
 
