@@ -19,6 +19,8 @@
  *
  */
 
+#ifndef __SG_PAYLOADS_H__
+#define __SG_PAYLOADS_H__
 
 #include <stdint.h>
 
@@ -227,6 +229,8 @@ enum SansgridDataTypeEnum {
 	SG_CHIRP_NETWORK_DISCONNECTS_SENSOR = 0x25,
 	SG_CHIRP_SENSOR_DISCONNECT = 0x26
 };
+
+#endif
 
 //#undef SANSGRID_UNION
 // vim: ft=c ts=4 noet sw=4:
