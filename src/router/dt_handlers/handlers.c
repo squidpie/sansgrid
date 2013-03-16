@@ -135,4 +135,18 @@ int routerHandleMock(RoutingTable *routing_table,
 	return -1;
 }
 
+
+int routerHandlePeacock(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridPeacock)]) {
+	// Handle a Peacock data type
+	SansgridPeacock *sg_peacock;
+	SANSGRID_UNION(SansgridPeacock, SansgridPeacockConv) sg_peacock_union;
+
+	// Convert serial data to formatted data
+	sg_peacock_union.serialdata = serialdata;
+	sg_peacock = sg_peacock_union.formdata;
+
+	return -1;
+}
+
 // vim: ft=c ts=4 noet sw=4:
