@@ -112,4 +112,27 @@ int routerHandleSing(RoutingTable *routing_table,
 }
 
 
+int routerHandleMock(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridMock)]) {
+	// Handle a Mock data type
+	SansgridMock *sg_mock;
+	SANSGRID_UNION(SansgridMock, SansgridMockConv) sg_mock_union;
+
+	// Convert serial data to formatted data
+	sg_mock_union.serialdata = serialdata;
+	sg_mock = sg_mock_union.formdata;
+
+	switch (sg_mock->datatype) {
+		case SG_MOCK_WITH_KEY:
+			// Acknowledgement and sensor's public key
+			break;
+		case SG_MOCK_WITHOUT_KEY:
+			// Acknowledgement, no sensor key
+			break;
+		default:
+			break;
+	}
+	return -1;
+}
+
 // vim: ft=c ts=4 noet sw=4:
