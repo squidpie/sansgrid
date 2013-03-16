@@ -230,6 +230,11 @@ enum SansgridDataTypeEnum {
 	SG_CHIRP_SENSOR_DISCONNECT = 0x26
 };
 
+enum SansgridEyeballModeEnum {
+	SG_EYEBALL_NOMATE = 0x0,
+	SG_EYEBALL_MATE = 0x01
+};
+
 enum SansgridPeckRecognitionEnum {
 	SG_PECK_RECOGNIZED = 0x0,
 	SG_PECK_MATE = 0x01,
