@@ -210,4 +210,44 @@ int routerHandleHeartbeat(RoutingTable *routing_table,
 	return -1;
 }
 
+int routerHandleChirp(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridChirp)]) {
+	// Handle a Chirp data type
+	
+	SansgridChirp *sg_chirp;
+	SANSGRID_UNION(SansgridChirp, SansgridChirpConv) sg_chirp_union;
+
+	// Convert serial data to formatted data
+	sg_chirp_union.serialdata = serialdata;
+	sg_chirp = sg_chirp_union.formdata;
+
+	switch (sg_chirp->datatype) {
+		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
+			// Command sent from server to sensor
+			break;
+		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
+			// Data sent from server to sensor
+			break;
+		case SG_CHIRP_DATA_STREAM_START:
+			// Start of data stream
+			break;
+		case SG_CHIRP_DATA_STREAM_CONTINUE:
+			// Continued stream of data
+			break;
+		case SG_CHIRP_DATA_STREAM_END:
+			// End of data stream
+			break;
+		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+			// Network is disconnecting sensor
+			break;
+		case SG_CHIRP_SENSOR_DISCONNECT:
+			// Sensor is disconnecting from network
+			break;
+		default:
+			break;
+	}
+	return -1;
+}
+
+
 // vim: ft=c ts=4 noet sw=4:
