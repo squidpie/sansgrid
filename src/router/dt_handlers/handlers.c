@@ -204,4 +204,10 @@ int routerHandleSquawk(RoutingTable *routing_table,
 	return -1;
 }
 
+int routerHandleHeartbeat(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridHeartbeat)]) {
+	// Handle a Heartbeat data type
+	return -1;
+}
+
 // vim: ft=c ts=4 noet sw=4:
