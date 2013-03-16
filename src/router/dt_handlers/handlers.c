@@ -149,4 +149,18 @@ int routerHandlePeacock(RoutingTable *routing_table,
 	return -1;
 }
 
+
+int routerHandleNest(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridNest)]) {
+	// Handle a Nest data type
+	SansgridNest *sg_nest;
+	SANSGRID_UNION(SansgridNest, SansgridNestConv) sg_nest_union;
+
+	// Convert serial data to formatted data
+	sg_nest_union.serialdata = serialdata;
+	sg_nest = sg_nest_union.formdata;
+
+	return -1;
+}
+
 // vim: ft=c ts=4 noet sw=4:
