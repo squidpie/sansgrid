@@ -87,5 +87,29 @@ int routerHandlePeck(RoutingTable *routing_table,
 }
 
 
+int routerHandleSing(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridSing)]) {
+	// Handle a Sing data type
+	SansgridSing *sg_sing;
+	SANSGRID_UNION(SansgridSing, SansgridSingConv) sg_sing_union;
+
+	// Convert serial data to formatted data
+	sg_sing_union.serialdata = serialdata;
+	sg_sing = sg_sing_union.formdata;
+
+	switch (sg_sing->datatype) {
+		case SG_SING_WITH_KEY:
+			// Acknowledgement and server's public key
+			break;
+		case SG_SING_WITHOUT_KEY:
+			// Acknowledgement, no public key
+			break;
+		default:
+			// error
+			break;
+	}
+	return -1;
+}
+
 
 // vim: ft=c ts=4 noet sw=4:
