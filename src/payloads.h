@@ -64,6 +64,15 @@ union SansgridFlyConv {
 
 //SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
 
+typedef struct SansgridDeviceProperties {
+	// TODO: No datatype yet
+	uint8_t datatype;
+	//uint8_t manid[4];
+	//uint8_t modnum[4];
+	//uint8_t serial_number[8];
+	//uint8_t profile;
+} SansgridDeviceProperties;
+	
 
 
 typedef struct SansgridEyeball {

@@ -3,6 +3,7 @@
 #include "handlers.h"
 #include "../../payloads.h"
 #include "../routing/routing.h"
+#include "../../sg_serial.h"
 
 int routerHandleHatching(RoutingTable *routing_table,
 		uint8_t serialdata[sizeof(SansgridHatching)]) {
@@ -41,9 +42,10 @@ int routerHandleFly(RoutingTable *routing_table,
 	// Handle a Fly data type
 	
 	// TODO: multicast network existence
+	sgSerialSend(serialdata, sizeof(SansgridFly));
 	
 	// not done yet
-	return -1;
+	return 0;
 }
 
 
@@ -60,7 +62,7 @@ int routerHandleEyeball(RoutingTable *routing_table,
 	sg_eyeball_union.serialdata = serialdata;
 	sg_eyeball = sg_eyeball_union.formdata;
 
-	// Store in the routing table
+	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, sg_eyeball);
 
 	// TODO: Send data to server
@@ -75,6 +77,12 @@ int routerHandlePeck(RoutingTable *routing_table,
 	// Handle a Peck data type
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
+	uint8_t ip_addr[IP_SIZE];
+
+	// TODO: Store device's properties somewhere
+	// Call them up here
+	//SansgridDeviceProperties *sg_prop;
+	SansgridEyeball *sg_eyeball = NULL;
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = serialdata;
@@ -83,6 +91,7 @@ int routerHandlePeck(RoutingTable *routing_table,
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
 			// Sensor Recognized
+			routingTableAssignIP(routing_table, ip_addr, sg_eyeball);
 			break;
 		case SG_PECK_MATE:
 			// Sensor Not Recognized;
