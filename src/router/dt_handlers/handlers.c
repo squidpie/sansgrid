@@ -163,4 +163,45 @@ int routerHandleNest(RoutingTable *routing_table,
 	return -1;
 }
 
+
+int routerHandleSquawk(RoutingTable *routing_table,
+		uint8_t serialdata[sizeof(SansgridSquawk)]) {
+	// Handle a Squawk data type
+	SansgridSquawk *sg_squawk;
+	SANSGRID_UNION(SansgridSquawk, SansgridSquawkConv) sg_squawk_union;
+
+	// Convert serial data to formatted data
+	sg_squawk_union.serialdata = serialdata;
+	sg_squawk = sg_squawk_union.formdata;
+
+	switch (sg_squawk->datatype) {
+		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			// Server Challenges sensor
+			break;
+		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+			// Sensor respond to server challenge,
+			// no sensor challenge needed
+			break;
+		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
+			// Sensor respond to server challenge,
+			// sensor challenge coming
+			break;
+		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+			// Sensor challenges server
+			break;
+		case SG_SQUAWK_SERVER_DENY_SENSOR:
+			// Server denies sensor challenge request
+			break;
+		case SG_SQUAWK_SERVER_RESPOND:
+			// Server Responds to challenge
+			break;
+		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+			// Sensor accepts server's response
+			break;
+		default:
+			break;
+	}
+	return -1;
+}
+
 // vim: ft=c ts=4 noet sw=4:
