@@ -31,6 +31,7 @@ int routerHandleHatching(RoutingTable *routing_table,
 	
 	routingTableAssignIPStatic(routing_table, sg_hatching->ip, sg_eyeball);
 
+	// Not done yet
 	return -1;
 }
 
@@ -40,6 +41,9 @@ int routerHandleFly(RoutingTable *routing_table,
 	// Handle a Fly data type
 	
 	// TODO: multicast network existence
+	
+	// not done yet
+	return -1;
 }
 
 
@@ -61,7 +65,8 @@ int routerHandleEyeball(RoutingTable *routing_table,
 
 	// TODO: Send data to server
 
-	return 0;
+	// not done yet
+	return -1;
 }
 
 
@@ -95,6 +100,8 @@ int routerHandlePeck(RoutingTable *routing_table,
 			// error
 			break;
 	}
+
+	// not done yet
 	return -1;
 }
 
@@ -120,6 +127,8 @@ int routerHandleSing(RoutingTable *routing_table,
 			// error
 			break;
 	}
+
+	// not done yet
 	return -1;
 }
 
@@ -144,6 +153,8 @@ int routerHandleMock(RoutingTable *routing_table,
 		default:
 			break;
 	}
+
+	// not done yet
 	return -1;
 }
 
@@ -158,6 +169,7 @@ int routerHandlePeacock(RoutingTable *routing_table,
 	sg_peacock_union.serialdata = serialdata;
 	sg_peacock = sg_peacock_union.formdata;
 
+	// not done yet
 	return -1;
 }
 
@@ -172,6 +184,7 @@ int routerHandleNest(RoutingTable *routing_table,
 	sg_nest_union.serialdata = serialdata;
 	sg_nest = sg_nest_union.formdata;
 
+	// not done yet
 	return -1;
 }
 
@@ -213,12 +226,15 @@ int routerHandleSquawk(RoutingTable *routing_table,
 		default:
 			break;
 	}
+	// not done yet
 	return -1;
 }
 
 int routerHandleHeartbeat(RoutingTable *routing_table,
 		uint8_t serialdata[sizeof(SansgridHeartbeat)]) {
 	// Handle a Heartbeat data type
+
+	// not done yet
 	return -1;
 }
 
@@ -258,6 +274,8 @@ int routerHandleChirp(RoutingTable *routing_table,
 		default:
 			break;
 	}
+
+	// not done yet
 	return -1;
 }
 
