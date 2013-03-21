@@ -12,16 +12,20 @@ int routerHandleHatching(RoutingTable *routing_table,
 	int i;
 	SANSGRID_UNION(SansgridHatching, SansgridHatchingConv) sg_hatching_union;
 	SansgridHatching *sg_hatching;
+	DeviceProperties *dev_prop;
 	SansgridEyeball *sg_eyeball;
 
 	sg_hatching_union.serialdata = serialdata;
 	sg_hatching = sg_hatching_union.formdata;
 
-	sg_eyeball = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
-	sg_eyeball->datatype = SG_EYEBALL;
+	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
+	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
+	sg_eyeball = &dev_prop->dev_attr;
 	for (i=0; i<4; i++) {
+		// TODO: Define more attributes here
 		sg_eyeball->manid[i] = 0x0;
 		sg_eyeball->modnum[i] = 0x0;
+		sg_eyeball->datatype = SG_EYEBALL;
 	}
 
 	for (i=0; i<8; i++) {
@@ -82,12 +86,10 @@ int routerHandlePeck(RoutingTable *routing_table,
 	// Handle a Peck data type
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
-	uint8_t ip_addr[IP_SIZE];
 
 	// TODO: Store device's properties somewhere
 	// Call them up here
 	//SansgridDeviceProperties *sg_prop;
-	DeviceProperties *properties = NULL;
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = serialdata;
@@ -106,13 +108,13 @@ int routerHandlePeck(RoutingTable *routing_table,
 		case SG_PECK_SERVER_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Server refuses mate
-			routingTableFreeIP(routing_table, sg_peck->ip_addr);	
+			routingTableFreeIP(routing_table, sg_peck->ip);	
 			// TODO: Send packet on to radio
 			break;
 		case SG_PECK_SENSOR_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Sensor refuses mate
-			routingTableFreeIP(routing_table, sg_peck->ip_addr);	
+			routingTableFreeIP(routing_table, sg_peck->ip);	
 			// TODO: Send packet on to radio
 			break;
 		default:
