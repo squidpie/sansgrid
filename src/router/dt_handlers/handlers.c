@@ -69,6 +69,7 @@ int routerHandleEyeball(RoutingTable *routing_table,
 
 	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
+	dev_prop->next_expected_packet = SG_DEVSTATUS_PECKING;
 	memcpy(dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
 
 	// Store IP in the routing table

@@ -44,6 +44,7 @@ typedef struct RoutingTable RoutingTable;
 typedef struct DeviceProperties DeviceProperties;
 
 enum SansgridDeviceStatusEnum {
+	SG_DEVSTATUS_NULL,
 	SG_DEVSTATUS_EYEBALLING,		// Last packet was Eyeball
 	SG_DEVSTATUS_PECKING,			// Last packet was peck
 	SG_DEVSTATUS_SINGING,			// Last packet was sing
@@ -57,6 +58,7 @@ struct DeviceProperties {
 	// A device's general properties
 	SansgridEyeball dev_attr;
 	enum SansgridDeviceStatusEnum dev_status;
+	enum SansgridDeviceStatusEnum next_expected_packet;
 };
 
 
@@ -70,6 +72,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
 
 
 

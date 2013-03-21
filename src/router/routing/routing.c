@@ -299,5 +299,29 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
+		RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE]) {
+	if (table == NULL || !table->table_alloc)
+		return SG_DEVSTATUS_NULL;
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return SG_DEVSTATUS_NULL;
+	return table->routing_table[index]->properties->next_expected_packet;
+}
+
+
+int32_t routingTableSetNextExpectedPacket(
+		RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE],
+		enum SansgridDeviceStatusEnum nextstatus) {
+	if (table == NULL || !table->table_alloc)
+		return -1;
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	table->routing_table[index]->properties->next_expected_packet = nextstatus;
+	return 0;
+}
 
 // vim: ft=c ts=4 noet sw=4:
