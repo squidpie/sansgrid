@@ -35,13 +35,6 @@
 
 
 
-struct DeviceProperties {
-	// A device's general properties
-	uint8_t manid[4];
-	uint8_t modnum[4];
-	uint8_t serial_number[8];
-	uint8_t profile;
-};
 
 
 typedef struct RoutingNode {
@@ -49,7 +42,7 @@ typedef struct RoutingNode {
 	// For now, this is separate from properties.
 	// Later, it may be combined with DeviceProperties
 	//struct DeviceProperties properties;
-	SansgridEyeball *properties;
+	DeviceProperties *properties;
 } RoutingNode;
 	
 
@@ -191,11 +184,12 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 }
 
 
-int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball) {
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
+	   DeviceProperties *properties) {
 	// Statically assign IP Address if possible
 	// return 0 if success, -1 if failure
 	
-	SansgridEyeball *dev_prop;
+	DeviceProperties *dev_prop;
 	int32_t index;
 
 	if (table == NULL)
@@ -209,8 +203,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		// TODO: statically assign IP
 		// Allocate space for the device
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
-		dev_prop = (SansgridEyeball*)malloc(sizeof(SansgridEyeball));
-		memcpy(dev_prop, sgeyeball, sizeof(SansgridEyeball));
+		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
+		memcpy(dev_prop, properties, sizeof(DeviceProperties));
 		table->routing_table[index]->properties = dev_prop;
 	}
 
@@ -219,7 +213,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 
 
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball) {
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], 
+		DeviceProperties *properties) {
 	// Allocate the next available block and give it an IP address
 
 	uint32_t tableptr;
@@ -239,7 +234,7 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], Sans
 	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	if (!routingTableAssignIPStatic(table, ip_addr, sgeyeball)) {
+	if (!routingTableAssignIPStatic(table, ip_addr, properties)) {
 		table->table_alloc++;
 		return 0;
 	}

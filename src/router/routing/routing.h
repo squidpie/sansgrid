@@ -41,6 +41,24 @@
 
 //typedef struct DeviceIP DeviceIP;
 typedef struct RoutingTable RoutingTable;
+typedef struct DeviceProperties DeviceProperties;
+
+enum SansgridDeviceStatusEnum {
+	SG_DEVSTATUS_EYEBALLING,		// Last packet was Eyeball
+	SG_DEVSTATUS_PECKING,			// Last packet was peck
+	SG_DEVSTATUS_SINGING,			// Last packet was sing
+	SG_DEVSTATUS_MOCKING,			// Last packet was mock
+	SG_DEVSTATUS_PEACOCKING,		// Last packet was peacock
+	SG_DEVSTATUS_NESTING,			// Last packet was nest
+	SG_DEVSTATUS_LEASED 			// Device Associated with Network
+};
+
+struct DeviceProperties {
+	// A device's general properties
+	SansgridEyeball dev_attr;
+	enum SansgridDeviceStatusEnum dev_status;
+};
+
 
 
 //int32_t littleEndian(void);
@@ -48,8 +66,8 @@ void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE]);
 RoutingTable *routingTableDestroy(RoutingTable *table);
-int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball);
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], SansgridEyeball *sgeyeball);
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 
