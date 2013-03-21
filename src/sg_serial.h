@@ -24,12 +24,27 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
+#include "payloads.h"
+
+typedef struct SansgridGeneric {
+	// Generic Packet
+	// Tagged with IP Address and packet's origin,
+	// along with the data
+	uint8_t datatype;
+	uint8_t ip[IP_SIZE];		// Origin's IP address
+	uint8_t packet_origin;		// Communication Source
+	uint8_t serial_data[80];
+	// Because of all the conversions and copying that is going on,
+	// for now I'm adding a bounds check to make sure no data is
+	// being cropped
+	uint8_t bounds_check;
+} SansgridGeneric;
 
 
 // Send size bytes of serialdata serially
-int8_t sgSerialSend(uint8_t *serialdata, uint32_t size);
+int8_t sgSerialSend(SansgridGeneric *serial_packet, uint32_t size);
 // Get data from serial in. Data size will be in size.
-int8_t sgSerialReceive(uint8_t *serialdata, uint32_t *size);
+int8_t sgSerialReceive(SansgridGeneric *serial_packet, uint32_t *size);
 
 
 

@@ -24,17 +24,16 @@
 
 #include <stdint.h>
 
-/*
-#define SANSGRID_UNION(type, name) union name { \
-	type formdata; \
-	uint8_t serialdata[sizeof(type)]; \
-}
-*/
+
+#define IP_SIZE 16
+
 
 #define SANSGRID_UNION(type, name) union name { \
 	type *formdata; \
 	uint8_t *serialdata; \
 }
+
+
 
 
 
@@ -47,6 +46,12 @@ typedef struct SansgridHatching {
 
 //SANSGRID_UNION(struct SansgridHatching, SansgridHatchingConv);
 
+/*
+union SansgridHatchingConv {
+	struct SansgridHatching formdata;
+	uint8_t serialdata[sizeof(struct SansgridHatching)];
+};
+*/
 
 
 typedef struct SansgridFly {
@@ -55,24 +60,7 @@ typedef struct SansgridFly {
 	char network_name[80];
 } SansgridFly;
 
-/*
-union SansgridFlyConv {
-	struct SansgridFly formdata;
-	uint8_t serialdata[sizeof(struct SansgridFly)];
-};
-*/
 
-//SANSGRID_UNION(struct SansgridFly, SansgridFlyConv);
-
-typedef struct SansgridDeviceProperties {
-	// TODO: No datatype yet
-	uint8_t datatype;
-	//uint8_t manid[4];
-	//uint8_t modnum[4];
-	//uint8_t serial_number[8];
-	//uint8_t profile;
-} SansgridDeviceProperties;
-	
 
 
 typedef struct SansgridEyeball {
@@ -104,7 +92,7 @@ typedef struct SansgridPeck {
 	// 	0x02	- Not Recognized, server refuses mate
 	// 	0x03	- Not Recognized, sensor refuses mate
 	uint8_t recognition;
-	uint8_t padding[47];
+	uint8_t padding[46];
 } SansgridPeck;
 
 //SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
@@ -249,6 +237,18 @@ enum SansgridPeckRecognitionEnum {
 	SG_PECK_MATE = 0x01,
 	SG_PECK_SERVER_REFUSES_MATE = 0x02,
 	SG_PECK_SENSOR_REFUSES_MATE = 0x03
+};
+
+enum SansgridDeviceStatusEnum {
+	SG_DEVSTATUS_NULL,
+	SG_DEVSTATUS_EYEBALLING,		// Eyeballing Status
+	SG_DEVSTATUS_PECKING,			// Pecking Status
+	SG_DEVSTATUS_SINGING,			// Singing Status
+	SG_DEVSTATUS_MOCKING,			// Mocking Status
+	SG_DEVSTATUS_PEACOCKING,		// Peacocking Status
+	SG_DEVSTATUS_NESTING,			// Nesting Status
+	SG_DEVSTATUS_SQUAWKING,			// Squawking Status
+	SG_DEVSTATUS_LEASED 			// Device Associated with Network
 };
 
 #endif

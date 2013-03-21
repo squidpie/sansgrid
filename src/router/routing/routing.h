@@ -23,6 +23,9 @@
  */
 
 
+#ifndef __SG_ROUTING_H__
+#define __SG_ROUTING_H__
+
 #define ROUTING_UNIQUE_BITS	8			// Number of unique bits for the IP address
 
 #if ROUTING_UNIQUE_BITS > 20			// Don't let the routing table be too big
@@ -30,7 +33,6 @@
 #endif
 
 #define ROUTING_ARRAYSIZE		(1 << ROUTING_UNIQUE_BITS)
-#define IP_SIZE 16
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -43,17 +45,6 @@
 typedef struct RoutingTable RoutingTable;
 typedef struct DeviceProperties DeviceProperties;
 
-enum SansgridDeviceStatusEnum {
-	SG_DEVSTATUS_NULL,
-	SG_DEVSTATUS_EYEBALLING,		// Eyeballing Status
-	SG_DEVSTATUS_PECKING,			// Pecking Status
-	SG_DEVSTATUS_SINGING,			// Singing Status
-	SG_DEVSTATUS_MOCKING,			// Mocking Status
-	SG_DEVSTATUS_PEACOCKING,		// Peacocking Status
-	SG_DEVSTATUS_NESTING,			// Nesting Status
-	SG_DEVSTATUS_SQUAWKING,			// Squawking Status
-	SG_DEVSTATUS_LEASED 			// Device Associated with Network
-};
 
 struct DeviceProperties {
 	// A device's general properties
@@ -78,5 +69,6 @@ int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[I
 
 
 
+#endif
 
 // vim: ft=c ts=4 noet sw=4:
