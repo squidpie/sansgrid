@@ -99,11 +99,17 @@ int routerHandlePeck(RoutingTable *routing_table,
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
 			// Sensor Recognized
+			// Next packet: Squawk
+			routingTableSetNextExpectedPacket(routing_table, sg_peck->ip,
+					SG_DEVSTATUS_SQUAWKING);
 			// TODO: Send packet on to radio
 			break;
 		case SG_PECK_MATE:
 			// Sensor Not Recognized;
 			// Server will mate
+			// Next packet: Mate
+			routingTableSetNextExpectedPacket(routing_table, sg_peck->ip,
+					SG_DEVSTATUS_SINGING);
 			// TODO: Send packet on to radio
 			break;
 		case SG_PECK_SERVER_REFUSES_MATE:
@@ -116,7 +122,7 @@ int routerHandlePeck(RoutingTable *routing_table,
 			// Sensor Not Recognized;
 			// Sensor refuses mate
 			routingTableFreeIP(routing_table, sg_peck->ip);	
-			// TODO: Send packet on to radio
+			// TODO: Send Chirp Network Disconnecting Sensor
 			break;
 		default:
 			// error
@@ -137,6 +143,8 @@ int routerHandleSing(RoutingTable *routing_table,
 	// Convert serial data to formatted data
 	sg_sing_union.serialdata = serialdata;
 	sg_sing = sg_sing_union.formdata;
+
+	routingTableSetNextExpectedPacket(routing_table, sg_sing->
 
 	switch (sg_sing->datatype) {
 		case SG_SING_WITH_KEY:

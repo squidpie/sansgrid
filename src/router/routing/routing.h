@@ -45,12 +45,13 @@ typedef struct DeviceProperties DeviceProperties;
 
 enum SansgridDeviceStatusEnum {
 	SG_DEVSTATUS_NULL,
-	SG_DEVSTATUS_EYEBALLING,		// Last packet was Eyeball
-	SG_DEVSTATUS_PECKING,			// Last packet was peck
-	SG_DEVSTATUS_SINGING,			// Last packet was sing
-	SG_DEVSTATUS_MOCKING,			// Last packet was mock
-	SG_DEVSTATUS_PEACOCKING,		// Last packet was peacock
-	SG_DEVSTATUS_NESTING,			// Last packet was nest
+	SG_DEVSTATUS_EYEBALLING,		// Eyeballing Status
+	SG_DEVSTATUS_PECKING,			// Pecking Status
+	SG_DEVSTATUS_SINGING,			// Singing Status
+	SG_DEVSTATUS_MOCKING,			// Mocking Status
+	SG_DEVSTATUS_PEACOCKING,		// Peacocking Status
+	SG_DEVSTATUS_NESTING,			// Nesting Status
+	SG_DEVSTATUS_SQUAWKING,			// Squawking Status
 	SG_DEVSTATUS_LEASED 			// Device Associated with Network
 };
 
