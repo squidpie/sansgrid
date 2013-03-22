@@ -27,7 +27,6 @@
 #ifndef __H_ROUTING__
 #define __H_ROUTING__
 #include "../../routing/routing.h"
-#endif
 
 #include "radio-stub.h"
 
@@ -60,5 +59,6 @@ void radioStubRuntime(int fildes[2]) {
 	return;
 }
 
+#endif
 
 // vim: ft=c ts=4 noet sw=4:

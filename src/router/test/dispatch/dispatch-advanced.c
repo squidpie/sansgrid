@@ -43,12 +43,18 @@ void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
 	Queue *queue = (Queue*)arg;
 	uint8_t *serial_data;
+	SansgridGeneric sg_gen;
+	SansgridFly sg_fly;
 	int oldstate;
 
 	while (1) {
 		queueDequeue(queue, &serial_data);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-		free(serial_data);
+		fail_if((serial_data == NULL), "serial_data not initialized!");
+		memcpy(&sg_gen, serial_data, sizeof(SansgridGeneric));
+		memcpy(&sg_fly, &sg_gen.serial_data, sizeof(SansgridFly));
+		printf("%s\n", sg_fly.network_name);
+		//free(serial_data);
 		//printf("Data\n");
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
@@ -58,23 +64,19 @@ void *routingTableRuntime(void *arg) {
 
 
 void *spiReader(void *arg) {
-	// reads from a named pipe and sends info to the dispatch queue
-	SansgridGeneric *sg_gen;
+	// reads from a serial connection and enqueues data
+	SansgridGeneric *sg_gen = NULL;
 	uint32_t packet_size;
 	Queue *queue = (Queue*)arg;
-	FILE *FPTR;
 	int oldstate;
 	SANSGRID_UNION(SansgridGeneric, SGUn) sg_gen_union;
 
-	if (!(FPTR = fopen("test/rstubin.fifo", "r"))) {
-		fail("Error: Cannot open rstubin.fifo!");
-	}
 
 	while (1) {
 		// Read from the pipe forever
 		
 		// Read from serial
-		if (sgSerialReceive(sg_gen, &packet_size) == -1)
+		if (sgSerialReceive(&sg_gen, &packet_size) == -1)
 			pthread_exit(arg);
 		// Convert (for now) back to serial
 		sg_gen_union.formdata = sg_gen;
@@ -87,50 +89,62 @@ void *spiReader(void *arg) {
 
 	pthread_exit(arg);
 }
+
+void *spiWriter(void *arg) {
+	// Writes to a serial connection
+
+	int i;
+	SansgridGeneric *sg_gen;
+	SansgridFly sg_fly;
+
+	sg_fly.datatype = SG_FLY;
+	snprintf(sg_fly.network_name, 78, "Ping");
+
+
+	for (i=0; i<10; i++) {
+		// write ping 10 times, then signal exiting using 
+		// the unnamed pipe
+		sg_gen = (SansgridGeneric*)malloc(sizeof(SansgridGeneric));
+		memcpy(&sg_gen->serial_data, &sg_fly, sizeof(SansgridFly));
+		
+		if (sgSerialSend(sg_gen, sizeof(SansgridGeneric)) == -1)
+			pthread_exit(arg);
+	}
+
+	pthread_exit(arg);
+}
 	
 
 
 START_TEST (testAdvancedDispatch) {
 	// unit test code for more dispatch testing
-	pid_t chpid;
 	Queue *queue;
-	pthread_t rtable_thread,
-			  spi_thread;
-	int fildes[2];
-	char lptr[5];
+	pthread_t spi_read_thread,
+			  spi_write_thread,
+			  routing_table_thread;
 	void *arg;
 
-	pipe(fildes);
-
-	chpid = fork();
-
-	fail_unless((chpid >= 0), "Error: Fork Failed!");
-	if (chpid == 0) {
-		// child
-		radioStubRuntime(fildes);
-		exit(EXIT_SUCCESS);
-	}
 
 	// parent
 
 	queue = queueInit(200);
 	fail_unless((queue != NULL), "Error: Queue not allocated!");
 
-	pthread_create(&rtable_thread, NULL, &routingTableRuntime, queue);
-	pthread_create(&spi_thread, NULL, &spiReader, queue);
+	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
+	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
+	pthread_create(&routing_table_thread, NULL, &routingTableRuntime, queue);
 
 	
 	// wait until radio stub is done writing
-	close(fildes[1]);
-	read(fildes[0], lptr, 5);
-	close(fildes[0]);
 	while (queueSize(queue) > 0)
 		sched_yield();
 
 
-	pthread_join(spi_thread, &arg);
-	pthread_cancel(rtable_thread);
-	pthread_join(rtable_thread, &arg);
+	pthread_join(spi_write_thread, &arg);
+	pthread_cancel(spi_read_thread);
+	pthread_join(spi_read_thread, &arg);
+	pthread_cancel(routing_table_thread);
+	pthread_join(routing_table_thread, &arg);
 	queueDestroy(queue);
 }
 END_TEST

@@ -27,7 +27,7 @@ int8_t sgSerialSend(SansgridGeneric *serial_packet, uint32_t size) {
 	return -1;
 }
 
-int8_t sgSerialReceive(SansgridGeneric *serial_packet, uint32_t *size) {
+int8_t sgSerialReceive(SansgridGeneric **serial_packet, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	return -1;
 }
