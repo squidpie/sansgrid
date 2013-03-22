@@ -28,12 +28,8 @@
 #include <pthread.h>
 #include <check.h>
 
-#ifndef __H_RADIO_STUB__
-#define __H_RADIO_STUB__
-#include "../stubs/radio-stub.h"
 #include "../communication/sg-serial-test.c"
 #include "../../../payloads.h"
-#endif
 
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"

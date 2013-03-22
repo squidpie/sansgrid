@@ -35,7 +35,6 @@ ROUTE_DIR = routing
 TEST_DIR = test
 TEST_DISPATCH_DIR = $(TEST_DIR)/dispatch
 TEST_ROUTING_DIR = $(TEST_DIR)/routing
-TEST_STUBS_DIR = $(TEST_DIR)/stubs
 
 # Files
 MAIN = $(DAEMON_DIR)/pi-runtime
@@ -48,12 +47,11 @@ TEST_HEADER = $(TEST_DIR)/tests.h
 DISPATCH_ADVANCED_TEST = $(TEST_DISPATCH_DIR)/dispatch-advanced
 DISPATCH_BASIC_TEST = $(TEST_DISPATCH_DIR)/dispatch-basic
 ROUTE_BASIC_TEST = $(TEST_ROUTING_DIR)/routing-basic-test
-STUBS = $(TEST_STUBS_DIR)/radio-stub
 
 
 # Object File Compilations
 OBS = $(ROUTING).o $(DISPATCH).o
-TEST_OBS = $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_BASIC_TEST).o $(STUBS).o
+TEST_OBS = $(DISPATCH_ADVANCED_TEST).o $(ROUTE_BASIC_TEST).o $(DISPATCH_BASIC_TEST).o 
 
 # Object File Builds
 SANSGRID_OBS = $(OBS) $(MAIN).o
