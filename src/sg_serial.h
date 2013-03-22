@@ -26,19 +26,6 @@
 #include <arpa/inet.h>
 #include "payloads.h"
 
-typedef struct SansgridGeneric {
-	// Generic Packet
-	// Tagged with IP Address and packet's origin,
-	// along with the data
-	uint8_t datatype;
-	uint8_t ip[IP_SIZE];		// Origin's IP address
-	uint8_t packet_origin;		// Communication Source
-	uint8_t serial_data[80];
-	// Because of all the conversions and copying that is going on,
-	// for now I'm adding a bounds check to make sure no data is
-	// being cropped
-	uint8_t bounds_check;
-} SansgridGeneric;
 
 
 // Send size bytes of serialdata serially

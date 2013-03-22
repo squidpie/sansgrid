@@ -25,19 +25,6 @@
 typedef struct Queue Queue;
 
 
-typedef struct DispatchNode {
-	// Generic Packet
-	// Tagged with IP Address and packet's origin,
-	// along with the data
-	uint8_t packet_origin;		// Communication Source
-	uint32_t timestamp;
-	uint8_t datatype;
-	uint8_t serial_data[80];
-	// Because of all the conversions and copying that is going on,
-	// for now I'm adding a bounds check to make sure no data is
-	// being cropped
-	uint8_t bounds_check;
-} DispatchNode;
 
 // Construct/Destruct
 Queue *queueInit(uint32_t size);

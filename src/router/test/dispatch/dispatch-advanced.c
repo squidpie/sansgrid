@@ -43,17 +43,17 @@ void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
 	Queue *queue = (Queue*)arg;
 	uint8_t *serial_data;
-	SansgridGeneric sg_gen;
 	SansgridFly sg_fly;
+	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int oldstate;
 
 	while (1) {
 		queueDequeue(queue, &serial_data);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		fail_if((serial_data == NULL), "serial_data not initialized!");
-		memcpy(&sg_gen, serial_data, sizeof(SansgridGeneric));
-		memcpy(&sg_fly, &sg_gen.serial_data, sizeof(SansgridFly));
-		printf("%s\n", sg_fly.network_name);
+		sg_fly_union.serialdata = serial_data;
+		sg_fly = *sg_fly_union.formdata;
+		printf("%i\t%s\n", sg_fly.datatype, sg_fly.network_name);
 		//free(serial_data);
 		//printf("Data\n");
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
@@ -65,25 +65,24 @@ void *routingTableRuntime(void *arg) {
 
 void *spiReader(void *arg) {
 	// reads from a serial connection and enqueues data
-	SansgridGeneric *sg_gen = NULL;
+	uint8_t *serial_data = NULL;
 	uint32_t packet_size;
 	Queue *queue = (Queue*)arg;
 	int oldstate;
-	SANSGRID_UNION(SansgridGeneric, SGUn) sg_gen_union;
 
 
 	while (1) {
 		// Read from the pipe forever
 		
 		// Read from serial
-		if (sgSerialReceive(&sg_gen, &packet_size) == -1)
+		if (sgSerialReceive(&serial_data, &packet_size) == -1)
 			pthread_exit(arg);
 		// Convert (for now) back to serial
-		sg_gen_union.formdata = sg_gen;
 
 		// Enqueue
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-		queueEnqueue(queue, sg_gen_union.serialdata);
+		queueEnqueue(queue, serial_data);
+		serial_data = NULL;
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
@@ -94,8 +93,9 @@ void *spiWriter(void *arg) {
 	// Writes to a serial connection
 
 	int i;
-	SansgridGeneric *sg_gen;
 	SansgridFly sg_fly;
+	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
+	uint8_t serial_data[sizeof(SansgridFly)];
 
 	sg_fly.datatype = SG_FLY;
 	snprintf(sg_fly.network_name, 78, "Ping");
@@ -104,10 +104,9 @@ void *spiWriter(void *arg) {
 	for (i=0; i<10; i++) {
 		// write ping 10 times, then signal exiting using 
 		// the unnamed pipe
-		sg_gen = (SansgridGeneric*)malloc(sizeof(SansgridGeneric));
-		memcpy(&sg_gen->serial_data, &sg_fly, sizeof(SansgridFly));
 		
-		if (sgSerialSend(sg_gen, sizeof(SansgridGeneric)) == -1)
+		sg_fly_union.formdata = &sg_fly;
+		if (sgSerialSend(sg_fly_union.serialdata, sizeof(SansgridFly)) == -1)
 			pthread_exit(arg);
 	}
 
