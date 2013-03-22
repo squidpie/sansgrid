@@ -42,9 +42,9 @@ typedef struct SansgridGeneric {
 
 
 // Send size bytes of serialdata serially
-int8_t sgSerialSend(SansgridGeneric *serial_packet, uint32_t size);
+int8_t sgSerialSend(uint8_t *serialdata, uint32_t size);
 // Get data from serial in. Data size will be in size.
-int8_t sgSerialReceive(SansgridGeneric **serial_packet, uint32_t *size);
+int8_t sgSerialReceive(uint8_t **serialdata, uint32_t *size);
 
 
 

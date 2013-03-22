@@ -17,9 +17,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifndef __SG_DISPATCH_H__
+#define __SG_DISPATCH_H__
+
 #include <stdint.h>
 
 typedef struct Queue Queue;
+
+
+typedef struct DispatchNode {
+	// Generic Packet
+	// Tagged with IP Address and packet's origin,
+	// along with the data
+	uint8_t packet_origin;		// Communication Source
+	uint32_t timestamp;
+	uint8_t datatype;
+	uint8_t serial_data[80];
+	// Because of all the conversions and copying that is going on,
+	// for now I'm adding a bounds check to make sure no data is
+	// being cropped
+	uint8_t bounds_check;
+} DispatchNode;
 
 // Construct/Destruct
 Queue *queueInit(uint32_t size);
@@ -32,6 +50,7 @@ int queueEnqueue(Queue *queue, uint8_t *serial_data);
 int queueTryDequeue(Queue *queue, uint8_t **serial_data);
 int queueDequeue(Queue *queue, uint8_t **serial_data);
 
+#endif
 
 // vim: ft=c ts=4 noet sw=4:
 
