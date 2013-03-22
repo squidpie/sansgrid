@@ -31,6 +31,8 @@
 #ifndef __H_RADIO_STUB__
 #define __H_RADIO_STUB__
 #include "../stubs/radio-stub.h"
+#include "../communication/sg-serial-test.c"
+#include "../../../payloads.h"
 #endif
 
 #include "../../dispatch/dispatch.h"
@@ -57,12 +59,12 @@ void *routingTableRuntime(void *arg) {
 
 void *spiReader(void *arg) {
 	// reads from a named pipe and sends info to the dispatch queue
-	int timeout = 0;
+	SansgridGeneric *sg_gen;
+	uint32_t packet_size;
 	Queue *queue = (Queue*)arg;
 	FILE *FPTR;
-	uint8_t *serial_data;
-	char filedata[101];
 	int oldstate;
+	SANSGRID_UNION(SansgridGeneric, SGUn) sg_gen_union;
 
 	if (!(FPTR = fopen("test/rstubin.fifo", "r"))) {
 		fail("Error: Cannot open rstubin.fifo!");
@@ -70,17 +72,16 @@ void *spiReader(void *arg) {
 
 	while (1) {
 		// Read from the pipe forever
-		while (fgets(filedata, 100*sizeof(char), FPTR) == NULL) {
-			timeout++;
-			if (timeout > 10000)
-				pthread_exit(arg);
-			sched_yield();
-		}
-		timeout = 0;
+		
+		// Read from serial
+		if (sgSerialReceive(sg_gen, &packet_size) == -1)
+			pthread_exit(arg);
+		// Convert (for now) back to serial
+		sg_gen_union.formdata = sg_gen;
+
+		// Enqueue
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-		serial_data = (uint8_t*)malloc(101*sizeof(uint8_t));
-		memcpy(serial_data, filedata, 100*sizeof(char));
-		queueEnqueue(queue, serial_data);
+		queueEnqueue(queue, sg_gen_union.serialdata);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 

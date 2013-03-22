@@ -34,7 +34,7 @@ int routerHandleHatching(RoutingTable *routing_table,
 	sg_eyeball->profile = 0x0;
 	sg_eyeball->mode = SG_EYEBALL_MATE;
 	
-	routingTableAssignIPStatic(routing_table, sg_hatching->ip, sg_eyeball);
+	routingTableAssignIPStatic(routing_table, sg_hatching->ip, dev_prop);
 
 	// Not done yet
 	return -1;
@@ -42,11 +42,11 @@ int routerHandleHatching(RoutingTable *routing_table,
 
 
 int routerHandleFly(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridFly)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Fly data type
 	
 	// TODO: multicast network existence
-	sgSerialSend(serialdata, sizeof(SansgridFly));
+	sgSerialSend(sg_generic, sizeof(SansgridGeneric));
 	
 	// not done yet
 	return 0;
@@ -54,7 +54,7 @@ int routerHandleFly(RoutingTable *routing_table,
 
 
 int routerHandleEyeball(RoutingTable *routing_table, 
-		uint8_t serialdata[sizeof(SansgridEyeball)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle an Eyeball data type
 	// 1. Assign IP Address
 	// 2. Transmit properties to server
@@ -64,13 +64,13 @@ int routerHandleEyeball(RoutingTable *routing_table,
 	uint8_t ip_addr[IP_SIZE];
 
 	// Convert serial data to formatted data
-	sg_eyeball_union.serialdata = serialdata;
+	sg_eyeball_union.serialdata = sg_generic->serial_data;
 	sg_eyeball = sg_eyeball_union.formdata;
 
 	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
 	dev_prop->next_expected_packet = SG_DEVSTATUS_PECKING;
-	memcpy(dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
+	memcpy(&dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
 
 	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, dev_prop);
@@ -83,7 +83,7 @@ int routerHandleEyeball(RoutingTable *routing_table,
 
 
 int routerHandlePeck(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridPeck)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Peck data type
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
@@ -93,7 +93,7 @@ int routerHandlePeck(RoutingTable *routing_table,
 	//SansgridDeviceProperties *sg_prop;
 	
 	// Convert serial data to formatted data
-	sg_peck_union.serialdata = serialdata;
+	sg_peck_union.serialdata = sg_generic->serial_data;
 	sg_peck = sg_peck_union.formdata;
 
 	switch (sg_peck->recognition) {
@@ -135,16 +135,17 @@ int routerHandlePeck(RoutingTable *routing_table,
 
 
 int routerHandleSing(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridSing)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Sing data type
 	SansgridSing *sg_sing;
 	SANSGRID_UNION(SansgridSing, SansgridSingConv) sg_sing_union;
 
 	// Convert serial data to formatted data
-	sg_sing_union.serialdata = serialdata;
+	sg_sing_union.serialdata = sg_generic->serial_data;
 	sg_sing = sg_sing_union.formdata;
 
-	routingTableSetNextExpectedPacket(routing_table, sg_sing->
+	routingTableSetNextExpectedPacket(routing_table, sg_generic->ip,
+			SG_DEVSTATUS_MOCKING);
 
 	switch (sg_sing->datatype) {
 		case SG_SING_WITH_KEY:
@@ -164,13 +165,13 @@ int routerHandleSing(RoutingTable *routing_table,
 
 
 int routerHandleMock(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridMock)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Mock data type
 	SansgridMock *sg_mock;
 	SANSGRID_UNION(SansgridMock, SansgridMockConv) sg_mock_union;
 
 	// Convert serial data to formatted data
-	sg_mock_union.serialdata = serialdata;
+	sg_mock_union.serialdata = sg_generic->serial_data;
 	sg_mock = sg_mock_union.formdata;
 
 	switch (sg_mock->datatype) {
@@ -190,13 +191,13 @@ int routerHandleMock(RoutingTable *routing_table,
 
 
 int routerHandlePeacock(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridPeacock)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Peacock data type
 	SansgridPeacock *sg_peacock;
 	SANSGRID_UNION(SansgridPeacock, SansgridPeacockConv) sg_peacock_union;
 
 	// Convert serial data to formatted data
-	sg_peacock_union.serialdata = serialdata;
+	sg_peacock_union.serialdata = sg_generic->serial_data;
 	sg_peacock = sg_peacock_union.formdata;
 
 	// not done yet
@@ -205,13 +206,13 @@ int routerHandlePeacock(RoutingTable *routing_table,
 
 
 int routerHandleNest(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridNest)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Nest data type
 	SansgridNest *sg_nest;
 	SANSGRID_UNION(SansgridNest, SansgridNestConv) sg_nest_union;
 
 	// Convert serial data to formatted data
-	sg_nest_union.serialdata = serialdata;
+	sg_nest_union.serialdata = sg_generic->serial_data;
 	sg_nest = sg_nest_union.formdata;
 
 	// not done yet
@@ -220,13 +221,13 @@ int routerHandleNest(RoutingTable *routing_table,
 
 
 int routerHandleSquawk(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridSquawk)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Squawk data type
 	SansgridSquawk *sg_squawk;
 	SANSGRID_UNION(SansgridSquawk, SansgridSquawkConv) sg_squawk_union;
 
 	// Convert serial data to formatted data
-	sg_squawk_union.serialdata = serialdata;
+	sg_squawk_union.serialdata = sg_generic->serial_data;
 	sg_squawk = sg_squawk_union.formdata;
 
 	switch (sg_squawk->datatype) {
@@ -261,7 +262,7 @@ int routerHandleSquawk(RoutingTable *routing_table,
 }
 
 int routerHandleHeartbeat(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridHeartbeat)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Heartbeat data type
 
 	// not done yet
@@ -269,14 +270,14 @@ int routerHandleHeartbeat(RoutingTable *routing_table,
 }
 
 int routerHandleChirp(RoutingTable *routing_table,
-		uint8_t serialdata[sizeof(SansgridChirp)]) {
+		SansgridGeneric *sg_generic) {
 	// Handle a Chirp data type
 	
 	SansgridChirp *sg_chirp;
 	SANSGRID_UNION(SansgridChirp, SansgridChirpConv) sg_chirp_union;
 
 	// Convert serial data to formatted data
-	sg_chirp_union.serialdata = serialdata;
+	sg_chirp_union.serialdata = sg_generic->serial_data;
 	sg_chirp = sg_chirp_union.formdata;
 
 	switch (sg_chirp->datatype) {
