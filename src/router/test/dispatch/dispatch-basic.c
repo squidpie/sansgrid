@@ -161,13 +161,13 @@ static void *readerFunc(void *arg) {
 		// When we're using non-blocking functions, make sure we aren't
 		// 	cancelled
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
-		if (queueTryDequeue(queue, &data) == -1) {
+		if (queueTryDequeue(queue, (void**)&data) == -1) {
 			// queue is empty. Block until data is available
 #if TESTS_DEBUG_LEVEL > 0
 			printf("E\n");
 #endif
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
-			queueDequeue(queue, &data);
+			queueDequeue(queue, (void**)&data);
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
 		}
 
@@ -208,7 +208,7 @@ START_TEST (testDispatchBasic) {
 
 	for (i=0; i<QUEUE_SIZE-1; i++) {
 		// Read data from the queue
-		excode = queueTryDequeue(queue, &in_data);
+		excode = queueTryDequeue(queue, (void**)&in_data);
 		fail_unless((excode == 0), "Error: No data to read!");
 		fail_unless((in_data != NULL), "Error: invalid pointer!");
 		fail_unless((*in_data == (i & 0xFF)), 

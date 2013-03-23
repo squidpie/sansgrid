@@ -48,10 +48,12 @@ void *routingTableRuntime(void *arg) {
 	SansgridFly sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int oldstate;
+#if TESTS_DEBUG_LEVEL > 0
 	int numpackets = 0;
+#endif
 
 	while (1) {
-		queueDequeue(queue, &serial_data);
+		queueDequeue(queue, (void**)&serial_data);
 		fail_if((serial_data == NULL), "serial_data not initialized!");
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		sg_fly_union.serialdata = serial_data;
@@ -68,8 +70,8 @@ void *routingTableRuntime(void *arg) {
 
 void *spiReader(void *arg) {
 	// reads from a serial connection and enqueues data
-	int i, j;
-	uint8_t *serial_data = NULL;
+	int i;
+	SansgridSerial *sg_serial;
 	uint32_t packet_size;
 	Queue *queue = (Queue*)arg;
 	int oldstate;
@@ -83,13 +85,12 @@ void *spiReader(void *arg) {
 	for (i=0; i<10; i++) {
 		
 		// Read from serial
-		if (sgSerialReceive(&serial_data, &packet_size) == -1)
+		if (sgSerialReceive(&sg_serial, &packet_size) == -1)
 			fail("Failed to read packet");
-
+		
 		// Enqueue
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-		queueEnqueue(queue, serial_data);
-		serial_data = NULL;
+		queueEnqueue(queue, sg_serial);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
@@ -103,7 +104,7 @@ void *spiWriter(void *arg) {
 	int i;
 	SansgridFly sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
-	uint8_t serial_data[sizeof(SansgridFly)];
+	SansgridSerial sg_serial;
 	FILE *FPTR;
 
 	sg_fly.datatype = SG_FLY;
@@ -120,7 +121,8 @@ void *spiWriter(void *arg) {
 		// write ping 10 times, then signal exiting using 
 		// the pipe
 		
-		if (sgSerialSend(sg_fly_union.serialdata, sizeof(SansgridFly)) == -1)
+		memcpy(&sg_serial.payload, sg_fly_union.serialdata, sizeof(SansgridFly));
+		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
 	}
 

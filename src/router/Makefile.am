@@ -1,5 +1,6 @@
 bin_PROGRAMS = sansgrid 
 check_PROGRAMS = sgtest
+AM_CFLAGS = -Wall -std=c99
 SANSGRID_COMM = communication/sg_tcp.c \
 		communication/sg_serial.c
 

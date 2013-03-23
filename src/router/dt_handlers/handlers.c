@@ -5,8 +5,7 @@
 #include "../routing/routing.h"
 #include "../../sg_serial.h"
 
-int routerHandleHatching(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridHatching)]) {
+int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
 	int i;
@@ -15,7 +14,7 @@ int routerHandleHatching(RoutingTable *routing_table,
 	DeviceProperties *dev_prop;
 	SansgridEyeball *sg_eyeball;
 
-	sg_hatching_union.serialdata = serial_data;
+	sg_hatching_union.serialdata = sg_serial->payload;
 	sg_hatching = sg_hatching_union.formdata;
 
 	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
@@ -41,20 +40,18 @@ int routerHandleHatching(RoutingTable *routing_table,
 }
 
 
-int routerHandleFly(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridFly)]) {
+int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Fly data type
 	
 	// TODO: multicast network existence
-	sgSerialSend(serial_data, sizeof(SansgridFly));
+	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 	
 	// not done yet
 	return 0;
 }
 
 
-int routerHandleEyeball(RoutingTable *routing_table, 
-		uint8_t serial_data[sizeof(SansgridEyeball)]) {
+int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle an Eyeball data type
 	// 1. Assign IP Address
 	// 2. Transmit properties to server
@@ -64,7 +61,7 @@ int routerHandleEyeball(RoutingTable *routing_table,
 	uint8_t ip_addr[IP_SIZE];
 
 	// Convert serial data to formatted data
-	sg_eyeball_union.serialdata = serial_data;
+	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
 
 	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
@@ -82,8 +79,7 @@ int routerHandleEyeball(RoutingTable *routing_table,
 }
 
 
-int routerHandlePeck(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridPeck)]) {
+int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peck data type
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
@@ -93,7 +89,7 @@ int routerHandlePeck(RoutingTable *routing_table,
 	//SansgridDeviceProperties *sg_prop;
 	
 	// Convert serial data to formatted data
-	sg_peck_union.serialdata = serial_data;
+	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
 
 	switch (sg_peck->recognition) {
@@ -134,14 +130,13 @@ int routerHandlePeck(RoutingTable *routing_table,
 }
 
 
-int routerHandleSing(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridSing)]) {
+int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Sing data type
 	SansgridSing *sg_sing;
 	SANSGRID_UNION(SansgridSing, SansgridSingConv) sg_sing_union;
 
 	// Convert serial data to formatted data
-	sg_sing_union.serialdata = serial_data;
+	sg_sing_union.serialdata = sg_serial->payload;
 	sg_sing = sg_sing_union.formdata;
 
 	// FIXME: SansgridSing needs ip address field
@@ -165,14 +160,13 @@ int routerHandleSing(RoutingTable *routing_table,
 }
 
 
-int routerHandleMock(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridMock)]) {
+int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Mock data type
 	SansgridMock *sg_mock;
 	SANSGRID_UNION(SansgridMock, SansgridMockConv) sg_mock_union;
 
 	// Convert serial data to formatted data
-	sg_mock_union.serialdata = serial_data;
+	sg_mock_union.serialdata = sg_serial->payload;
 	sg_mock = sg_mock_union.formdata;
 
 	switch (sg_mock->datatype) {
@@ -191,14 +185,13 @@ int routerHandleMock(RoutingTable *routing_table,
 }
 
 
-int routerHandlePeacock(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridPeacock)]) {
+int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peacock data type
 	SansgridPeacock *sg_peacock;
 	SANSGRID_UNION(SansgridPeacock, SansgridPeacockConv) sg_peacock_union;
 
 	// Convert serial data to formatted data
-	sg_peacock_union.serialdata = serial_data;
+	sg_peacock_union.serialdata = sg_serial->payload;
 	sg_peacock = sg_peacock_union.formdata;
 
 	// not done yet
@@ -206,14 +199,13 @@ int routerHandlePeacock(RoutingTable *routing_table,
 }
 
 
-int routerHandleNest(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridNest)]) {
+int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	SansgridNest *sg_nest;
 	SANSGRID_UNION(SansgridNest, SansgridNestConv) sg_nest_union;
 
 	// Convert serial data to formatted data
-	sg_nest_union.serialdata = serial_data;
+	sg_nest_union.serialdata = sg_serial->payload;
 	sg_nest = sg_nest_union.formdata;
 
 	// not done yet
@@ -221,14 +213,13 @@ int routerHandleNest(RoutingTable *routing_table,
 }
 
 
-int routerHandleSquawk(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridSquawk)]) {
+int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Squawk data type
 	SansgridSquawk *sg_squawk;
 	SANSGRID_UNION(SansgridSquawk, SansgridSquawkConv) sg_squawk_union;
 
 	// Convert serial data to formatted data
-	sg_squawk_union.serialdata = serial_data;
+	sg_squawk_union.serialdata = sg_serial->payload;
 	sg_squawk = sg_squawk_union.formdata;
 
 	switch (sg_squawk->datatype) {
@@ -262,23 +253,21 @@ int routerHandleSquawk(RoutingTable *routing_table,
 	return -1;
 }
 
-int routerHandleHeartbeat(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridHeartbeat)]) {
+int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Heartbeat data type
 
 	// not done yet
 	return -1;
 }
 
-int routerHandleChirp(RoutingTable *routing_table,
-		uint8_t serial_data[sizeof(SansgridChirp)]) {
+int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Chirp data type
 	
 	SansgridChirp *sg_chirp;
 	SANSGRID_UNION(SansgridChirp, SansgridChirpConv) sg_chirp_union;
 
 	// Convert serial data to formatted data
-	sg_chirp_union.serialdata = serial_data;
+	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 
 	switch (sg_chirp->datatype) {

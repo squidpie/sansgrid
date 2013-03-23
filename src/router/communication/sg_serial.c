@@ -22,12 +22,12 @@
 #include <stdint.h>
 #include "../../sg_serial.h"
 
-int8_t sgSerialSend(uint8_t *serialdata, uint32_t size) {
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	return -1;
 }
 
-int8_t sgSerialReceive(uint8_t **serialdata, uint32_t *size) {
+int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	return -1;
 }

@@ -38,16 +38,19 @@ void sgSerialTestSetWriter(FILE *FPTR) {
 
 
 
-int8_t sgSerialSend(uint8_t *serial_data, uint32_t size) {
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	int i;
+	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
 
 
 	if (FPTR_WRITE == NULL)
 		return -1;
+
+	sg_serial_union.formdata = sg_serial;
 	
-	for (i=0; i<80; i++) {
-		putc(serial_data[i], FPTR_WRITE);
+	for (i=0; i<sizeof(SansgridSerial); i++) {
+		putc(sg_serial_union.serialdata[i], FPTR_WRITE);
 	}
 	
 	return 0;
@@ -55,25 +58,25 @@ int8_t sgSerialSend(uint8_t *serial_data, uint32_t size) {
 
 
 
-int8_t sgSerialReceive(uint8_t **serial_data, uint32_t *size) {
+int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	int timeout = 0;
-	char lptr[81];
+	char lptr[sizeof(SansgridSerial)+1];
 
 	if (FPTR_READ == NULL)
 		return -1;
 
 	// Read from the pipe 
-	while (fgets(lptr, 81, FPTR_READ) == NULL) {
+	while (fgets(lptr, sizeof(SansgridSerial)+1, FPTR_READ) == NULL) {
 		timeout++;
 		if (timeout > 10000) {
 			return -1;
 		}
 		sched_yield();
 	}
-	*serial_data = (uint8_t*)malloc(80*sizeof(uint8_t));
-	memcpy(*serial_data, lptr, 80);
-	*size = 80;
+	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));
+	*size = sizeof(SansgridSerial);
 	return 0;
 }
 

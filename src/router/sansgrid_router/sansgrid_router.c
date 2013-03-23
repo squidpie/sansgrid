@@ -29,38 +29,37 @@
 
 
 void *dispatchRuntime(void *arg) {
-	uint8_t *serial_data;
-	volatile int i = 0;
+	SansgridSerial *sg_serial;
 
 	while (1) {
-		if (queueDequeue(dispatch, &serial_data) == -1) 
+		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) 
 			exit(EXIT_FAILURE);
-		switch (serial_data[0]) {
+		switch (sg_serial->payload[0]) {
 			case SG_HATCH:
-				routerHandleHatching(routing_table, serial_data);
+				routerHandleHatching(routing_table, sg_serial);
 				break;
 			case SG_FLY:
-				routerHandleFly(routing_table, serial_data);
+				routerHandleFly(routing_table, sg_serial);
 				break;
 			case SG_EYEBALL:
-				routerHandleEyeball(routing_table, serial_data);
+				routerHandleEyeball(routing_table, sg_serial);
 				break;
 			case SG_PECK:
-				routerHandlePeck(routing_table, serial_data);
+				routerHandlePeck(routing_table, sg_serial);
 				break;
 			case SG_SING_WITH_KEY:
 			case SG_SING_WITHOUT_KEY:
-				routerHandleSing(routing_table, serial_data);
+				routerHandleSing(routing_table, sg_serial);
 				break;
 			case SG_MOCK_WITH_KEY:
 			case SG_MOCK_WITHOUT_KEY:
-				routerHandleMock(routing_table, serial_data);
+				routerHandleMock(routing_table, sg_serial);
 				break;
 			case SG_PEACOCK:
-				routerHandlePeacock(routing_table, serial_data);
+				routerHandlePeacock(routing_table, sg_serial);
 				break;
 			case SG_NEST:
-				routerHandleNest(routing_table, serial_data);
+				routerHandleNest(routing_table, sg_serial);
 				break;
 			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
 			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
@@ -69,11 +68,11 @@ void *dispatchRuntime(void *arg) {
 			case SG_SQUAWK_SERVER_DENY_SENSOR:
 			case SG_SQUAWK_SERVER_RESPOND:
 			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
-				routerHandleSquawk(routing_table, serial_data);
+				routerHandleSquawk(routing_table, sg_serial);
 				break;
 			case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			case SG_HEARTBEAT_SENSOR_TO_ROUTER:
-				routerHandleHeartbeat(routing_table, serial_data);
+				routerHandleHeartbeat(routing_table, sg_serial);
 				break;
 			case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 			case SG_CHIRP_DATA_SENSOR_TO_SERVER:
@@ -82,7 +81,7 @@ void *dispatchRuntime(void *arg) {
 			case SG_CHIRP_DATA_STREAM_END:
 			case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			case SG_CHIRP_SENSOR_DISCONNECT:
-				routerHandleChirp(routing_table, serial_data);
+				routerHandleChirp(routing_table, sg_serial);
 				break;
 			default:
 				break;
@@ -93,13 +92,13 @@ void *dispatchRuntime(void *arg) {
 
 void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
-	uint8_t *serial_data;
 	uint32_t size;
+	SansgridSerial *sg_serial;
 	while (1) {
-		while (sgSerialReceive(&serial_data, &size) == -1) {
+		while (sgSerialReceive(&sg_serial, &size) == -1) {
 			sched_yield();
 		}
-		queueEnqueue(dispatch, serial_data);
+		queueEnqueue(dispatch, sg_serial);
 	}
 	pthread_exit(arg);
 }

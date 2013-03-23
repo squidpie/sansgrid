@@ -40,9 +40,9 @@ typedef struct SansgridSerial {
 // WARNING: This function will change
 int8_t sgSerialOpen(void);
 // Send size bytes of serialdata serially
-int8_t sgSerialSend(uint8_t *serialdata, uint32_t size);
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size);
 // Get data from serial in. Data size will be in size.
-int8_t sgSerialReceive(uint8_t **serialdata, uint32_t *size);
+int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size);
 // Finish serial connection
 // WARNING: This function will change
 int8_t sgSerialClose(void);

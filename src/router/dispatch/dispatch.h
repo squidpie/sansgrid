@@ -32,10 +32,10 @@ Queue *queueDestroy(Queue*);
 // Queue State
 int queueSize(Queue*);
 // Queuing Operations
-int queueTryEnqueue(Queue *queue, uint8_t *serial_data);
-int queueEnqueue(Queue *queue, uint8_t *serial_data);
-int queueTryDequeue(Queue *queue, uint8_t **serial_data);
-int queueDequeue(Queue *queue, uint8_t **serial_data);
+int queueTryEnqueue(Queue *queue, void *serial_data);
+int queueEnqueue(Queue *queue, void *serial_data);
+int queueTryDequeue(Queue *queue, void **serial_data);
+int queueDequeue(Queue *queue, void **serial_data);
 
 #endif
 
