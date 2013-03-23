@@ -58,7 +58,7 @@ union SansgridHatchingConv {
 typedef struct SansgridFly {
 	// Datatype: 0xF0
 	uint8_t datatype;
-	char network_name[79];
+	char network_name[80];
 } SansgridFly;
 
 
@@ -75,7 +75,9 @@ typedef struct SansgridEyeball {
 	// Modes:
 	// 	00 - Standard mode
 	// 	01 - Sensor Ready to mate
-	unsigned mode:4;
+	//unsigned mode:4;
+	uint8_t mode;
+	uint8_t padding[62];
 } SansgridEyeball;
 
 //SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
@@ -93,7 +95,7 @@ typedef struct SansgridPeck {
 	// 	0x02	- Not Recognized, server refuses mate
 	// 	0x03	- Not Recognized, sensor refuses mate
 	uint8_t recognition;
-	uint8_t padding[46];
+	uint8_t padding[47];
 } SansgridPeck;
 
 //SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
@@ -182,7 +184,7 @@ typedef struct SansgridChirp {
 	// 		0x26: Sensor Disconnecting from Network
 	uint8_t datatype;
 	uint8_t datasize;	// Used to truncate data
-	uint8_t data[80];
+	uint8_t data[79];
 } SansgridChirp;
 
 //SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);

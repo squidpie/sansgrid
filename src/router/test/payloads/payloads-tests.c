@@ -40,9 +40,9 @@
 
 void checkSize(const char *pkname, size_t pksize) {
 	fail_unless((pksize == PAYLOAD_SIZE), 
-			"%s is wrong size: \n \
-			\tExpected: %i\n \
-			\tGot: %i", pkname, PAYLOAD_SIZE, pksize);
+			"\n%s is wrong size: \
+			\n\tExpected: %i\
+			\n\tGot: %i", pkname, PAYLOAD_SIZE, pksize);
 }
 
 
