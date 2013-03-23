@@ -29,9 +29,12 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <pthread.h>
 
+#include "sansgrid_daemon.h"
 #include "../dispatch/dispatch.h"
 #include "../routing/routing.h"
+#include "../sansgrid_router/sansgrid_router.h"
 
 #if defined(SYSLOG) && defined(LOG_FILE)
 #undef LOG_FILE
@@ -86,20 +89,15 @@ int main(void) {
 
 	// close standard file descriptors
 	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
+	//close(STDOUT_FILENO);
 	close(STDERR_FILENO);
 
 	// daemon-specific initialization goes here
 	
 
+	sg_router_runtime();
 
-	// The Big Loop
-	while (1) {
-		// do stuff here
-		sleep(30);	// wait 30 seconds
-	}
-
-	exit(EXIT_SUCCESS);
+	return 0;
 }
 
 

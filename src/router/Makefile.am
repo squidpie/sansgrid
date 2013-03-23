@@ -13,7 +13,8 @@ SANSGRID_TEST = test/communication/sg-serial-test.c \
 			
 sansgrid_SOURCES = $(SANSGRID_BASE) \
 		   $(SANSGRID_COMM) \
-		   daemon/pi-runtime.c 
+		   daemon/sansgrid_daemon.c \
+		   sansgrid_router/sansgrid_router.c
 sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/test-core.c

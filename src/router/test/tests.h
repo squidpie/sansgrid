@@ -20,7 +20,7 @@
 #include <check.h>
 #include <stdint.h>
 
-#define TESTS_DEBUG_LEVEL 0
+#define TESTS_DEBUG_LEVEL 1
 
 
 // General Debug
