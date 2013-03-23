@@ -37,6 +37,7 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+// Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
 void sgSerialTestSetWriter(FILE *FPTR);
 

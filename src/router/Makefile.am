@@ -1,6 +1,6 @@
 bin_PROGRAMS = sansgrid 
 check_PROGRAMS = sgtest
-SANSGRID_COMM = communication/sg_router_server_communication.c \
+SANSGRID_COMM = communication/sg_tcp.c \
 		communication/sg_serial.c
 
 SANSGRID_BASE = dispatch/dispatch.c \
