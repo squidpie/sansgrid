@@ -27,13 +27,18 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <check.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "../communication/sg-serial-test.c"
+#include "../../../sg_serial.h"
 #include "../../../payloads.h"
 
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+void sgSerialTestSetReader(FILE *FPTR);
+void sgSerialTestSetWriter(FILE *FPTR);
 
 void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
@@ -42,16 +47,17 @@ void *routingTableRuntime(void *arg) {
 	SansgridFly sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int oldstate;
+	int numpackets = 0;
 
 	while (1) {
 		queueDequeue(queue, &serial_data);
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		fail_if((serial_data == NULL), "serial_data not initialized!");
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		sg_fly_union.serialdata = serial_data;
 		sg_fly = *sg_fly_union.formdata;
-		printf("%i\t%s\n", sg_fly.datatype, sg_fly.network_name);
-		//free(serial_data);
-		//printf("Data\n");
+#if TESTS_DEBUG_LEVEL > 0
+		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly.datatype, sg_fly.network_name);
+#endif
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
@@ -61,19 +67,23 @@ void *routingTableRuntime(void *arg) {
 
 void *spiReader(void *arg) {
 	// reads from a serial connection and enqueues data
+	int i, j;
 	uint8_t *serial_data = NULL;
 	uint32_t packet_size;
 	Queue *queue = (Queue*)arg;
 	int oldstate;
+	FILE *FPTR;
 
+	if (!(FPTR = fopen("rstubin.fifo", "r"))) {
+		fail("Can't open fifo for reading");
+	}
+	sgSerialTestSetReader(FPTR);
 
-	while (1) {
-		// Read from the pipe forever
+	for (i=0; i<10; i++) {
 		
 		// Read from serial
 		if (sgSerialReceive(&serial_data, &packet_size) == -1)
-			pthread_exit(arg);
-		// Convert (for now) back to serial
+			fail("Failed to read packet");
 
 		// Enqueue
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -82,6 +92,7 @@ void *spiReader(void *arg) {
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
+	fclose(FPTR);
 	pthread_exit(arg);
 }
 
@@ -92,19 +103,27 @@ void *spiWriter(void *arg) {
 	SansgridFly sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	uint8_t serial_data[sizeof(SansgridFly)];
+	FILE *FPTR;
 
 	sg_fly.datatype = SG_FLY;
 	snprintf(sg_fly.network_name, 78, "Ping");
+	sg_fly_union.formdata = &sg_fly;
 
+
+	if (!(FPTR = fopen("rstubin.fifo", "w"))) {
+		fail("Can't open fifo for writing");
+	}
+	sgSerialTestSetWriter(FPTR);
 
 	for (i=0; i<10; i++) {
 		// write ping 10 times, then signal exiting using 
-		// the unnamed pipe
+		// the pipe
 		
-		sg_fly_union.formdata = &sg_fly;
 		if (sgSerialSend(sg_fly_union.serialdata, sizeof(SansgridFly)) == -1)
-			pthread_exit(arg);
+			fail("Failed to send packet");
 	}
+
+	fclose(FPTR);
 
 	pthread_exit(arg);
 }
@@ -120,27 +139,32 @@ START_TEST (testAdvancedDispatch) {
 	void *arg;
 
 
+	struct stat buffer;
 	// parent
 
 	queue = queueInit(200);
 	fail_unless((queue != NULL), "Error: Queue not allocated!");
+
+	if (stat("rstubin.fifo", &buffer) < 0)
+		mkfifo("rstubin.fifo", 0644);
 
 	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
 	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
 	pthread_create(&routing_table_thread, NULL, &routingTableRuntime, queue);
 
 	
-	// wait until radio stub is done writing
+
+
+	pthread_join(spi_read_thread, &arg);
+	pthread_join(spi_write_thread, &arg);
 	while (queueSize(queue) > 0)
 		sched_yield();
-
-
-	pthread_join(spi_write_thread, &arg);
-	pthread_cancel(spi_read_thread);
-	pthread_join(spi_read_thread, &arg);
 	pthread_cancel(routing_table_thread);
 	pthread_join(routing_table_thread, &arg);
 	queueDestroy(queue);
+
+
+	unlink("rstubin.fifo");
 }
 END_TEST
 

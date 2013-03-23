@@ -57,7 +57,7 @@ union SansgridHatchingConv {
 typedef struct SansgridFly {
 	// Datatype: 0xF0
 	uint8_t datatype;
-	char network_name[80];
+	char network_name[79];
 } SansgridFly;
 
 

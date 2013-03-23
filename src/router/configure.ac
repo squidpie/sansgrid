@@ -1,0 +1,40 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.69])
+AC_INIT([sansgrid], [0.1], [])
+AM_INIT_AUTOMAKE([-Wall silent-rules foreign])
+AM_SILENT_RULES([yes])
+
+# Checks for programs.
+#AC_PROG_CXX
+AC_PROG_CC
+#AC_PROG_MAKE_SET
+
+# Checks for libraries.
+# FIXME: Replace `main' with a function in `-lcheck':
+AC_CHECK_LIB([check], [srunner_create])
+# FIXME: Replace `main' with a function in `-lpthread':
+AC_CHECK_LIB([pthread], [pthread_create])
+
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h stdint.h stdlib.h string.h syslog.h unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
+AC_TYPE_INT32_T
+AC_TYPE_INT8_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT8_T
+
+# Checks for library functions.
+AC_FUNC_FORK
+AC_FUNC_MALLOC
+
+AC_CONFIG_FILES([Makefile])
+                 #test/Makefile
+                 #test/dispatch/Makefile
+                 #test/routing/Makefile])
+AC_OUTPUT
