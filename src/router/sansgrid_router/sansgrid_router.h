@@ -31,7 +31,6 @@ Queue *dispatch;
 RoutingTable *routing_table;
 uint8_t router_base[IP_SIZE];
 
-int sg_router_runtime(void);
 #endif
 
 // vim: ft=c ts=4 noet sw=4:

@@ -109,10 +109,15 @@ void fnExit(void) {
 }
 
 
-int sg_router_runtime(void) {
+int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
 				dispatch_thread;
 
+	if (argc < 2) {
+		int excode = daemon_init();
+		if (excode == EXIT_FAILURE)
+			exit(EXIT_FAILURE);
+	}
 	atexit(fnExit);
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_base);
