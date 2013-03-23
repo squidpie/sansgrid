@@ -26,6 +26,7 @@
 
 
 #define IP_SIZE 16
+#define PAYLOAD_SIZE 81
 
 
 #define SANSGRID_UNION(type, name) union name { \

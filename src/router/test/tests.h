@@ -34,6 +34,8 @@ Suite *routingBasicTestSuite (void);
 // Dispatch
 Suite *dispatchBasicTesting (void);
 Suite *dispatchAdvancedTesting (void);
+// Payload
+Suite *payloadTesting (void);
 
 #endif
 
