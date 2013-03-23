@@ -53,48 +53,50 @@ static int syslog_open = FALSE;
 #endif
 	
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	pid_t pid;
 	pid_t sid;
 
-	//int fd;
 
-	pid = fork();
+	if (argc < 2) {
 
-	// exit if fork failed
-	if (pid < 0)
-		exit(EXIT_FAILURE);
+		pid = fork();
 
-	// kill parent process
-	if (pid > 0)
-		exit(EXIT_SUCCESS);
+		// exit if fork failed
+		if (pid < 0)
+			exit(EXIT_FAILURE);
 
-	// change the file mode mask
-	umask(0);
+		// kill parent process
+		if (pid > 0) {
+			printf("Running as process %i\n", pid);
+			exit(EXIT_SUCCESS);
+		}
 
-	// open logs here
-	
-	// create new sid for child process
-	sid = setsid();
-	if (sid < 0) {
-		// log any failure
-		exit(EXIT_FAILURE);
+		// change the file mode mask
+		umask(0);
+
+		// open logs here
+		
+		// create new sid for child process
+		sid = setsid();
+		if (sid < 0) {
+			// log any failure
+			exit(EXIT_FAILURE);
+		}
+
+		// move working directory to root
+		if ((chdir("/")) < 0) {
+			// log any failure here
+			exit(EXIT_FAILURE);
+		}
+
+		// close standard file descriptors
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		close(STDERR_FILENO);
+
+		// daemon-specific initialization goes here
 	}
-
-	// move working directory to root
-	if ((chdir("/")) < 0) {
-		// log any failure here
-		exit(EXIT_FAILURE);
-	}
-
-	// close standard file descriptors
-	close(STDIN_FILENO);
-	//close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-
-	// daemon-specific initialization goes here
-	
-
 	sg_router_runtime();
 
 	return 0;
