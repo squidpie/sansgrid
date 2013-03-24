@@ -24,18 +24,17 @@
 #include <string.h>
 #include "../../../sg_serial.h"
 
-static FILE *FPTR_WRITE = NULL,
-			*FPTR_READ = NULL;
+static FILE *FPTR_SPI_WRITE = NULL,
+			*FPTR_SPI_READ = NULL;
 
 
 void sgSerialTestSetReader(FILE *FPTR) {
-	FPTR_READ = FPTR;
+	FPTR_SPI_READ = FPTR;
 }
 
 void sgSerialTestSetWriter(FILE *FPTR) {
-	FPTR_WRITE = FPTR;
+	FPTR_SPI_WRITE = FPTR;
 }
-
 
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
@@ -44,13 +43,13 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
 
 
-	if (FPTR_WRITE == NULL)
+	if (FPTR_SPI_WRITE == NULL)
 		return -1;
 
 	sg_serial_union.formdata = sg_serial;
 	
 	for (i=0; i<sizeof(SansgridSerial); i++) {
-		putc(sg_serial_union.serialdata[i], FPTR_WRITE);
+		putc(sg_serial_union.serialdata[i], FPTR_SPI_WRITE);
 	}
 	
 	return 0;
@@ -60,20 +59,29 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
+	int i;
 	int timeout = 0;
 	char lptr[sizeof(SansgridSerial)+1];
 
-	if (FPTR_READ == NULL)
+	if (FPTR_SPI_READ == NULL)
 		return -1;
 
 	// Read from the pipe 
-	while (fgets(lptr, sizeof(SansgridSerial)+1, FPTR_READ) == NULL) {
+	//printf("PING\n");
+	for (i=0; i<(sizeof(SansgridSerial)); i++) {
+		lptr[i] = fgetc(FPTR_SPI_READ);
+		//printf("%x", lptr[i]);
+	}
+	//printf("\n");
+	/*
+	while (fgets(lptr, sizeof(SansgridSerial)+1, FPTR_SPI_READ) == NULL) {
 		timeout++;
-		if (timeout > 10000) {
+		if (timeout > 50) {
 			return -1;
 		}
 		sched_yield();
 	}
+	*/
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
