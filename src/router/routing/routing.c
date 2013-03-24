@@ -324,4 +324,15 @@ int32_t routingTableSetNextExpectedPacket(
 	return 0;
 }
 
+int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], int32_t hb_status) {
+	// Set the heartbeat status of a device
+	if (table == NULL || !table->table_alloc)
+		return -1;
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return 0;
+	table->routing_table[index]->properties->heartbeat_status = hb_status;
+}
+
 // vim: ft=c ts=4 noet sw=4:

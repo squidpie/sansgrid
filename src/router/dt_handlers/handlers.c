@@ -25,6 +25,31 @@
 #include "../routing/routing.h"
 #include "../../sg_serial.h"
 
+
+static void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
+	// Something went wrong. Transmit NETWORK_DISCONNECT_SENSOR to ip_addr
+	SansgridSerial sg_serial;
+	SansgridChirp sg_chirp;
+
+	if ((ip_addr[IP_SIZE-1] & ~1) == 0x0) {
+		// router or server. Don't free device
+		return;
+	}
+
+	// TODO: Send signal to server that device is being disconnected
+
+	// Signal to sensor disconnecting
+	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
+	memcpy(&sg_serial, &sg_chirp, sizeof(SansgridChirp));
+	sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+
+	routingTableFreeIP(routing_table, ip_addr);	
+
+	return;
+}
+	
+
+
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
@@ -73,8 +98,8 @@ int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle an Eyeball data type
-	// 1. Assign IP Address
-	// 2. Transmit properties to server
+	// Assign tentative IP Address 
+	// Send SansgridEyeball from sensor to server
 	SansgridEyeball *sg_eyeball;
 	DeviceProperties *dev_prop;
 	SANSGRID_UNION(SansgridEyeball, SansgridEyeballConv) sg_eyeball_union;
@@ -92,7 +117,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, dev_prop);
 
-	// TODO: Send data to server
+	// TODO: Send to server
 
 	// not done yet
 	return -1;
@@ -101,12 +126,10 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 
 int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peck data type
+	// Send SansgridPeck from server to sensor
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
 
-	// TODO: Store device's properties somewhere
-	// Call them up here
-	//SansgridDeviceProperties *sg_prop;
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
@@ -116,42 +139,37 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		case SG_PECK_RECOGNIZED:
 			// Sensor Recognized
 			// Next packet: Squawk
-			routingTableSetNextExpectedPacket(routing_table, sg_peck->ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
 					SG_DEVSTATUS_SQUAWKING);
-			// TODO: Send packet on to radio
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_PECK_MATE:
 			// Sensor Not Recognized;
 			// Server will mate
 			// Next packet: Mate
-			routingTableSetNextExpectedPacket(routing_table, sg_peck->ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
 					SG_DEVSTATUS_SINGING);
-			// TODO: Send packet on to radio
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_PECK_SERVER_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Server refuses mate
-			routingTableFreeIP(routing_table, sg_peck->ip);	
-			// TODO: Send packet on to radio
-			break;
 		case SG_PECK_SENSOR_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Sensor refuses mate
-			routingTableFreeIP(routing_table, sg_peck->ip);	
-			// TODO: Send Chirp Network Disconnecting Sensor
-			break;
 		default:
-			// error
+			// fallthrough/error
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 	}
 
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
 int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Sing data type
+	// Send a SansgridSing payload from server to sensor
 	SansgridSing *sg_sing;
 	SANSGRID_UNION(SansgridSing, SansgridSingConv) sg_sing_union;
 
@@ -159,29 +177,29 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_sing_union.serialdata = sg_serial->payload;
 	sg_sing = sg_sing_union.formdata;
 
-	// FIXME: SansgridSing needs ip address field
-	//routingTableSetNextExpectedPacket(routing_table, sg_sing->ip,
-			//SG_DEVSTATUS_MOCKING);
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			SG_DEVSTATUS_MOCKING);
 
 	switch (sg_sing->datatype) {
 		case SG_SING_WITH_KEY:
 			// Acknowledgement and server's public key
-			break;
 		case SG_SING_WITHOUT_KEY:
 			// Acknowledgement, no public key
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
 			// error
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 	}
 
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
 int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Mock data type
+	// Send a SansgridMock payload from server to sensor
 	SansgridMock *sg_mock;
 	SANSGRID_UNION(SansgridMock, SansgridMockConv) sg_mock_union;
 
@@ -192,44 +210,34 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_mock->datatype) {
 		case SG_MOCK_WITH_KEY:
 			// Acknowledgement and sensor's public key
-			break;
 		case SG_MOCK_WITHOUT_KEY:
 			// Acknowledgement, no sensor key
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 	}
 
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
 int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peacock data type
-	SansgridPeacock *sg_peacock;
-	SANSGRID_UNION(SansgridPeacock, SansgridPeacockConv) sg_peacock_union;
+	// Send a SansgridPeacock from server to sensor
+	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
-	// Convert serial data to formatted data
-	sg_peacock_union.serialdata = sg_serial->payload;
-	sg_peacock = sg_peacock_union.formdata;
-
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
-	SansgridNest *sg_nest;
-	SANSGRID_UNION(SansgridNest, SansgridNestConv) sg_nest_union;
+	// Send a SansgridNest from server to sensor
+	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
-	// Convert serial data to formatted data
-	sg_nest_union.serialdata = sg_serial->payload;
-	sg_nest = sg_nest_union.formdata;
-
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
@@ -245,28 +253,38 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
 			// Server Challenges sensor
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
+			// TODO: Send packet to server
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// sensor challenge coming
+			// TODO: Send packet to server
 			break;
 		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
 			// Sensor challenges server
+			// TODO: Send packet to server
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 			// Server denies sensor challenge request
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 		case SG_SQUAWK_SERVER_RESPOND:
 			// Server Responds to challenge
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
+			// TODO: Send packet to server
 			break;
 		default:
+			// error
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
 	}
 	// not done yet
@@ -276,8 +294,28 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Heartbeat data type
 
+	SansgridHeartbeat *sg_heartbeat;
+	SANSGRID_UNION(SansgridHeartbeat, SGHB) sansgrid_heartbeat_union;
+
+	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
+	sg_heartbeat = sansgrid_heartbeat_union.formdata;
+
+	switch (sg_heartbeat->datatype) {
+		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
+			// Heartbeat from router to sensor
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			break;
+		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
+			// Heartbeat response from sensor
+			routingTableSetHeartbeatStatus(routing_table, sg_serial->origin_ip,
+					SG_DEVICE_PRESENT);
+			break;
+		default:
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
+	}
+
 	// not done yet
-	return -1;
+	return 0;
 }
 
 int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
@@ -293,24 +331,28 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_chirp->datatype) {
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 			// Command sent from server to sensor
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
 			// Data sent from server to sensor
+			// TODO: Send payload to server
 			break;
 		case SG_CHIRP_DATA_STREAM_START:
 			// Start of data stream
-			break;
+			// Currently undefined
 		case SG_CHIRP_DATA_STREAM_CONTINUE:
 			// Continued stream of data
-			break;
+			// Currently undefined
 		case SG_CHIRP_DATA_STREAM_END:
 			// End of data stream
-			break;
+			// Currently undefined
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			// Network is disconnecting sensor
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 		case SG_CHIRP_SENSOR_DISCONNECT:
 			// Sensor is disconnecting from network
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
 		default:
 			break;

@@ -39,6 +39,11 @@
 
 #include "../../payloads.h"
 
+enum SansgridHeartbeatStatusEnum {
+	SG_DEVICE_PRESENT,
+	SG_DEVICE_STALE,
+	SG_DEVICE_LOST
+};
 
 
 //typedef struct DeviceIP DeviceIP;
@@ -49,6 +54,7 @@ typedef struct DeviceProperties DeviceProperties;
 struct DeviceProperties {
 	// A device's general properties
 	SansgridEyeball dev_attr;
+	enum SansgridHeartbeatStatusEnum heartbeat_status;
 	enum SansgridDeviceStatusEnum dev_status;
 	enum SansgridDeviceStatusEnum next_expected_packet;
 };
@@ -66,6 +72,7 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
+int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], int32_t hb_status);
 
 
 
