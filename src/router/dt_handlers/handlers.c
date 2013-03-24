@@ -24,6 +24,7 @@
 #include "../../payloads.h"
 #include "../routing/routing.h"
 #include "../../sg_serial.h"
+#include "../communication/sg_tcp.h"
 
 
 static void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
@@ -36,11 +37,13 @@ static void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZ
 		return;
 	}
 
-	// TODO: Send signal to server that device is being disconnected
-
-	// Signal to sensor disconnecting
 	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
 	memcpy(&sg_serial, &sg_chirp, sizeof(SansgridChirp));
+
+	// Signal to server disconnecting
+	sgTCPSend(&sg_serial, sizeof(SansgridSerial));
+
+	// Signal to sensor disconnecting
 	sgSerialSend(&sg_serial, sizeof(SansgridSerial));
 
 	routingTableFreeIP(routing_table, ip_addr);	
@@ -80,18 +83,16 @@ int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial)
 	
 	routingTableAssignIPStatic(routing_table, sg_hatching->ip, dev_prop);
 
-	// Not done yet
-	return -1;
+	return 0;
 }
 
 
 int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Fly data type
+	// Send a SansgridFly from router to radio
 	
-	// TODO: multicast network existence
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 	
-	// not done yet
 	return 0;
 }
 
@@ -117,10 +118,10 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, dev_prop);
 
-	// TODO: Send to server
+	// Send packet to the server
+	sgTCPSend(sg_serial, sizeof(SansgridSerial));
 
-	// not done yet
-	return -1;
+	return 0;
 }
 
 
@@ -243,6 +244,8 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Squawk data type
+	// Send a SansgridSquawk 	from server to sensor
+	// 						 or from sensor to server
 	SansgridSquawk *sg_squawk;
 	SANSGRID_UNION(SansgridSquawk, SansgridSquawkConv) sg_squawk_union;
 
@@ -258,16 +261,16 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
-			// TODO: Send packet to server
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// sensor challenge coming
-			// TODO: Send packet to server
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
 			// Sensor challenges server
-			// TODO: Send packet to server
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 			// Server denies sensor challenge request
@@ -279,7 +282,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
-			// TODO: Send packet to server
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
 			// error
@@ -287,12 +290,13 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
 	}
-	// not done yet
-	return -1;
+	return 0;
 }
 
 int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Heartbeat data type
+	// Send a SansgridHeartbeat from router to sensor
+	// Receive a SansgridHeartbeat from sensor
 
 	SansgridHeartbeat *sg_heartbeat;
 	SANSGRID_UNION(SansgridHeartbeat, SGHB) sansgrid_heartbeat_union;
@@ -314,12 +318,13 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 	}
 
-	// not done yet
 	return 0;
 }
 
 int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Chirp data type
+	// Send a SansgridChirp from server to sensor
+	// Send a SansgridChirp from sensor to server
 	
 	SansgridChirp *sg_chirp;
 	SANSGRID_UNION(SansgridChirp, SansgridChirpConv) sg_chirp_union;
@@ -335,7 +340,7 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
 			// Data sent from server to sensor
-			// TODO: Send payload to server
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_DATA_STREAM_START:
 			// Start of data stream
@@ -355,11 +360,12 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
 		default:
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			break;
 	}
 
-	// not done yet
-	return -1;
+	return 0;
 }
 
 

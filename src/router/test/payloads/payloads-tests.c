@@ -33,6 +33,7 @@
 
 #include "../../../sg_serial.h"
 #include "../../../payloads.h"
+#include "../../routing/routing.h"
 
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
@@ -59,6 +60,42 @@ START_TEST (testPayloadSize) {
 	checkSize("SansgridSquawk", sizeof(SansgridSquawk));
 	checkSize("SansgridHeartbeat", sizeof(SansgridHeartbeat));
 	checkSize("SansgridChirp", sizeof(SansgridChirp));
+}
+END_TEST
+
+
+START_TEST (testEyeball) {
+	// unit test code to test the Eyeball data type
+	int i;
+	SansgridEyeball sg_eyeball;
+	SansgridSerial sg_serial;
+	RoutingTable *routing_table;
+	uint8_t base[IP_SIZE];
+
+	sg_eyeball.datatype = SG_EYEBALL;
+	for (i=0; i<4; i++) {
+		sg_eyeball.manid[i] = 0x0;
+		sg_eyeball.modnum[i] = 0x0;
+		sg_eyeball.serial_number[i] = 0x0;
+	}
+	for (i=4; i<8; i++) {
+		sg_eyeball.serial_number[i] = 0x0;
+	}
+	for (i=0; i<IP_SIZE; i++)
+		base[i] = 0x0;
+	base[0] = 128;
+	sg_eyeball.profile = 0x0;
+
+
+	routing_table = routingTableInit(base);
+	fail_if((routing_table == NULL), "Error: routing table not initialized!");
+
+
+	sg_eyeball.mode = SG_EYEBALL_MATE;
+
+
+	
+
 }
 END_TEST
 

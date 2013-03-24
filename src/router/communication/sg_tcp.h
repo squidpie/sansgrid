@@ -18,22 +18,15 @@
  *
  *
  */
+#ifndef __SG_ROUTER_TCP_H__
+#define __SG_ROUTER_TCP_H__
 
 #include <stdint.h>
-#include "sg_tcp.h"
 #include "../../sg_serial.h"
+int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size);
+int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 
-int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
-	// Send size bytes of serialdata
-	return -1;
-}
-
-int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	// Receive serialdata, size of packet stored in size
-	return -1;
-}
-
-
+#endif
 
 // vim: ft=c ts=4 noet sw=4:
 
