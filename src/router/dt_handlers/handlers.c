@@ -117,6 +117,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 
 	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, dev_prop);
+	memcpy(sg_serial->origin_ip, ip_addr, sizeof(IP_SIZE));
 
 	// Send packet to the server
 	sgTCPSend(sg_serial, sizeof(SansgridSerial));

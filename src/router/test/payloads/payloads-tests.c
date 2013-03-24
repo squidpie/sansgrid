@@ -70,15 +70,23 @@ void *spiPayloadReader(void *arg) {
 	// Reads from a serial connection
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size;
+	int excode;
 
-	if (!(FPTR_SPI_READER = fopen("rstubin.fifo", "r"))) {
+	if (!(FPTR_SPI_READER = fopen("spi.fifo", "r"))) {
 		fail("Can't open serial pipe for reading!");
 	}
 	sgSerialTestSetReader(FPTR_SPI_READER);
 
-	if (sgSerialReceive(&sg_serial, &packet_size) == -1)
+	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read packet");
-	queueEnqueue(dispatch, sg_serial);
+	else if (excode == 0) {
+#if TESTS_DEBUG_LEVEL > 0
+		printf("Origin IP: ");
+		routingTablePrint(sg_serial->origin_ip);
+		if (queueEnqueue(dispatch, sg_serial) == -1)
+			fail("Dispatch Enqueue Failure (Serial)");
+#endif
+	}
 
 	fclose(FPTR_SPI_READER);
 	pthread_exit(arg);
@@ -90,15 +98,24 @@ void *tcpPayloadReader(void *arg) {
 	// Reads from a TCP connection
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size;
+	int excode;
 
 	if (!(FPTR_TCP_READER = fopen("tcp.fifo", "r"))) {
 		fail("Can't open TCP pipe for reading!");
 	}
 	sgTCPTestSetReader(FPTR_TCP_READER);
 
-	if (sgTCPReceive(&sg_serial, &packet_size) == -1)
+	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read TCP packet");
-	queueEnqueue(dispatch, sg_serial);
+	else if (excode == 0) {
+#if TESTS_DEBUG_LEVEL > 0
+		//printf("Address: %p\n", sg_serial);
+		printf("Origin IP: ");
+		routingTablePrint(sg_serial->origin_ip);
+#endif
+		if (queueEnqueue(dispatch, sg_serial) == -1)
+			fail("Dispatch Enqueue Failure (TCP)");
+	}
 
 	fclose(FPTR_TCP_READER);
 	pthread_exit(arg);
@@ -114,8 +131,8 @@ static int32_t payloadStateInit(void) {
 
 	struct stat buffer;
 
-	if (stat("rstubin.fifo", &buffer) < 0)
-		mkfifo("rstubin.fifo", 0644);
+	if (stat("spi.fifo", &buffer) < 0)
+		mkfifo("spi.fifo", 0644);
 	if (stat("tcp.fifo", &buffer) < 0)
 		mkfifo("tcp.fifo", 0644);
 
@@ -131,7 +148,7 @@ static int32_t payloadStateInit(void) {
 	pthread_create(&tcp_reader_thr, NULL, &tcpPayloadReader, NULL);
 	
 	// Initialize Pipes
-	if (!(FPTR_SPI_WRITER = fopen("rstubin.fifo", "w"))) {
+	if (!(FPTR_SPI_WRITER = fopen("spi.fifo", "w"))) {
 		fail("Error: Can't open serial pipe for writing!");
 	}
 	if (!(FPTR_TCP_WRITER = fopen("tcp.fifo", "w"))) {
@@ -143,6 +160,20 @@ static int32_t payloadStateInit(void) {
 	return 0;
 }
 
+static int32_t payloadStateCommit(void) {
+	// Close writing file descriptors, join threads, remove pipes
+	void *arg;
+	fclose(FPTR_SPI_WRITER);
+	fclose(FPTR_TCP_WRITER);
+
+	// Finish reading
+	pthread_join(serial_reader_thr, &arg);
+	pthread_join(tcp_reader_thr, &arg);
+	
+	unlink("spi.fifo");
+	unlink("tcp.fifo");
+	return 0;
+}
 
 
 START_TEST (testPayloadSize) {
@@ -164,33 +195,53 @@ END_TEST
 
 START_TEST (testEyeball) {
 	// unit test code to test the Eyeball data type
-	int i;
 	SansgridEyeball sg_eyeball;
 	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial_read;
 
-	void *arg;
 
+	// initialize
 	payloadStateInit();
 
+	// Make packet
+	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 
-
+	// Call handler
 	routerHandleEyeball(routing_table, &sg_serial);
 
-	fclose(FPTR_SPI_WRITER);
-	fclose(FPTR_TCP_WRITER);
+	// Finish up with pipes
+	payloadStateCommit();
 
-	// Finish reading
-	pthread_join(serial_reader_thr, &arg);
-	pthread_join(tcp_reader_thr, &arg);
+	// Run test on current state
+	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
+		fail("Dispatch Failure");
 
-	
+	fail_if((sg_serial_read == NULL), "payload lost");
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Address: %p\n", sg_serial_read);
+	printf("Origin IP: ");
+	routingTablePrint(sg_serial_read->origin_ip);
+	printf("Dest   IP: ");
+	routingTablePrint(sg_serial_read->dest_ip);
+	printf("Sent: ");
+	for (int i=0; i<sizeof(SansgridEyeball); i++)
+		printf("%.2x", sg_serial.payload[i]);
+	printf("\n");
+	printf("Read: ");
+	for (int i=0; i<sizeof(SansgridEyeball); i++)
+		printf("%.2x", sg_serial_read->payload[i]);
+	printf("\n");
+#endif
+	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridEyeball)))
+		fail("Packet Mismatch");
+	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip))
+		fail("No IP assigned");
 
-	// Cleanup
-	unlink("rstubin.fifo");
-	unlink("tcp.fifo");
+	// Final Cleanup
 	queueDestroy(dispatch);
+	routingTableDestroy(routing_table);
 }
 END_TEST
 

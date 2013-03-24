@@ -25,6 +25,18 @@
 #include "../../../sg_serial.h"
 #include "../../communication/sg_tcp.h"
 
+void payloadMkSerial(SansgridSerial *sg_serial) {
+	for (int i=0; i<IP_SIZE; i++) {
+		sg_serial->dest_ip[i] = 0x0;
+		sg_serial->origin_ip[i] = 0x0;
+	}
+	for (int i=0; i<81; i++)
+		sg_serial->payload[i] = 0x0;
+	sg_serial->timestamp = 0x0;
+	sg_serial->origin = 0x0;
+	return;
+}
+
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type) {
 	int i;
 
@@ -39,6 +51,8 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum 
 	}
 	sg_eyeball->profile = 0x0;
 	sg_eyeball->mode = ebmate_type;
+	for (i=0; i<62; i++)
+		sg_eyeball->padding[i] = 0x0;
 
 	return;
 }

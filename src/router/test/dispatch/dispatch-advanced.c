@@ -44,11 +44,11 @@ void sgSerialTestSetWriter(FILE *FPTR);
 void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
 	Queue *queue = (Queue*)arg;
-	SansgridFly sg_fly;
-	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int oldstate;
 	SansgridSerial *sg_serial;
 #if TESTS_DEBUG_LEVEL > 0
+	SansgridFly sg_fly;
+	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int numpackets = 0;
 #endif
 
@@ -56,9 +56,9 @@ void *routingTableRuntime(void *arg) {
 		queueDequeue(queue, (void**)&sg_serial);
 		fail_if((sg_serial == NULL), "serial_data not initialized!");
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+#if TESTS_DEBUG_LEVEL > 0
 		sg_fly_union.serialdata = sg_serial->payload;
 		sg_fly = *sg_fly_union.formdata;
-#if TESTS_DEBUG_LEVEL > 0
 		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly.datatype, sg_fly.network_name);
 #endif
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);

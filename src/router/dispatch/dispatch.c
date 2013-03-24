@@ -26,6 +26,7 @@
  * Link with -lpthread
  */
 
+#include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdlib.h>
@@ -66,6 +67,7 @@ static int enqueue(Queue *queue, void *serial_data, int (*sem_fn)(sem_t*)) {
 	pthread_mutex_lock(&queue->queue_lock);		// get atomic access to queue
 
 	queue->list[queue->queue_index_end] = serial_data;
+	//printf("Enqueue: %i: %p\n", queue->queue_index_end, serial_data);
 	modInc(&queue->queue_index_end, queue->size);
 
 	sem_post(&queue->queue_empty_lock);			// signal more data is available
@@ -85,6 +87,7 @@ static int dequeue(Queue *queue, void **serial_data, int (*sem_fn)(sem_t*)) {
 	pthread_mutex_lock(&queue->queue_lock);		// get atomic access to queue
 
 	*serial_data = queue->list[queue->queue_index_start];
+	//printf("Dequeue: %i: %p\n", queue->queue_index_start, *serial_data);
 	modInc(&queue->queue_index_start, queue->size);
 
 	sem_post(&queue->queue_full_lock);			// signal more space is available

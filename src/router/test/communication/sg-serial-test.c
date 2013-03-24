@@ -60,28 +60,17 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	int i;
-	int timeout = 0;
 	char lptr[sizeof(SansgridSerial)+1];
 
 	if (FPTR_SPI_READ == NULL)
 		return -1;
 
 	// Read from the pipe 
-	//printf("PING\n");
-	for (i=0; i<(sizeof(SansgridSerial)); i++) {
+	for (i=0; i<(sizeof(SansgridSerial)) && FPTR_SPI_READ; i++) {
 		lptr[i] = fgetc(FPTR_SPI_READ);
-		//printf("%x", lptr[i]);
+		if (lptr[i] == EOF)
+			return 1;
 	}
-	//printf("\n");
-	/*
-	while (fgets(lptr, sizeof(SansgridSerial)+1, FPTR_SPI_READ) == NULL) {
-		timeout++;
-		if (timeout > 50) {
-			return -1;
-		}
-		sched_yield();
-	}
-	*/
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);

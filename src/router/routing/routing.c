@@ -200,7 +200,6 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	index = locationToTablePtr(ip_addr, table->base);
 
 	if (routingTableLookup(table, ip_addr) == 0) {
-		// TODO: statically assign IP
 		// Allocate space for the device
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));

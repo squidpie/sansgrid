@@ -26,6 +26,7 @@
 
 #include "../../../payloads.h"
 
+void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
 
 
