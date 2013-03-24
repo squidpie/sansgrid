@@ -95,7 +95,10 @@ typedef struct SansgridPeck {
 	// 	0x02	- Not Recognized, server refuses mate
 	// 	0x03	- Not Recognized, sensor refuses mate
 	uint8_t recognition;
-	uint8_t padding[47];
+	uint8_t manid[4];
+	uint8_t modnum[4];
+	uint8_t sn[8];
+	uint8_t padding[31];
 } SansgridPeck;
 
 //SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
