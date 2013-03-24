@@ -8,6 +8,7 @@ SANSGRID_BASE = dispatch/dispatch.c \
 		dt_handlers/handlers.c \
 		routing/routing.c
 SANSGRID_TEST = test/communication/sg-serial-test.c \
+		test/communication/sg-tcp-test.c \
 		test/dispatch/dispatch-basic.c \
 		test/dispatch/dispatch-advanced.c \
 		test/routing/routing-basic-test.c \
