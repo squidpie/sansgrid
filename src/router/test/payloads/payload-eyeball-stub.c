@@ -32,8 +32,9 @@ START_TEST (testEyeball) {
 	SansgridSerial sg_serial;
 	SansgridSerial *sg_serial_read;
 
+	// initialize dispatch/routing, set up fifos/threads
+	payloadRoutingInit();
 
-	// initialize
 	payloadStateInit();
 
 	// Make packet
@@ -44,16 +45,15 @@ START_TEST (testEyeball) {
 	// Call handler
 	routerHandleEyeball(routing_table, &sg_serial);
 
-	// Finish up with pipes
+	// Finish up with pipes/threads
 	payloadStateCommit();
 
-	// Run test on current state
+	// Test current state
 	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
 		fail("Dispatch Failure");
 
 	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
-	printf("Address: %p\n", sg_serial_read);
 	printf("Origin IP: ");
 	routingTablePrint(sg_serial_read->origin_ip);
 	printf("Dest   IP: ");

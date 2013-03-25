@@ -22,6 +22,12 @@
  */
 
 #include "payload-tests.h"
+pthread_t serial_reader_thr,
+  		  tcp_reader_thr;
+static FILE *FPTR_SPI_WRITER,
+	 		*FPTR_SPI_READER,
+	 		*FPTR_TCP_WRITER,
+	 		*FPTR_TCP_READER;
 
 
 void checkSize(const char *pkname, size_t pksize) {
@@ -77,8 +83,8 @@ void *tcpPayloadReader(void *arg) {
 	else if (excode == 0) {
 #if TESTS_DEBUG_LEVEL > 0
 		//printf("Address: %p\n", sg_serial);
-		printf("Origin IP: ");
-		routingTablePrint(sg_serial->origin_ip);
+		//printf("Origin IP: ");
+		//routingTablePrint(sg_serial->origin_ip);
 #endif
 		if (queueEnqueue(dispatch, sg_serial) == -1)
 			fail("Dispatch Enqueue Failure (TCP)");
@@ -89,12 +95,24 @@ void *tcpPayloadReader(void *arg) {
 }
 
 
+int32_t payloadRoutingInit(void) {
+	uint8_t base[IP_SIZE];
+
+	dispatch = queueInit(200);
+	fail_if((dispatch == NULL), "Error: dispatch is not initialized!");
+	for (int i=0; i<IP_SIZE; i++)
+		base[i] = 0x0;
+	routing_table = routingTableInit(base);
+	fail_if((routing_table == NULL), "Error: routing table is not initialized!");
+
+	return 0;
+}
+
 
 int32_t payloadStateInit(void) {
 	// initialize routing table, dispatch,
 	// and file descriptors, and threads for
 	// tests
-	uint8_t base[IP_SIZE];
 
 	struct stat buffer;
 
@@ -103,13 +121,7 @@ int32_t payloadStateInit(void) {
 	if (stat("tcp.fifo", &buffer) < 0)
 		mkfifo("tcp.fifo", 0644);
 
-	for (int i=0; i<IP_SIZE; i++)
-		base[i] = 0x0;
 
-	dispatch = queueInit(200);
-	fail_if((dispatch == NULL), "Error: dispatch is not initialized!");
-	routing_table = routingTableInit(base);
-	fail_if((routing_table == NULL), "Error: routing table is not initialized!");
 
 	pthread_create(&serial_reader_thr, NULL, &spiPayloadReader, NULL);
 	pthread_create(&tcp_reader_thr, NULL, &tcpPayloadReader, NULL);
@@ -126,6 +138,8 @@ int32_t payloadStateInit(void) {
 
 	return 0;
 }
+
+
 
 int32_t payloadStateCommit(void) {
 	// Close writing file descriptors, join threads, remove pipes

@@ -51,12 +51,6 @@ void sgTCPTestSetWriter(FILE *FPTR);
 
 Queue *dispatch;
 RoutingTable *routing_table;
-FILE *FPTR_SPI_WRITER,
-	 *FPTR_SPI_READER,
-	 *FPTR_TCP_WRITER,
-	 *FPTR_TCP_READER;
-pthread_t serial_reader_thr,
-  		  tcp_reader_thr;
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
@@ -69,6 +63,7 @@ void *spiPayloadReader(void *arg);
 void *tcpPayloadReader(void *arg);
 
 // Payload State
+int32_t payloadRoutingInit(void);
 int32_t payloadStateInit(void);
 int32_t payloadStateCommit(void);
 
