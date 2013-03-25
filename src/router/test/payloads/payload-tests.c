@@ -55,6 +55,9 @@ void *spiPayloadReader(void *arg) {
 	else if (excode == 0) {
 		if (queueEnqueue(dispatch, sg_serial) == -1)
 			fail("Dispatch Enqueue Failure (Serial)");
+#if TESTS_DEBUG_LEVEL > 0
+		printf("(Serial) Queued\n");
+#endif
 	}
 
 	fclose(FPTR_SPI_READER);
@@ -79,6 +82,9 @@ void *tcpPayloadReader(void *arg) {
 	else if (excode == 0) {
 		if (queueEnqueue(dispatch, sg_serial) == -1)
 			fail("Dispatch Enqueue Failure (TCP)");
+#if TESTS_DEBUG_LEVEL > 0
+		printf("(TCP) Queued\n");
+#endif
 	}
 
 	fclose(FPTR_TCP_READER);
@@ -141,9 +147,11 @@ int32_t payloadStateCommit(void) {
 	// Finish reading
 	pthread_join(serial_reader_thr, &arg);
 	pthread_join(tcp_reader_thr, &arg);
+
 	
 	unlink("spi.fifo");
 	unlink("tcp.fifo");
+
 	return 0;
 }
 

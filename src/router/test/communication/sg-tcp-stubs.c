@@ -70,8 +70,10 @@ int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Read from the pipe 
 	for (i=0; i<sizeof(SansgridSerial) && FPTR_TCP_READ; i++) {
 		lptr[i] = fgetc(FPTR_TCP_READ);
-		if (lptr[i] == EOF)
+		if (lptr[i] == EOF && (i == (sizeof(SansgridSerial)-1))) {
+			//printf("(TCP) Dropping Packet\n");
 			return 1;
+		}
 	}
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));

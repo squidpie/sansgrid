@@ -46,12 +46,10 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
 	payloadMkPeck(&sg_peck, sg_peck_rec);
 
-	printf("Before Eyeball\n");
 	// Call Eyeball handler
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
-	printf("Almost Done... (Eyeball)\n");
 	// Commit Eyeball handler
 	payloadStateCommit();
 
@@ -63,12 +61,10 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	printf("Successfully Eyeballed\n");
 #endif
 
-	printf("Before Peck\n");
 	// Call Peck handler
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	routerHandlePeck(routing_table, &sg_serial);
-	printf("Almost Done... (Peck)\n");
 	// Commit Peck handler
 	payloadStateCommit();
 
