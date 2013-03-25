@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <check.h>
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -69,6 +69,8 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 	memcpy(&sg_peck->manid, &sg_eyeball.manid, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->modnum, &sg_eyeball.modnum, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->serial_number, &sg_eyeball.serial_number, 8*sizeof(uint8_t));
+	for (i=0; i<31; i++)
+		sg_peck->padding[i] = 0x0;
 
 	return;
 }

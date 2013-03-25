@@ -21,19 +21,26 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <string.h>
 #include "../../../sg_serial.h"
+#include "../tests.h"
 
 static FILE *FPTR_SPI_WRITE = NULL,
 			*FPTR_SPI_READ = NULL;
+static sem_t *SPI_READ = NULL;
 
 
-void sgSerialTestSetReader(FILE *FPTR) {
+void sgSerialTestSetReader(FILE *FPTR, sem_t *readlock) {
 	FPTR_SPI_READ = FPTR;
 }
 
 void sgSerialTestSetWriter(FILE *FPTR) {
 	FPTR_SPI_WRITE = FPTR;
+}
+
+void sgSerialTestSetReadlock(sem_t *readlock) {
+	SPI_READ = readlock;
 }
 
 
@@ -68,10 +75,18 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Read from the pipe 
 	for (i=0; i<(sizeof(SansgridSerial)) && FPTR_SPI_READ; i++) {
 		lptr[i] = fgetc(FPTR_SPI_READ);
-		if (lptr[i] == EOF && (i == (sizeof(SansgridSerial)-1))) {
-			//printf("(Serial) Dropping Packet\n");
+	}
+	if (SPI_READ) {
+		if (sem_trywait(SPI_READ) == -1) {
 			return 1;
 		}
+	}
+	if (i < sizeof(SansgridSerial)) {
+#if TESTS_DEBUG_LEVEL > 0
+		printf("(Serial) Dropping Packet at %i of %i\n", i, 
+				sizeof(SansgridSerial));
+#endif
+		return 1;
 	}
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));

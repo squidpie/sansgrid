@@ -17,8 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
- * This dispatch test uses a named pipe as a stub to read from.
- * The data from the stub is enqueued, and the dispatch thread dequeues the data.
+ * The payload tests are designed to closely simulate a serial pipe.
+ * Semaphores are important when using the functions defined in payload-stub-handlers.c
+ * You should do a sem_post():
+ * 		Receiving from server: post the TCP semaphore
+ * 		Receiving from sensor: post the SPI semaphore 
+ * 	If the semaphores are uninitialized the pipe will be read
+ * 			(regardless of whether valid data exists in the pipe).
  */
 #ifndef __SG_PAYLOAD_STUBS_H__
 #define __SG_PAYLOAD_STUBS_H__
@@ -29,6 +34,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <check.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -45,12 +51,16 @@
 
 // Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
+void sgSerialTestSetReadlock(sem_t *readlock);
 void sgSerialTestSetWriter(FILE *FPTR);
 void sgTCPTestSetReader(FILE *FPTR);
+void sgTCPTestSetReadlock(sem_t *readlock);
 void sgTCPTestSetWriter(FILE *FPTR);
 
 Queue *dispatch;
 RoutingTable *routing_table;
+sem_t tcp_readlock,
+	  spi_readlock;
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);

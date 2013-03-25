@@ -144,6 +144,7 @@ int32_t payloadStateCommit(void) {
 	fclose(FPTR_SPI_WRITER);
 	fclose(FPTR_TCP_WRITER);
 
+
 	// Finish reading
 	pthread_join(serial_reader_thr, &arg);
 	pthread_join(tcp_reader_thr, &arg);

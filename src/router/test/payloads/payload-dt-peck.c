@@ -32,6 +32,8 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	SansgridPeck sg_peck;
 	SansgridSerial sg_serial;
 	SansgridSerial *sg_serial_read;
+	sem_t spi_readlock,
+		  tcp_readlock;
 
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n");
@@ -39,6 +41,11 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 #endif
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
+	sem_init(&spi_readlock, 0, 0);
+	sem_init(&tcp_readlock, 0, 0);
+
+	sgSerialTestSetReadlock(&spi_readlock);
+	sgTCPTestSetReadlock(&tcp_readlock);
 
 
 	// Make packet
@@ -47,14 +54,17 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	payloadMkPeck(&sg_peck, sg_peck_rec);
 
 	// Call Eyeball handler
+	sem_post(&tcp_readlock);	// Data flows from sensor to server
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
 	// Commit Eyeball handler
 	payloadStateCommit();
 
+	fail_if((queueSize(dispatch) == 0), "(Peck: Eyeball): No data on the dispatch!");
 	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
 		fail("Dispatch Failure");
+	fail_if((queueSize(dispatch) > 0), "Too much data went on the dispatch");
 
 	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
@@ -62,6 +72,7 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 #endif
 
 	// Call Peck handler
+	sem_post(&spi_readlock);	// Data flows from server to sensor
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	routerHandlePeck(routing_table, &sg_serial);
@@ -69,8 +80,10 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	payloadStateCommit();
 
 	// Test current state
+	fail_if((queueSize(dispatch) == 0), "(Peck: Peck): No data on the dispatch!");
 	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
 		fail("Dispatch Failure");
+	fail_if((queueSize(dispatch) > 0), "Too much data went on the dispatch");
 
 	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
@@ -95,6 +108,8 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	// Final Cleanup
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
+	sem_destroy(&spi_readlock);
+	sem_destroy(&tcp_readlock);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Pecked\n");
 #endif
