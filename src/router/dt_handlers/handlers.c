@@ -117,7 +117,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 
 	// Store IP in the routing table
 	routingTableAssignIP(routing_table, ip_addr, dev_prop);
-	memcpy(sg_serial->origin_ip, ip_addr, sizeof(IP_SIZE));
+	memcpy(&sg_serial->origin_ip, ip_addr, IP_SIZE);
 
 	// Send packet to the server
 	sgTCPSend(sg_serial, sizeof(SansgridSerial));
@@ -129,13 +129,27 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peck data type
 	// Send SansgridPeck from server to sensor
+	SansgridEyeball sg_eyeball;
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
+	DeviceProperties dev_prop;
+	uint8_t ip_addr[IP_SIZE];
 
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
+
+	memcpy(&sg_eyeball.manid, sg_peck->manid, 4);
+	memcpy(&sg_eyeball.modnum, sg_peck->modnum, 4);
+	memcpy(&sg_eyeball.serial_number, sg_peck->serial_number, 8);
+
+	memcpy(&dev_prop.dev_attr, &sg_eyeball, sizeof(SansgridEyeball));
+	if (routingTableFindByAttr(routing_table, &dev_prop, ip_addr) != 1) {
+		// error
+		return -1;
+	}
+	memcpy(&sg_serial->dest_ip, ip_addr, IP_SIZE);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:

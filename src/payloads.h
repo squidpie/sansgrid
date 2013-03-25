@@ -87,7 +87,7 @@ typedef struct SansgridEyeball {
 typedef struct SansgridPeck {
 	// Datatype: 0x01
 	uint8_t datatype;
-	uint8_t ip[16];
+	uint8_t ip[IP_SIZE];
 	uint8_t server_id[16];
 	// Recognition:
 	// 	0x00	- Recognized
@@ -97,7 +97,7 @@ typedef struct SansgridPeck {
 	uint8_t recognition;
 	uint8_t manid[4];
 	uint8_t modnum[4];
-	uint8_t sn[8];
+	uint8_t serial_number[8];
 	uint8_t padding[31];
 } SansgridPeck;
 

@@ -226,7 +226,7 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	tableptr = table->tableptr;
 
 	// Find next available slot
-	while (table->routing_table[tableptr]) {
+	while (table->routing_table[tableptr] || tableptr < 2) {
 		tableptr = (tableptr + 1) % ROUTING_ARRAYSIZE;
 	}
 	maskip(ip_addr, table->base, tableptr);	// create IP address
@@ -297,6 +297,31 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	return 1;
 }
 
+
+int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, uint8_t ip_addr[IP_SIZE]) {
+	// Find a device from the table based on device's properties
+	// return 1 if device found with device's IP address stored in ip_addr
+	// return 0 if device is not found
+
+	DeviceProperties *table_dprop;
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (!table->routing_table[i])
+			continue;
+		table_dprop = table->routing_table[i]->properties;
+		if (memcmp(dev_prop->dev_attr.manid, table_dprop->dev_attr.manid, 4))
+			continue;
+		else if (memcmp(dev_prop->dev_attr.modnum, table_dprop->dev_attr.modnum, 4))
+			continue;
+		else if (memcmp(dev_prop->dev_attr.serial_number, table_dprop->dev_attr.serial_number, 8))
+			continue;
+		else {
+			// found the device
+			maskip(ip_addr, table->base, i);
+			return 1;
+		}
+	}
+	return 0;
+}
 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,

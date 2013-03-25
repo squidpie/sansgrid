@@ -61,19 +61,17 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
-	int timeout = 0;
+	int i;
 	char lptr[sizeof(SansgridSerial)+1];
 
 	if (FPTR_TCP_READ == NULL)
 		return -1;
 
 	// Read from the pipe 
-	while (fgets(lptr, sizeof(SansgridSerial)+1, FPTR_TCP_READ) == NULL) {
-		timeout++;
-		if (timeout > 10000) {
-			return -1;
-		}
-		sched_yield();
+	for (i=0; i<sizeof(SansgridSerial) && FPTR_TCP_READ; i++) {
+		lptr[i] = fgetc(FPTR_TCP_READ);
+		if (lptr[i] == EOF)
+			return 1;
 	}
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));

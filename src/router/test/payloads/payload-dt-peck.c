@@ -1,4 +1,4 @@
-/* Eyeball Tests
+/* Peck Tests
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -26,26 +26,41 @@
 
 
 
-START_TEST (testEyeball) {
+START_TEST (testPeckMating) {
 	// unit test code to test the Eyeball data type
 	SansgridEyeball sg_eyeball;
+	SansgridPeck sg_peck;
 	SansgridSerial sg_serial;
 	SansgridSerial *sg_serial_read;
 
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
 
-	payloadStateInit();
 
 	// Make packet
 	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
+	payloadMkPeck(&sg_peck, SG_PECK_MATE);
+
+	// Call Eyeball handler
+	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
-
-	// Call handler
 	routerHandleEyeball(routing_table, &sg_serial);
+	// Commit Eyeball handler
+	payloadStateCommit();
 
-	// Finish up with pipes/threads
+	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
+		fail("Dispatch Failure");
+	fail_if((sg_serial_read == NULL), "payload lost");
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Eyeballed\n");
+#endif
+
+	// Call Peck handler
+	payloadStateInit();
+	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
+	routerHandlePeck(routing_table, &sg_serial);
+	// Commit Peck handler
 	payloadStateCommit();
 
 	// Test current state
@@ -59,34 +74,34 @@ START_TEST (testEyeball) {
 	printf("Dest   IP: ");
 	routingTablePrint(sg_serial_read->dest_ip);
 	printf("Sent: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
+	for (int i=0; i<sizeof(SansgridPeck); i++)
 		printf("%.2x", sg_serial.payload[i]);
 	printf("\n");
 	printf("Read: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
+	for (int i=0; i<sizeof(SansgridPeck); i++)
 		printf("%.2x", sg_serial_read->payload[i]);
 	printf("\n");
 #endif
-	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridEyeball)))
+	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridPeck)))
 		fail("Packet Mismatch");
-	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip))
+	if (!routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
 
 	// Final Cleanup
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
 #if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Eyeballed\n");
+	printf("Successfully Pecked\n");
 #endif
 }
 END_TEST
 
 
 
-Suite *payloadEyeballTesting (void) {
-	Suite *s = suite_create("Eyeball Payload Tests");
+Suite *payloadPeckTesting (void) {
+	Suite *s = suite_create("Peck Payload Tests");
 	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, testEyeball);
+	tcase_add_test(tc_core, testPeckMating);
 
 	suite_add_tcase(s, tc_core);
 

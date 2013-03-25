@@ -76,6 +76,7 @@ void *spiReader(void *arg) {
 	Queue *queue = (Queue*)arg;
 	int oldstate;
 	FILE *FPTR;
+	uint32_t excode;
 
 	if (!(FPTR = fopen("rstubin.fifo", "r"))) {
 		fail("Can't open fifo for reading");
@@ -85,13 +86,14 @@ void *spiReader(void *arg) {
 	for (i=0; i<10; i++) {
 		
 		// Read from serial
-		if (sgSerialReceive(&sg_serial, &packet_size) == -1)
+		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
-		
-		// Enqueue
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-		queueEnqueue(queue, sg_serial);
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		else if (excode == 0) {
+			// Enqueue
+			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+			queueEnqueue(queue, sg_serial);
+			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		}
 	}
 
 	fclose(FPTR);

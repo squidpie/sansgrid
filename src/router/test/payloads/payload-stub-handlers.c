@@ -56,5 +56,23 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum 
 }
 
 
+void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type) {
+	int i;
+	SansgridEyeball sg_eyeball;
+
+	sg_peck->datatype = SG_PECK;
+	for (i=0; i<16; i++) {
+		sg_peck->server_id[i] = 0x0;
+	}
+	sg_peck->recognition = pkrec_type;
+	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
+	memcpy(&sg_peck->manid, &sg_eyeball.manid, 4*sizeof(uint8_t));
+	memcpy(&sg_peck->modnum, &sg_eyeball.modnum, 4*sizeof(uint8_t));
+	memcpy(&sg_peck->serial_number, &sg_eyeball.serial_number, 8*sizeof(uint8_t));
+
+	return;
+}
+
+
 // vim: ft=c ts=4 noet sw=4:
 

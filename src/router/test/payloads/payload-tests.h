@@ -54,6 +54,7 @@ RoutingTable *routing_table;
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
+void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);
@@ -68,8 +69,9 @@ int32_t payloadStateInit(void);
 int32_t payloadStateCommit(void);
 
 // Tests
-Suite *payloadEyeballTesting (void);
 Suite *payloadSizeTesting (void);
+Suite *payloadEyeballTesting (void);
+Suite *payloadPeckTesting (void);
 
 #endif
 // vim: ft=c ts=4 noet sw=4:
