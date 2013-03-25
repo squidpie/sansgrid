@@ -23,13 +23,58 @@
 #ifndef __SG_PAYLOAD_STUBS_H__
 #define __SG_PAYLOAD_STUBS_H__
 
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <check.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+#include "../../../sg_serial.h"
+#include "../../communication/sg_tcp.h"
 #include "../../../payloads.h"
+#include "../../routing/routing.h"
+#include "../../dt_handlers/handlers.h"
 
+#include "../../dispatch/dispatch.h"
+#include "../tests.h"
+
+// Setup fifo reading/writing
+void sgSerialTestSetReader(FILE *FPTR);
+void sgSerialTestSetWriter(FILE *FPTR);
+void sgTCPTestSetReader(FILE *FPTR);
+void sgTCPTestSetWriter(FILE *FPTR);
+
+Queue *dispatch;
+RoutingTable *routing_table;
+FILE *FPTR_SPI_WRITER,
+	 *FPTR_SPI_READER,
+	 *FPTR_TCP_WRITER,
+	 *FPTR_TCP_READER;
+pthread_t serial_reader_thr,
+  		  tcp_reader_thr;
+// Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
 
+// Size checking handlers
+void checkSize(const char *pkname, size_t pksize);
 
+// Payload Readers
+void *spiPayloadReader(void *arg);
+void *tcpPayloadReader(void *arg);
+
+// Payload State
+int32_t payloadStateInit(void);
+int32_t payloadStateCommit(void);
+
+// Tests
+Suite *payloadEyeballTesting (void);
+Suite *payloadSizeTesting (void);
 
 #endif
 // vim: ft=c ts=4 noet sw=4:

@@ -57,7 +57,8 @@ int main(void) {
 	srunner_add_suite(sr, routingBasicTestSuite());
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());
-	srunner_add_suite(sr, payloadTesting());
+	srunner_add_suite(sr, payloadSizeTesting());
+	srunner_add_suite(sr, payloadEyeballTesting());
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

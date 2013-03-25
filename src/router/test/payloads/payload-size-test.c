@@ -23,38 +23,36 @@
 
 #include "payload-tests.h"
 
-void payloadMkSerial(SansgridSerial *sg_serial) {
-	for (int i=0; i<IP_SIZE; i++) {
-		sg_serial->dest_ip[i] = 0x0;
-		sg_serial->origin_ip[i] = 0x0;
-	}
-	for (int i=0; i<81; i++)
-		sg_serial->payload[i] = 0x0;
-	sg_serial->timestamp = 0x0;
-	sg_serial->origin = 0x0;
-	return;
+
+
+START_TEST (testPayloadSize) {
+	// unit test code for making sure all payloads are the same size
+	checkSize("SansgridHatching", sizeof(SansgridHatching));
+	checkSize("SansgridFly", sizeof(SansgridFly));
+	checkSize("SansgridEyeball", sizeof(SansgridEyeball));
+	checkSize("SansgridPeck", sizeof(SansgridPeck));
+	checkSize("SansgridSing", sizeof(SansgridSing));
+	checkSize("SansgridMock", sizeof(SansgridMock));
+	checkSize("SansgridPeacock", sizeof(SansgridPeacock));
+	checkSize("SansgridNest", sizeof(SansgridNest));
+	checkSize("SansgridSquawk", sizeof(SansgridSquawk));
+	checkSize("SansgridHeartbeat", sizeof(SansgridHeartbeat));
+	checkSize("SansgridChirp", sizeof(SansgridChirp));
 }
+END_TEST
 
-void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type) {
-	int i;
 
-	sg_eyeball->datatype = SG_EYEBALL;
-	for (i=0; i<4; i++) {
-		sg_eyeball->manid[i] = 0x0;
-		sg_eyeball->modnum[i] = 0x0;
-		sg_eyeball->serial_number[i] = 0x0;
-	}
-	for (i=4; i<8; i++) {
-		sg_eyeball->serial_number[i] = 0x0;
-	}
-	sg_eyeball->profile = 0x0;
-	sg_eyeball->mode = ebmate_type;
-	for (i=0; i<62; i++)
-		sg_eyeball->padding[i] = 0x0;
 
-	return;
+
+Suite *payloadSizeTesting (void) {
+	Suite *s = suite_create("Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testPayloadSize);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
 }
 
 
 // vim: ft=c ts=4 noet sw=4:
-

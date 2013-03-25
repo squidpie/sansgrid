@@ -21,41 +21,8 @@
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <check.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include "payload-tests.h"
 
-#include "../../../sg_serial.h"
-#include "../../communication/sg_tcp.h"
-#include "../../../payloads.h"
-#include "../../routing/routing.h"
-#include "../../dt_handlers/handlers.h"
-
-#include "../../dispatch/dispatch.h"
-#include "../tests.h"
-#include "payload-stub-handlers.h"
-
-// Setup fifo reading/writing
-void sgSerialTestSetReader(FILE *FPTR);
-void sgSerialTestSetWriter(FILE *FPTR);
-void sgTCPTestSetReader(FILE *FPTR);
-void sgTCPTestSetWriter(FILE *FPTR);
-
-static Queue *dispatch;
-static RoutingTable *routing_table;
-static FILE *FPTR_SPI_WRITER,
-			*FPTR_SPI_READER,
-			*FPTR_TCP_WRITER,
-			*FPTR_TCP_READER;
-static pthread_t serial_reader_thr,
-				 tcp_reader_thr;
 
 void checkSize(const char *pkname, size_t pksize) {
 	fail_unless((pksize == PAYLOAD_SIZE), 
@@ -123,7 +90,7 @@ void *tcpPayloadReader(void *arg) {
 
 
 
-static int32_t payloadStateInit(void) {
+int32_t payloadStateInit(void) {
 	// initialize routing table, dispatch,
 	// and file descriptors, and threads for
 	// tests
@@ -160,7 +127,7 @@ static int32_t payloadStateInit(void) {
 	return 0;
 }
 
-static int32_t payloadStateCommit(void) {
+int32_t payloadStateCommit(void) {
 	// Close writing file descriptors, join threads, remove pipes
 	void *arg;
 	fclose(FPTR_SPI_WRITER);
@@ -176,87 +143,8 @@ static int32_t payloadStateCommit(void) {
 }
 
 
-START_TEST (testPayloadSize) {
-	// unit test code for making sure all payloads are the same size
-	checkSize("SansgridHatching", sizeof(SansgridHatching));
-	checkSize("SansgridFly", sizeof(SansgridFly));
-	checkSize("SansgridEyeball", sizeof(SansgridEyeball));
-	checkSize("SansgridPeck", sizeof(SansgridPeck));
-	checkSize("SansgridSing", sizeof(SansgridSing));
-	checkSize("SansgridMock", sizeof(SansgridMock));
-	checkSize("SansgridPeacock", sizeof(SansgridPeacock));
-	checkSize("SansgridNest", sizeof(SansgridNest));
-	checkSize("SansgridSquawk", sizeof(SansgridSquawk));
-	checkSize("SansgridHeartbeat", sizeof(SansgridHeartbeat));
-	checkSize("SansgridChirp", sizeof(SansgridChirp));
-}
-END_TEST
 
-
-START_TEST (testEyeball) {
-	// unit test code to test the Eyeball data type
-	SansgridEyeball sg_eyeball;
-	SansgridSerial sg_serial;
-	SansgridSerial *sg_serial_read;
-
-
-	// initialize
-	payloadStateInit();
-
-	// Make packet
-	payloadMkSerial(&sg_serial);
-	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
-	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
-
-	// Call handler
-	routerHandleEyeball(routing_table, &sg_serial);
-
-	// Finish up with pipes
-	payloadStateCommit();
-
-	// Run test on current state
-	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
-		fail("Dispatch Failure");
-
-	fail_if((sg_serial_read == NULL), "payload lost");
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Address: %p\n", sg_serial_read);
-	printf("Origin IP: ");
-	routingTablePrint(sg_serial_read->origin_ip);
-	printf("Dest   IP: ");
-	routingTablePrint(sg_serial_read->dest_ip);
-	printf("Sent: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
-		printf("%.2x", sg_serial.payload[i]);
-	printf("\n");
-	printf("Read: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
-		printf("%.2x", sg_serial_read->payload[i]);
-	printf("\n");
-#endif
-	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridEyeball)))
-		fail("Packet Mismatch");
-	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip))
-		fail("No IP assigned");
-
-	// Final Cleanup
-	queueDestroy(dispatch);
-	routingTableDestroy(routing_table);
-}
-END_TEST
-
-
-
-Suite *payloadTesting (void) {
-	Suite *s = suite_create("Payload Tests");
-	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, testPayloadSize);
-	tcase_add_test(tc_core, testEyeball);
-
-	suite_add_tcase(s, tc_core);
-
-	return s;
-}
 
 
 // vim: ft=c ts=4 noet sw=4:
+

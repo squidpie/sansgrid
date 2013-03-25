@@ -12,8 +12,10 @@ SANSGRID_TEST = test/communication/sg-serial-test.c \
 		test/dispatch/dispatch-basic.c \
 		test/dispatch/dispatch-advanced.c \
 		test/routing/routing-basic-test.c \
-		test/payloads/payloads-tests.c \
-		test/payloads/payload-stub-handlers.c
+		test/payloads/payload-tests.c \
+		test/payloads/payload-stub-handlers.c \
+		test/payloads/payload-size-test.c \
+		test/payloads/payload-eyeball-stub.c
 			
 sansgrid_SOURCES = $(SANSGRID_BASE) \
 		   $(SANSGRID_COMM) \
