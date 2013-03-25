@@ -20,12 +20,17 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <stdint.h>
 #include "sansgrid_router.h"
 #include "../../payloads.h"
 #include "../dt_handlers/handlers.h"
 #include "../../sg_serial.h"
+
+
+void usage(int status);
 
 
 void *dispatchRuntime(void *arg) {
@@ -112,8 +117,53 @@ void fnExit(void) {
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
 				dispatch_thread;
+	int c;
+	int32_t no_daemonize = 0;
+	while (1) {
+		const struct option long_options[] = {
+			{"foreground",	no_argument, 	&no_daemonize, 	1},
+			{"daemon", 		no_argument, 	&no_daemonize, 	0},
+			{"help", 		no_argument, 	0, 				'h'},
+			{"version", 	no_argument, 	0, 				'v'},
+			{0, 0, 0, 0}
+		};
+		int option_index = 0;
 
-	if (argc < 2) {
+		c = getopt_long(argc, argv, "fhv", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+			case 0:
+				if (long_options[option_index].flag != 0)
+					break;
+				printf("option %s ", long_options[option_index].name);
+				if (optarg)
+					printf("With arg %s", optarg);
+				printf("\n");
+				break;
+			case 'f':
+				// Run in the foreground
+				no_daemonize = 1;
+				break;
+			case 'h':
+				// help
+				usage(EXIT_SUCCESS);
+				break;
+			case 'v':
+				// version
+				// TODO: Give version
+				printf("Not implemented yet!\n");
+				exit(EXIT_SUCCESS);
+				break;
+			case '?':
+				// getopt_long alreaady printed an error message
+				exit(EXIT_FAILURE);
+				break;
+			default:
+				abort();
+		}
+	}
+	if (!no_daemonize) {
 		int excode = daemon_init();
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
@@ -139,6 +189,18 @@ int main(int argc, char *argv[]) {
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
 	return 0;
+}
+
+void usage(int status) {
+	if (status != EXIT_SUCCESS)
+		printf("Try sansgrid -h\n");
+	else {
+		printf("Usage: sansgrid [OPTION]\n");
+		printf("\
+  -h, --help                 display this help and exit\n\
+  -v, --version              output version information and exit\n");
+	}
+	exit(status);
 }
 
 // vim: ft=c ts=4 noet sw=4:

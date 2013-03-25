@@ -7,15 +7,15 @@ SANSGRID_COMM = communication/sg_tcp.c \
 SANSGRID_BASE = dispatch/dispatch.c \
 		dt_handlers/handlers.c \
 		routing/routing.c
-SANSGRID_TEST = test/communication/sg-serial-test.c \
-		test/communication/sg-tcp-test.c \
+SANSGRID_TEST = test/communication/sg-serial-stubs.c \
+		test/communication/sg-tcp-stubs.c \
 		test/dispatch/dispatch-basic.c \
 		test/dispatch/dispatch-advanced.c \
 		test/routing/routing-basic-test.c \
 		test/payloads/payload-tests.c \
 		test/payloads/payload-stub-handlers.c \
 		test/payloads/payload-size-test.c \
-		test/payloads/payload-eyeball-stub.c
+		test/payloads/payload-dt-eyeball.c
 			
 sansgrid_SOURCES = $(SANSGRID_BASE) \
 		   $(SANSGRID_COMM) \
@@ -23,5 +23,5 @@ sansgrid_SOURCES = $(SANSGRID_BASE) \
 		   sansgrid_router/sansgrid_router.c
 sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
-		 test/test-core.c
+		 test/tests.c
 
