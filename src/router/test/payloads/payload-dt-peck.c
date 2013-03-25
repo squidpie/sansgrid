@@ -25,14 +25,18 @@
 #include "payload-tests.h"
 
 
-
-START_TEST (testPeckMating) {
+static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char *message) {
 	// unit test code to test the Eyeball data type
+	// (The next packet would be a Squawk)
 	SansgridEyeball sg_eyeball;
 	SansgridPeck sg_peck;
 	SansgridSerial sg_serial;
 	SansgridSerial *sg_serial_read;
 
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n");
+	printf("%s\n", message);
+#endif
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
 
@@ -40,26 +44,31 @@ START_TEST (testPeckMating) {
 	// Make packet
 	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
-	payloadMkPeck(&sg_peck, SG_PECK_MATE);
+	payloadMkPeck(&sg_peck, sg_peck_rec);
 
+	printf("Before Eyeball\n");
 	// Call Eyeball handler
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
+	printf("Almost Done... (Eyeball)\n");
 	// Commit Eyeball handler
 	payloadStateCommit();
 
 	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
 		fail("Dispatch Failure");
+
 	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Eyeballed\n");
 #endif
 
+	printf("Before Peck\n");
 	// Call Peck handler
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	routerHandlePeck(routing_table, &sg_serial);
+	printf("Almost Done... (Peck)\n");
 	// Commit Peck handler
 	payloadStateCommit();
 
@@ -93,15 +102,27 @@ START_TEST (testPeckMating) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Pecked\n");
 #endif
+	return 0;
+}
+
+
+START_TEST (testPeckMating) {
+	testPecking(SG_PECK_MATE, "Test Peck (Mate)");
 }
 END_TEST
 
+
+START_TEST (testPeckRecognized) {
+	testPecking(SG_PECK_RECOGNIZED, "Test Peck (Recognized)");
+}
+END_TEST
 
 
 Suite *payloadPeckTesting (void) {
 	Suite *s = suite_create("Peck Payload Tests");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testPeckMating);
+	tcase_add_test(tc_core, testPeckRecognized);
 
 	suite_add_tcase(s, tc_core);
 

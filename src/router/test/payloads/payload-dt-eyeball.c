@@ -35,16 +35,15 @@ START_TEST (testEyeball) {
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
 
-	payloadStateInit();
 
 	// Make packet
 	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
-	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 
 	// Call handler
+	payloadStateInit();
+	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
-
 	// Finish up with pipes/threads
 	payloadStateCommit();
 

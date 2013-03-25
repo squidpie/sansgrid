@@ -53,12 +53,8 @@ void *spiPayloadReader(void *arg) {
 	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read packet");
 	else if (excode == 0) {
-#if TESTS_DEBUG_LEVEL > 0
-		printf("Origin IP: ");
-		routingTablePrint(sg_serial->origin_ip);
 		if (queueEnqueue(dispatch, sg_serial) == -1)
 			fail("Dispatch Enqueue Failure (Serial)");
-#endif
 	}
 
 	fclose(FPTR_SPI_READER);
@@ -81,11 +77,6 @@ void *tcpPayloadReader(void *arg) {
 	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read TCP packet");
 	else if (excode == 0) {
-#if TESTS_DEBUG_LEVEL > 0
-		//printf("Address: %p\n", sg_serial);
-		//printf("Origin IP: ");
-		//routingTablePrint(sg_serial->origin_ip);
-#endif
 		if (queueEnqueue(dispatch, sg_serial) == -1)
 			fail("Dispatch Enqueue Failure (TCP)");
 	}
