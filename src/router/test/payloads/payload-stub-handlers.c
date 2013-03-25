@@ -61,9 +61,10 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 	SansgridEyeball sg_eyeball;
 
 	sg_peck->datatype = SG_PECK;
-	for (i=0; i<16; i++) {
+	for (i=0; i<IP_SIZE; i++)
+		sg_peck->ip[i] = 0x0;
+	for (i=0; i<16; i++)
 		sg_peck->server_id[i] = 0x0;
-	}
 	sg_peck->recognition = pkrec_type;
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
 	memcpy(&sg_peck->manid, &sg_eyeball.manid, 4*sizeof(uint8_t));
