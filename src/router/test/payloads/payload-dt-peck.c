@@ -25,7 +25,8 @@
 #include "payload-tests.h"
 
 
-static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char *message) {
+static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char *message,
+		enum SansgridDeviceStatusEnum next_packet) {
 	// unit test code to test the Eyeball data type
 	// (The next packet would be a Squawk)
 	SansgridEyeball sg_eyeball;
@@ -104,6 +105,12 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 		fail("Packet Mismatch");
 	if (!routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
+	if (next_packet != routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->dest_ip))
+		fail("Control Flow Mismatch \
+				\n\tExpected: %i \
+				\n\tGot: %i", next_packet, 
+				routingTableLookupNextExpectedPacket(routing_table, 
+					sg_serial_read->dest_ip));
 
 	// Final Cleanup
 	queueDestroy(dispatch);
@@ -118,13 +125,13 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 
 
 START_TEST (testPeckMating) {
-	testPecking(SG_PECK_MATE, "Test Peck (Mate)");
+	testPecking(SG_PECK_MATE, "Test Peck (Mate)", SG_DEVSTATUS_SINGING);
 }
 END_TEST
 
 
 START_TEST (testPeckRecognized) {
-	testPecking(SG_PECK_RECOGNIZED, "Test Peck (Recognized)");
+	testPecking(SG_PECK_RECOGNIZED, "Test Peck (Recognized)", SG_DEVSTATUS_SQUAWKING);
 }
 END_TEST
 
