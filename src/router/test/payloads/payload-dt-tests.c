@@ -26,7 +26,7 @@ sem_t spi_readlock,
 
 
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
-		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
+		int(*fn)(RoutingTable*, SansgridSerial*)) {
 
 	SansgridSerial *sg_serial_read;
 	sgSerialTestSetReadlock(&spi_readlock);
@@ -65,9 +65,6 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip)
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
-#if TESTS_DEBUG_LEVEL > 0
-		printf("Successfully %s\n", message);
-#endif
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
 	return 0;
 }
@@ -99,22 +96,22 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	if (test_struct->eyeball) {
 		payloadMkEyeball(&sg_eyeball, test_struct);
 		memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
-		testPayloadSpecific(&sg_serial, test_struct->eyeball, routerHandleEyeball, "Eyeballed");
+		testPayloadSpecific(&sg_serial, test_struct->eyeball, routerHandleEyeball);
 	}
 	if (test_struct->peck) {
 		payloadMkPeck(&sg_peck, test_struct);
 		memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
-		testPayloadSpecific(&sg_serial, test_struct->peck, routerHandlePeck, "Pecked");
+		testPayloadSpecific(&sg_serial, test_struct->peck, routerHandlePeck);
 	}
 	if (test_struct->sing) {
 		payloadMkSing(&sg_sing, test_struct);
 		memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridMock));
-		testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing, "Sung");
+		testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing);
 	}
 	if (test_struct->mock) {
 		payloadMkMock(&sg_mock, test_struct);
 		memcpy(&sg_serial.payload, &sg_mock, sizeof(SansgridMock));
-		testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock, "Mocked");
+		testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock);
 	}
 
 
@@ -154,6 +151,7 @@ void testStructInit(PayloadTestStruct *test_struct) {
 }
 
 void testEyeballPayload(PayloadTestStruct *test_struct) {
+	// Call Eyeball tests with all options
 	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
 	test_struct->eyeball = &eyeball;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
@@ -164,29 +162,61 @@ void testEyeballPayload(PayloadTestStruct *test_struct) {
 }
 
 void testPeckPayload(PayloadTestStruct *test_struct) {
-	PayloadTestNode peck = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_SINGING };
+	// Call Peck tests with all options
+	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
+	PayloadTestNode peck;
+
+	// Set defaults
+	peck.read_dir = SG_TEST_COMM_READ_SPI;
+	test_struct->eyeball_mode = SG_EYEBALL_MATE;
+	// Assign nodes
 	test_struct->peck = &peck;
+	test_struct->eyeball = &eyeball;
+
+	// Test device unrecognized
+	peck.next_packet = SG_DEVSTATUS_SINGING;
 	test_struct->peck_mode = SG_PECK_MATE;
-	testEyeballPayload(test_struct);
+	testPayload(test_struct);
+
+	// Test device recognized
 	peck.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
-	testEyeballPayload(test_struct);
+	testPayload(test_struct);
+
 	return;
 }
 
 
 void testSingPayload(PayloadTestStruct *test_struct) {
+	// Call Sing tests with all options
+	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
+	PayloadTestNode peck = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_SINGING };
 	PayloadTestNode sing = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_MOCKING };
+
+	// Set defaults
+	sing.read_dir = SG_TEST_COMM_READ_SPI;
+	sing.next_packet = SG_DEVSTATUS_MOCKING;
+	test_struct->eyeball_mode = SG_EYEBALL_MATE;
+	test_struct->peck_mode = SG_PECK_MATE;
+	// Assign nodes
+	test_struct->eyeball = &eyeball;
+	test_struct->peck = &peck;
 	test_struct->sing = &sing;
+
+	// Test server authenticating with key
 	test_struct->sing_mode = SG_SING_WITH_KEY;
-	testPeckPayload(test_struct);
+	testPayload(test_struct);
+
+	// Test server authenticating without key
 	test_struct->sing_mode = SG_SING_WITHOUT_KEY;
-	testPeckPayload(test_struct);
+	testPayload(test_struct);
+
 	return;
 }
 
 
 void testMockPayload(PayloadTestStruct *test_struct) {
+	// Call mock tests with all options
 	PayloadTestNode mock = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PEACOCKING };
 	test_struct->mock = &mock;
 	test_struct->mock_mode = SG_MOCK_WITH_KEY;
@@ -197,33 +227,57 @@ void testMockPayload(PayloadTestStruct *test_struct) {
 }
 
 START_TEST (testEyeball) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\nTesting Eyeball\n");
+#endif
 	PayloadTestStruct test_struct;
 	testStructInit(&test_struct);
 	testEyeballPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Eyeballed\n");
+#endif
 }
 END_TEST
 
 
 START_TEST (testPeck) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\nTesting Peck\n");
+#endif
 	PayloadTestStruct test_struct;
 	testStructInit(&test_struct);
 	testPeckPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Pecked\n");
+#endif
 }
 END_TEST
 
 
 START_TEST (testSing) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\nTesting Singing\n");
+#endif
 	PayloadTestStruct test_struct;
 	testStructInit(&test_struct);
 	testSingPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Sung\n");
+#endif
 }
 END_TEST
 
 
 START_TEST (testMock) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\nTesting Mocking\n");
+#endif
 	PayloadTestStruct test_struct;
 	testStructInit(&test_struct);
 	testMockPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Mocked\n");
+#endif
 }
 END_TEST
 
