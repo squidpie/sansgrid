@@ -109,6 +109,16 @@ void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs
 }
 
 
+void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
+	int i;
+	sg_nest->datatype = test_specs->nest_mode;
+	for (i=0; i<80; i++)
+		sg_nest->padding[i] = 0x0;
+
+	return;
+}
+
+
 
 
 // vim: ft=c ts=4 noet sw=4:

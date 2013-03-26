@@ -257,6 +257,8 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	// Send a SansgridNest from server to sensor
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
