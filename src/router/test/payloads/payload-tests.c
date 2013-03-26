@@ -138,7 +138,7 @@ int32_t payloadStateInit(void) {
 
 
 
-int32_t payloadStateCommit(void) {
+int32_t payloadStateCommit(SansgridSerial **sg_serial_read) {
 	// Close writing file descriptors, join threads, remove pipes
 	void *arg;
 	fclose(FPTR_SPI_WRITER);
@@ -152,6 +152,15 @@ int32_t payloadStateCommit(void) {
 	
 	unlink("spi.fifo");
 	unlink("tcp.fifo");
+
+
+	// Test current state
+	fail_if((queueSize(dispatch) == 0), "No data on the dispatch!");
+	if (queueDequeue(dispatch, (void**)sg_serial_read) == -1)
+		fail("Dispatch Failure");
+	fail_if((queueSize(dispatch) > 0), "Too much data went on the dispatch");
+
+	fail_if((sg_serial_read == NULL), "payload lost");
 
 	return 0;
 }

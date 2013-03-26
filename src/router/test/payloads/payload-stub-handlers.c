@@ -77,5 +77,18 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 }
 
 
+void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type) {
+	int i;
+	SansgridEyeball sg_eyeball;
+
+	sg_sing->datatype = sing_type;
+	for (i=0; i<80; i++)
+		sg_sing->pubkey[i] = 0x0;
+
+	return;
+}
+
+
+
 // vim: ft=c ts=4 noet sw=4:
 

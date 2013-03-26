@@ -65,6 +65,7 @@ sem_t tcp_readlock,
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
 void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type);
+void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);
@@ -76,12 +77,13 @@ void *tcpPayloadReader(void *arg);
 // Payload State
 int32_t payloadRoutingInit(void);
 int32_t payloadStateInit(void);
-int32_t payloadStateCommit(void);
+int32_t payloadStateCommit(SansgridSerial **);
 
 // Tests
 Suite *payloadSizeTesting (void);
 Suite *payloadEyeballTesting (void);
 Suite *payloadPeckTesting (void);
+Suite *payloadSingTesting (void);
 
 #endif
 // vim: ft=c ts=4 noet sw=4:

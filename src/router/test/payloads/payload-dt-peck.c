@@ -17,8 +17,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
- * This dispatch test uses a named pipe as a stub to read from.
- * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
 
@@ -60,14 +58,8 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
 	// Commit Eyeball handler
-	payloadStateCommit();
+	payloadStateCommit(&sg_serial_read);
 
-	fail_if((queueSize(dispatch) == 0), "(Peck: Eyeball): No data on the dispatch!");
-	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
-		fail("Dispatch Failure");
-	fail_if((queueSize(dispatch) > 0), "Too much data went on the dispatch");
-
-	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Eyeballed\n");
 #endif
@@ -78,15 +70,8 @@ static int testPecking(enum SansgridPeckRecognitionEnum sg_peck_rec, const char 
 	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	routerHandlePeck(routing_table, &sg_serial);
 	// Commit Peck handler
-	payloadStateCommit();
+	payloadStateCommit(&sg_serial_read);
 
-	// Test current state
-	fail_if((queueSize(dispatch) == 0), "(Peck: Peck): No data on the dispatch!");
-	if (queueDequeue(dispatch, (void**)&sg_serial_read) == -1)
-		fail("Dispatch Failure");
-	fail_if((queueSize(dispatch) > 0), "Too much data went on the dispatch");
-
-	fail_if((sg_serial_read == NULL), "payload lost");
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Origin IP: ");
 	routingTablePrint(sg_serial_read->origin_ip);

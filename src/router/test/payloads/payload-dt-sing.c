@@ -1,4 +1,4 @@
-/* Eyeball Tests
+/* Sing Tests
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -23,15 +23,22 @@
 #include "payload-tests.h"
 
 
-
-START_TEST (testEyeball) {
+static int testSinging(enum SansgridDataTypeEnum sing_type, const char *message,
+		enum SansgridDeviceStatusEnum next_packet) {
 	// unit test code to test the Eyeball data type
-	sem_t spi_readlock,
-		  tcp_readlock;
+	// (The next packet would be a Squawk)
 	SansgridEyeball sg_eyeball;
+	SansgridPeck sg_peck;
+	SansgridSing sg_sing;
 	SansgridSerial sg_serial;
 	SansgridSerial *sg_serial_read;
+	sem_t spi_readlock,
+		  tcp_readlock;
 
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n");
+	printf("%s\n", message);
+#endif
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
 	sem_init(&spi_readlock, 0, 0);
@@ -44,13 +51,39 @@ START_TEST (testEyeball) {
 	// Make packet
 	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
+	payloadMkPeck(&sg_peck, SG_PECK_MATE);
+	payloadMkSing(&sg_sing, sing_type);
 
-	// Call handler
+	// Call Eyeball handler
 	sem_post(&tcp_readlock);	// Data flows from sensor to server
 	payloadStateInit();
 	memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	routerHandleEyeball(routing_table, &sg_serial);
-	// Finish up with pipes/threads
+	// Commit Eyeball handler
+	payloadStateCommit(&sg_serial_read);
+
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Eyeballed\n");
+#endif
+
+	// Call Peck handler
+	sem_post(&spi_readlock);	// Data flows from server to sensor
+	payloadStateInit();
+	memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
+	routerHandlePeck(routing_table, &sg_serial);
+	// Commit Peck handler
+	payloadStateCommit(&sg_serial_read);
+
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Pecked\n");
+#endif
+
+	// Call Sing handler
+	sem_post(&spi_readlock);	// Data flows from server to sensor
+	payloadStateInit();
+	memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridSing));
+	routerHandleSing(routing_table, &sg_serial);
+	// Commit Sing handler
 	payloadStateCommit(&sg_serial_read);
 
 #if TESTS_DEBUG_LEVEL > 0
@@ -59,18 +92,24 @@ START_TEST (testEyeball) {
 	printf("Dest   IP: ");
 	routingTablePrint(sg_serial_read->dest_ip);
 	printf("Sent: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
+	for (int i=0; i<sizeof(SansgridSing); i++)
 		printf("%.2x", sg_serial.payload[i]);
 	printf("\n");
 	printf("Read: ");
-	for (int i=0; i<sizeof(SansgridEyeball); i++)
+	for (int i=0; i<sizeof(SansgridSing); i++)
 		printf("%.2x", sg_serial_read->payload[i]);
 	printf("\n");
 #endif
-	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridEyeball)))
+	if (memcmp(sg_serial_read->payload, &sg_serial.payload, sizeof(SansgridSing)))
 		fail("Packet Mismatch");
-	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip))
+	if (!routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
+	if (next_packet != routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->dest_ip))
+		fail("Control Flow Mismatch \
+				\n\tExpected: %i \
+				\n\tGot: %i", next_packet, 
+				routingTableLookupNextExpectedPacket(routing_table, 
+					sg_serial_read->dest_ip));
 
 	// Final Cleanup
 	queueDestroy(dispatch);
@@ -78,17 +117,29 @@ START_TEST (testEyeball) {
 	sem_destroy(&spi_readlock);
 	sem_destroy(&tcp_readlock);
 #if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Eyeballed\n");
+	printf("Successfully Sung\n");
 #endif
+	return 0;
+}
+
+
+START_TEST (testSingWithKey) {
+	testSinging(SG_SING_WITH_KEY, "Test Sing (with key)", SG_DEVSTATUS_MOCKING);
 }
 END_TEST
 
 
+START_TEST (testSingWithoutKey) {
+	testSinging(SG_SING_WITHOUT_KEY, "Test Sing (without key)", SG_DEVSTATUS_MOCKING);
+}
+END_TEST
 
-Suite *payloadEyeballTesting (void) {
-	Suite *s = suite_create("Eyeball Payload Tests");
+
+Suite *payloadSingTesting (void) {
+	Suite *s = suite_create("Sing Payload Tests");
 	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, testEyeball);
+	tcase_add_test(tc_core, testSingWithKey);
+	tcase_add_test(tc_core, testSingWithoutKey);
 
 	suite_add_tcase(s, tc_core);
 
