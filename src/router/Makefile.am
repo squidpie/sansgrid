@@ -17,7 +17,8 @@ SANSGRID_TEST = test/communication/sg-serial-stubs.c \
 		test/payloads/payload-size-test.c \
 		test/payloads/payload-dt-eyeball.c \
 		test/payloads/payload-dt-peck.c \
-		test/payloads/payload-dt-sing.c
+		test/payloads/payload-dt-sing.c \
+		test/payloads/payload-dt-mock.c
 			
 sansgrid_SOURCES = $(SANSGRID_BASE) \
 		   $(SANSGRID_COMM) \

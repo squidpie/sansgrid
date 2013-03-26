@@ -79,7 +79,6 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 
 void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type) {
 	int i;
-	SansgridEyeball sg_eyeball;
 
 	sg_sing->datatype = sing_type;
 	for (i=0; i<80; i++)
@@ -87,6 +86,18 @@ void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type) {
 
 	return;
 }
+
+
+void payloadMkMock(SansgridMock *sg_mock, enum SansgridDataTypeEnum mock_type) {
+	int i;
+
+	sg_mock->datatype = mock_type;
+	for (i=0; i<80; i++)
+		sg_mock->pubkey[i] = 0x0;
+
+	return;
+}
+
 
 
 

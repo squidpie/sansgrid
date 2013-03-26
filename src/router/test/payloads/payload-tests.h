@@ -66,6 +66,7 @@ void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
 void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type);
 void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type);
+void payloadMkMock(SansgridMock *sg_mock, enum SansgridDataTypeEnum mock_type);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);
@@ -84,6 +85,7 @@ Suite *payloadSizeTesting (void);
 Suite *payloadEyeballTesting (void);
 Suite *payloadPeckTesting (void);
 Suite *payloadSingTesting (void);
+Suite *payloadMockTesting (void);
 
 #endif
 // vim: ft=c ts=4 noet sw=4:
