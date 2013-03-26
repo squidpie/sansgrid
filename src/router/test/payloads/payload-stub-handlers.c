@@ -35,10 +35,10 @@ void payloadMkSerial(SansgridSerial *sg_serial) {
 	return;
 }
 
-void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type) {
+void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs) {
 	int i;
 
-	sg_eyeball->datatype = SG_EYEBALL;
+	sg_eyeball->datatype = test_specs->eyeball_mode;
 	for (i=0; i<4; i++) {
 		sg_eyeball->manid[i] = 0x0;
 		sg_eyeball->modnum[i] = 0x0;
@@ -48,7 +48,7 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum 
 		sg_eyeball->serial_number[i] = 0x0;
 	}
 	sg_eyeball->profile = 0x0;
-	sg_eyeball->mode = ebmate_type;
+	sg_eyeball->mode = test_specs->eyeball_mode;
 	for (i=0; i<62; i++)
 		sg_eyeball->padding[i] = 0x0;
 
@@ -56,7 +56,7 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum 
 }
 
 
-void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type) {
+void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 	int i;
 	SansgridEyeball sg_eyeball;
 
@@ -65,8 +65,8 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 		sg_peck->ip[i] = 0x0;
 	for (i=0; i<16; i++)
 		sg_peck->server_id[i] = 0x0;
-	sg_peck->recognition = pkrec_type;
-	payloadMkEyeball(&sg_eyeball, SG_EYEBALL_MATE);
+	sg_peck->recognition = test_specs->peck_mode;
+	payloadMkEyeball(&sg_eyeball, test_specs);
 	memcpy(&sg_peck->manid, &sg_eyeball.manid, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->modnum, &sg_eyeball.modnum, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->serial_number, &sg_eyeball.serial_number, 8*sizeof(uint8_t));
@@ -77,10 +77,10 @@ void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec
 }
 
 
-void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type) {
+void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs) {
 	int i;
 
-	sg_sing->datatype = sing_type;
+	sg_sing->datatype = test_specs->sing_mode;
 	for (i=0; i<80; i++)
 		sg_sing->pubkey[i] = 0x0;
 
@@ -88,10 +88,10 @@ void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type) {
 }
 
 
-void payloadMkMock(SansgridMock *sg_mock, enum SansgridDataTypeEnum mock_type) {
+void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 	int i;
 
-	sg_mock->datatype = mock_type;
+	sg_mock->datatype = test_specs->mock_mode;
 	for (i=0; i<80; i++)
 		sg_mock->pubkey[i] = 0x0;
 

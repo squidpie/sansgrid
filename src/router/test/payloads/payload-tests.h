@@ -49,6 +49,49 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+enum CommReadDirEnum {
+	SG_TEST_COMM_READ_NONE,
+	SG_TEST_COMM_READ_SPI,
+	SG_TEST_COMM_READ_TCP,
+	SG_TEST_COMM_READ_BOTH
+};
+
+typedef struct PayloadTestNode {
+	enum CommReadDirEnum read_dir;
+	enum SansgridDeviceStatusEnum next_packet;
+} PayloadTestNode;
+
+typedef struct PayloadTestStruct {
+	// eyeball
+	enum SansgridEyeballModeEnum eyeball_mode;
+	PayloadTestNode *eyeball;
+	// peck
+	enum SansgridPeckRecognitionEnum peck_mode;
+	PayloadTestNode *peck;
+	// sing
+	enum SansgridDataTypeEnum sing_mode;
+	PayloadTestNode *sing;
+	// mock
+	enum SansgridDataTypeEnum mock_mode;
+	PayloadTestNode *mock;
+	// peacock
+	enum SansgridDataTypeEnum peacock_mode;
+	PayloadTestNode *peacock;
+	// nest
+	enum SansgridDataTypeEnum nest_mode;
+	PayloadTestNode *nest;
+	// squawk
+	enum SansgridDataTypeEnum squawk_mode;
+	PayloadTestNode *squawk;
+	// heartbeat
+	enum SansgridDataTypeEnum heartbeat_mode;
+	PayloadTestNode *heartbeat;
+	// chirp
+	enum SansgridDataTypeEnum chirp_mode;
+	PayloadTestNode *chirp;
+} PayloadTestStruct;
+
+
 // Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
 void sgSerialTestSetReadlock(sem_t *readlock);
@@ -63,10 +106,10 @@ sem_t tcp_readlock,
 	  spi_readlock;
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
-void payloadMkEyeball(SansgridEyeball *sg_eyeball, enum SansgridEyeballModeEnum ebmate_type);
-void payloadMkPeck(SansgridPeck *sg_peck, enum SansgridPeckRecognitionEnum pkrec_type);
-void payloadMkSing(SansgridSing *sg_sing, enum SansgridDataTypeEnum sing_type);
-void payloadMkMock(SansgridMock *sg_mock, enum SansgridDataTypeEnum mock_type);
+void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs);
+void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs);
+void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs);
+void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);

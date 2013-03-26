@@ -36,10 +36,7 @@ Suite *dispatchBasicTesting (void);
 Suite *dispatchAdvancedTesting (void);
 // Payload
 Suite *payloadSizeTesting (void);
-Suite *payloadEyeballTesting (void);
-Suite *payloadPeckTesting (void);
-Suite *payloadSingTesting (void);
-Suite *payloadMockTesting (void);
+Suite *payloadTesting (void);
 
 #endif
 
