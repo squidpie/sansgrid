@@ -116,11 +116,17 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	memcpy(&dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
 
 	// Store IP in the routing table
-	routingTableAssignIP(routing_table, ip_addr, dev_prop);
-	memcpy(&sg_serial->origin_ip, ip_addr, IP_SIZE);
+	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
+		routingTableAssignIP(routing_table, ip_addr, dev_prop);
+		memcpy(&sg_serial->origin_ip, ip_addr, IP_SIZE);
 
-	// Send packet to the server
-	sgTCPSend(sg_serial, sizeof(SansgridSerial));
+		// Send packet to the server
+		sgTCPSend(sg_serial, sizeof(SansgridSerial));
+	} else {
+		// TODO: Not implemented yet
+		// Have to send a refusal back to sensor
+		return -1;
+	}
 
 	return 0;
 }

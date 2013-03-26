@@ -28,6 +28,7 @@ sem_t spi_readlock,
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
+	int exit_code;
 	SansgridSerial *sg_serial_read;
 	sgSerialTestSetReadlock(&spi_readlock);
 	sgTCPTestSetReadlock(&tcp_readlock);
@@ -53,23 +54,24 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	printf("%s\n", message);
 #endif
 	payloadStateInit();
-	fn(routing_table, sg_serial);
+	exit_code = fn(routing_table, sg_serial);
 	// Commit handler
 	payloadStateCommit(&sg_serial_read);
 
 	if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
 		fail("Packet Mismatch");
-	if (test_node->next_packet != routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->origin_ip))
+	int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->origin_ip);
+	int dest = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->dest_ip);
+	if (test_node->next_packet != (orig | dest))
 		fail("Control Flow Mismatch \
 				\n\tExpected: %i \
 				\n\tGot: %i", test_node->next_packet, 
-				routingTableLookupNextExpectedPacket(routing_table, 
-					sg_serial_read->origin_ip));
+				(orig | dest));
 	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip)
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
-	return 0;
+	return exit_code;
 }
 
 
@@ -77,6 +79,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 static int testPayload(PayloadTestStruct *test_struct) {
 	// unit test code to test the Eyeball data type
 	// (The next packet would be a Squawk)
+	int32_t exit_code;
 	SansgridEyeball sg_eyeball;
 	SansgridPeck sg_peck;
 	SansgridSing sg_sing;
@@ -84,6 +87,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	SansgridPeacock sg_peacock;
 	SansgridNest sg_nest;
 	SansgridSerial sg_serial;
+	uint8_t ip_addr[IP_SIZE];
 
 	/*
 #if TESTS_DEBUG_LEVEL > 0
@@ -96,36 +100,59 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	sem_init(&spi_readlock, 0, 0);
 	sem_init(&tcp_readlock, 0, 0);
 
-	payloadMkSerial(&sg_serial);
 	if (test_struct->eyeball) {
+		payloadMkSerial(&sg_serial);
 		payloadMkEyeball(&sg_eyeball, test_struct);
 		memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
-		testPayloadSpecific(&sg_serial, test_struct->eyeball, routerHandleEyeball, "Eyeballing");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->eyeball, routerHandleEyeball, "Eyeballing");
+		if (exit_code)
+			return exit_code;
+		memcpy(&ip_addr, &sg_serial.origin_ip, IP_SIZE);
 	}
 	if (test_struct->peck) {
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkPeck(&sg_peck, test_struct);
 		memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
-		testPayloadSpecific(&sg_serial, test_struct->peck, routerHandlePeck, "Pecking");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->peck, routerHandlePeck, "Pecking");
+		if (exit_code)
+			return exit_code;
 	}
 	if (test_struct->sing) {
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkSing(&sg_sing, test_struct);
 		memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridSing));
-		testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing, "Singing");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing, "Singing");
+		if (exit_code)
+			return exit_code;
 	}
 	if (test_struct->mock) {
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
 		payloadMkMock(&sg_mock, test_struct);
 		memcpy(&sg_serial.payload, &sg_mock, sizeof(SansgridMock));
-		testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock, "Mocking");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock, "Mocking");
+		if (exit_code)
+			return exit_code;
 	}
 	if (test_struct->peacock) {
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
 		payloadMkPeacock(&sg_peacock, test_struct);
 		memcpy(&sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
-		testPayloadSpecific(&sg_serial, test_struct->peacock, routerHandlePeacock, "Peacocking");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->peacock, routerHandlePeacock, "Peacocking");
+		if (exit_code)
+			return exit_code;
 	}
 	if (test_struct->nest) {
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkNest(&sg_nest, test_struct);
 		memcpy(&sg_serial.payload, &sg_nest, sizeof(SansgridNest));
-		testPayloadSpecific(&sg_serial, test_struct->nest, routerHandleNest, "Nesting");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest, routerHandleNest, "Nesting");
+		if (exit_code)
+			return exit_code;
 	}
 
 
@@ -135,11 +162,11 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	printf("Dest   IP: ");
 	routingTablePrint(sg_serial.dest_ip);
 	printf("Sent: ");
-	for (int i=0; i<sizeof(SansgridMock); i++)
+	for (int i=0; i<PAYLOAD_SIZE; i++)
 		printf("%.2x", sg_serial.payload[i]);
 	printf("\n");
 	printf("Read: ");
-	for (int i=0; i<sizeof(SansgridMock); i++)
+	for (int i=0; i<PAYLOAD_SIZE; i++)
 		printf("%.2x", sg_serial.payload[i]);
 	printf("\n\n");
 #endif
@@ -166,36 +193,36 @@ void testStructInit(PayloadTestStruct *test_struct) {
 
 void testEyeballPayload(PayloadTestStruct *test_struct) {
 	// Call Eyeball tests with all options
+	// Mate, NoMate
+	// Next payload is always pecking
 	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
 	test_struct->eyeball = &eyeball;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
 	testPayload(test_struct);
-	test_struct->eyeball_mode = SG_EYEBALL_NOMATE;
-	testPayload(test_struct);
+	// FIXME: This path is not implemented yet
+	//test_struct->eyeball_mode = SG_EYEBALL_NOMATE;
+	//testPayload(test_struct);
 	return;
 }
 
 void testPeckPayload(PayloadTestStruct *test_struct) {
 	// Call Peck tests with all options
-	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
 	PayloadTestNode peck;
 
 	// Set defaults
 	peck.read_dir = SG_TEST_COMM_READ_SPI;
-	test_struct->eyeball_mode = SG_EYEBALL_MATE;
 	// Assign nodes
 	test_struct->peck = &peck;
-	test_struct->eyeball = &eyeball;
 
 	// Test device unrecognized
 	peck.next_packet = SG_DEVSTATUS_SINGING;
 	test_struct->peck_mode = SG_PECK_MATE;
-	testPayload(test_struct);
+	testEyeballPayload(test_struct);
 
 	// Test device recognized
 	peck.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
-	testPayload(test_struct);
+	testEyeballPayload(test_struct);
 
 	return;
 }
