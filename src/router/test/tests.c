@@ -61,6 +61,7 @@ int main(void) {
 	srunner_add_suite(sr, payloadEyeballTesting());
 	srunner_add_suite(sr, payloadPeckTesting());
 	srunner_add_suite(sr, payloadSingTesting());
+	srunner_add_suite(sr, payloadMockTesting());
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

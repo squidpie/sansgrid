@@ -223,12 +223,16 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_mock_union.serialdata = sg_serial->payload;
 	sg_mock = sg_mock_union.formdata;
 
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			SG_DEVSTATUS_PEACOCKING);
+
+
 	switch (sg_mock->datatype) {
 		case SG_MOCK_WITH_KEY:
 			// Acknowledgement and sensor's public key
 		case SG_MOCK_WITHOUT_KEY:
 			// Acknowledgement, no sensor key
-			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
