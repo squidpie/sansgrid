@@ -145,6 +145,12 @@ static int testPayload(PayloadTestStruct *test_struct) {
 		if (exit_code)
 			return exit_code;
 	}
+	if (test_struct->squawk) {
+		payloadMkSerial(&sg_serial);
+		fail("Squawk not implemented yet!");
+		//memcpy(&sg_serial.
+		return -1;
+	}
 	if (test_struct->nest) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
@@ -288,6 +294,16 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 }
 
 
+void testSquawkPayload(PayloadTestStruct *test_struct) {
+	// Call squawk tests with all valid options
+	PayloadTestNode squawk;
+	test_struct->squawk = &squawk;
+	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
+	testPeckPayload(test_struct);
+}
+
+
 
 // Unit test definitions
 
@@ -374,6 +390,20 @@ START_TEST (testNest) {
 }
 END_TEST
 
+
+START_TEST (testSquawk) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Squawking\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testSquawkPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Squawked\n");
+#endif
+}
+END_TEST
+
 Suite *payloadTesting (void) {
 	Suite *s = suite_create("Payload Handling Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -383,6 +413,7 @@ Suite *payloadTesting (void) {
 	tcase_add_test(tc_core, testMock);
 	tcase_add_test(tc_core, testPeacock);
 	tcase_add_test(tc_core, testNest);
+	tcase_add_test(tc_core, testSquawk);
 
 
 	suite_add_tcase(s, tc_core);
