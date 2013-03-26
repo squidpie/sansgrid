@@ -105,13 +105,18 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	}
 	if (test_struct->sing) {
 		payloadMkSing(&sg_sing, test_struct);
-		memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridMock));
+		memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridSing));
 		testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing);
 	}
 	if (test_struct->mock) {
 		payloadMkMock(&sg_mock, test_struct);
 		memcpy(&sg_serial.payload, &sg_mock, sizeof(SansgridMock));
 		testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock);
+	}
+	if (test_struct->peacock) {
+		payloadMkPeacock(&sg_peacock, test_struct);
+		memcpy(&sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
+		testPayloadSpecific(&sg_serial, test_struct->peacock, routerHandlePeacock);
 	}
 
 
@@ -226,6 +231,16 @@ void testMockPayload(PayloadTestStruct *test_struct) {
 	return;
 }
 
+
+void testPeacockPayload(PayloadTestStruct *test_struct) {
+	// Call peacock tests with all valid options
+	PayloadTestNode peacock = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_NESTING };
+	test_struct->peacock = &peacock;
+	test_struct->peacock_mode = SG_PEACOCK;
+	testMockPayload(test_struct);
+	return;
+}
+
 START_TEST (testEyeball) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\nTesting Eyeball\n");
@@ -282,6 +297,20 @@ START_TEST (testMock) {
 END_TEST
 
 
+START_TEST (testPeacock) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\nTesting Peacocking\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testPeacockPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Peacocked\n");
+#endif
+}
+END_TEST
+
+
 Suite *payloadTesting (void) {
 	Suite *s = suite_create("Payload Handling Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -289,6 +318,7 @@ Suite *payloadTesting (void) {
 	tcase_add_test(tc_core, testPeck);
 	tcase_add_test(tc_core, testSing);
 	tcase_add_test(tc_core, testMock);
+	tcase_add_test(tc_core, testPeacock);
 
 
 	suite_add_tcase(s, tc_core);

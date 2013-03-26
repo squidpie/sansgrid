@@ -99,6 +99,16 @@ void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 }
 
 
+void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs) {
+	int i;
+	sg_peacock->datatype = test_specs->peacock_mode;
+	for (i=0; i<80; i++)
+		sg_peacock->capabilities[i] = 0x0;
+
+	return;
+}
+
+
 
 
 // vim: ft=c ts=4 noet sw=4:

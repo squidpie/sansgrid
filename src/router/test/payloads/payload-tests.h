@@ -110,6 +110,7 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs
 void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs);
 void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs);
 void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs);
+void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);
