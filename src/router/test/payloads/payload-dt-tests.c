@@ -36,13 +36,13 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 
 	// Call Eyeball handler
 	switch (test_node->read_dir) {
-		case SG_TEST_COMM_READ_SPI:
+		case SG_TEST_COMM_WRITE_SPI:
 			sem_post(&spi_readlock);
 			break;
-		case SG_TEST_COMM_READ_TCP:
+		case SG_TEST_COMM_WRITE_TCP:
 			sem_post(&tcp_readlock);
 			break;
-		case SG_TEST_COMM_READ_BOTH:
+		case SG_TEST_COMM_WRITE_BOTH:
 			sem_post(&spi_readlock);
 			sem_post(&tcp_readlock);
 			break;
@@ -195,7 +195,7 @@ void testEyeballPayload(PayloadTestStruct *test_struct) {
 	// Call Eyeball tests with all options
 	// Mate, NoMate
 	// Next payload is always pecking
-	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
+	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
 	test_struct->eyeball = &eyeball;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
 	testPayload(test_struct);
@@ -210,7 +210,7 @@ void testPeckPayload(PayloadTestStruct *test_struct) {
 	PayloadTestNode peck;
 
 	// Set defaults
-	peck.read_dir = SG_TEST_COMM_READ_SPI;
+	peck.read_dir = SG_TEST_COMM_WRITE_SPI;
 	// Assign nodes
 	test_struct->peck = &peck;
 
@@ -230,12 +230,12 @@ void testPeckPayload(PayloadTestStruct *test_struct) {
 
 void testSingPayload(PayloadTestStruct *test_struct) {
 	// Call Sing tests with all options
-	PayloadTestNode eyeball = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PECKING };
-	PayloadTestNode peck = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_SINGING };
-	PayloadTestNode sing = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_MOCKING };
+	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SINGING };
+	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING };
 
 	// Set defaults
-	sing.read_dir = SG_TEST_COMM_READ_SPI;
+	sing.read_dir = SG_TEST_COMM_WRITE_SPI;
 	sing.next_packet = SG_DEVSTATUS_MOCKING;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
 	test_struct->peck_mode = SG_PECK_MATE;
@@ -258,7 +258,7 @@ void testSingPayload(PayloadTestStruct *test_struct) {
 
 void testMockPayload(PayloadTestStruct *test_struct) {
 	// Call mock tests with all options
-	PayloadTestNode mock = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_PEACOCKING };
+	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING };
 	test_struct->mock = &mock;
 	test_struct->mock_mode = SG_MOCK_WITH_KEY;
 	testSingPayload(test_struct);
@@ -270,7 +270,7 @@ void testMockPayload(PayloadTestStruct *test_struct) {
 
 void testPeacockPayload(PayloadTestStruct *test_struct) {
 	// Call peacock tests with all valid options
-	PayloadTestNode peacock = { SG_TEST_COMM_READ_TCP, SG_DEVSTATUS_NESTING };
+	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING };
 	test_struct->peacock = &peacock;
 	test_struct->peacock_mode = SG_PEACOCK;
 	testMockPayload(test_struct);
@@ -280,7 +280,7 @@ void testPeacockPayload(PayloadTestStruct *test_struct) {
 
 void testNestPayload(PayloadTestStruct *test_struct) {
 	// Call Nest tests with all valid options
-	PayloadTestNode nest = { SG_TEST_COMM_READ_SPI, SG_DEVSTATUS_LEASED };
+	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
 	test_struct->nest = &nest;
 	test_struct->nest_mode = SG_NEST;
 	testPeacockPayload(test_struct);
