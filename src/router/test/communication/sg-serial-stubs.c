@@ -29,6 +29,8 @@
 static FILE *FPTR_SPI_WRITE = NULL,
 			*FPTR_SPI_READ = NULL;
 static sem_t *SPI_READ = NULL;
+static sem_t *spi_read_sync = NULL;
+static sem_t *spi_write_sync = NULL;
 
 
 void sgSerialTestSetReader(FILE *FPTR, sem_t *readlock) {
@@ -43,6 +45,11 @@ void sgSerialTestSetReadlock(sem_t *readlock) {
 	SPI_READ = readlock;
 }
 
+void sgSerialTestSetRWSync(sem_t *readlock, sem_t *writelock) {
+	spi_read_sync = readlock;
+	spi_write_sync = writelock;
+}
+
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
@@ -55,6 +62,10 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 	sg_serial_union.formdata = sg_serial;
 	
+	if (spi_write_sync)
+		sem_post(spi_write_sync);
+	if (spi_read_sync)
+		sem_wait(spi_read_sync);
 	for (i=0; i<sizeof(SansgridSerial) && FPTR_SPI_WRITE; i++) {
 		putc(sg_serial_union.serialdata[i], FPTR_SPI_WRITE);
 	}
@@ -73,6 +84,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		return -1;
 
 	// Read from the pipe 
+	if (spi_read_sync)
+		sem_post(spi_read_sync);
+	if (spi_write_sync)
+		sem_wait(spi_write_sync);
 	for (i=0; i<(sizeof(SansgridSerial)) && FPTR_SPI_READ; i++) {
 		lptr[i] = fgetc(FPTR_SPI_READ);
 	}

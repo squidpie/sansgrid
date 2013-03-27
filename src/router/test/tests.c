@@ -53,7 +53,8 @@ int main(void) {
 	int number_failed;
 
 
-	SRunner *sr = srunner_create(makeMasterSuite());
+	SRunner *sr;
+   	sr = srunner_create(makeMasterSuite());
 	srunner_add_suite(sr, routingBasicTestSuite());
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());

@@ -22,7 +22,7 @@
  */
 
 #include <stdio.h>
-#include <stdint.h>
+//#include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "../../../sg_serial.h"
 #include "../../../payloads.h"
@@ -43,68 +44,82 @@ void payloadMkSerial(SansgridSerial *sg_serial);
 // Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
 void sgSerialTestSetWriter(FILE *FPTR);
+void sgSerialTestSetRWSync(sem_t *readlock, sem_t *writelock);
 
-void *routingTableRuntime(void *arg) {
+static void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
+	int i;
 	Queue *queue = (Queue*)arg;
-	int oldstate;
-	SansgridSerial *sg_serial;
+	//int oldstate = 0;
+	SansgridSerial *sg_serial = NULL;
 #if TESTS_DEBUG_LEVEL > 0
 	SansgridFly *sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int numpackets = 0;
 #endif
 
-	while (1) {
-		queueDequeue(queue, (void**)&sg_serial);
+	for (i=0; i<10; i++) {
+		if (queueDequeue(queue, (void**)&sg_serial) == -1)
+			fail("Dispatch Dequeue Failure");
 		fail_if((sg_serial == NULL), "serial_data not initialized!");
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+		//pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 #if TESTS_DEBUG_LEVEL > 0
 		sg_fly_union.serialdata = sg_serial->payload;
 		sg_fly = sg_fly_union.formdata;
 		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly->datatype, sg_fly->network_name);
 #endif
 		free(sg_serial);
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
 	pthread_exit(arg);
 }
 
 
-void *spiReader(void *arg) {
+static void *spiReader(void *arg) {
 	// reads from a serial connection and enqueues data
 	int i;
-	SansgridSerial *sg_serial;
-	uint32_t packet_size;
+	SansgridSerial *sg_serial = NULL;
+	uint32_t packet_size = 0;
 	Queue *queue = (Queue*)arg;
-	int oldstate;
+	//int oldstate;
 	FILE *FPTR;
-	uint32_t excode;
+	int8_t excode;
 
-	if (!(FPTR = fopen("rstubin.fifo", "r"))) {
-		fail("Can't open fifo for reading");
-	}
-	sgSerialTestSetReader(FPTR);
 
 	for (i=0; i<10; i++) {
 		
+#if TESTS_DEBUG_LEVEL > 1
+		printf("Reading %i\n", i);
+#endif
+		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
+			fail("Can't open fifo for reading");
+		}
+		sgSerialTestSetReader(FPTR);
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
+		else if (sg_serial == NULL)
+			fail("No data received!");
 		else if (excode == 0) {
 			// Enqueue
-			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-			queueEnqueue(queue, sg_serial);
-			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+			//pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+			if (queueEnqueue(queue, sg_serial) == -1)
+				fail("Queue Enqueue Failure");
+			//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
+		if (fclose(FPTR) == EOF)
+			fail("File Descriptor failed to close");
+		sgSerialTestSetReader(NULL);
 	}
-	fclose(FPTR);
 
+#if TESTS_DEBUG_LEVEL > 1
+	printf("Reader exiting\n");
+#endif
 	pthread_exit(arg);
 }
 
-void *spiWriter(void *arg) {
+static void *spiWriter(void *arg) {
 	// Writes to a serial connection
 
 	int i;
@@ -114,27 +129,32 @@ void *spiWriter(void *arg) {
 
 	payloadMkSerial(&sg_serial);
 	sg_fly.datatype = SG_FLY;
-	snprintf(sg_fly.network_name, 78, "Ping");
-	memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 
 
-	if (!(FPTR = fopen("rstubin.fifo", "w"))) {
-		fail("Can't open fifo for writing");
-	}
-	sgSerialTestSetWriter(FPTR);
 
 	for (i=0; i<10; i++) {
 		// write ping 10 times, then signal exiting using 
 		// the pipe
-		
+#if TESTS_DEBUG_LEVEL > 1
+		printf("Writing %i\n", i);
+#endif
+		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
+			fail("Can't open fifo for writing");
+		}
+		sgSerialTestSetWriter(FPTR);
+		snprintf(sg_fly.network_name, 78, "Ping %i", i);
+		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
+		if (fclose(FPTR) == EOF)
+			fail("File Descriptor Failed to close");
+		sgSerialTestSetWriter(NULL);
 	}
 
-	//printf("Ping Start\n");
-	fclose(FPTR);
-	//printf("Next ping\n");
 
+#if TESTS_DEBUG_LEVEL > 1
+	printf("Writer Exiting\n");
+#endif
 	pthread_exit(arg);
 }
 	
@@ -146,6 +166,7 @@ START_TEST (testAdvancedDispatch) {
 	pthread_t spi_read_thread,
 			  spi_write_thread,
 			  routing_table_thread;
+	sem_t readlock, writelock;
 	void *arg;
 
 
@@ -157,6 +178,9 @@ START_TEST (testAdvancedDispatch) {
 
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);
+	sem_init(&readlock, 0, 0);
+	sem_init(&writelock, 0, 0);
+	sgSerialTestSetRWSync(&readlock, &writelock);
 
 	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
 	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
@@ -172,6 +196,10 @@ START_TEST (testAdvancedDispatch) {
 	pthread_cancel(routing_table_thread);
 	pthread_join(routing_table_thread, &arg);
 	queueDestroy(queue);
+	sem_destroy(&readlock);
+	sem_destroy(&writelock);
+
+	sgSerialTestSetRWSync(NULL, NULL);
 
 
 	unlink("rstubin.fifo");
