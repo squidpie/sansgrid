@@ -85,6 +85,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
+	free(sg_serial_read);
 	return exit_code;
 }
 

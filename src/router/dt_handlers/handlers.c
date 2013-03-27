@@ -128,6 +128,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return -1;
 	}
 
+	free(dev_prop);
 	return 0;
 }
 

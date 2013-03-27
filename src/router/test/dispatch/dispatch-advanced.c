@@ -106,13 +106,12 @@ void *spiWriter(void *arg) {
 
 	int i;
 	SansgridFly sg_fly;
-	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	SansgridSerial sg_serial;
 	FILE *FPTR;
 
 	sg_fly.datatype = SG_FLY;
 	snprintf(sg_fly.network_name, 78, "Ping");
-	sg_fly_union.formdata = &sg_fly;
+	memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 
 
 	if (!(FPTR = fopen("rstubin.fifo", "w"))) {
@@ -124,7 +123,6 @@ void *spiWriter(void *arg) {
 		// write ping 10 times, then signal exiting using 
 		// the pipe
 		
-		memcpy(&sg_serial.payload, sg_fly_union.serialdata, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
 	}
