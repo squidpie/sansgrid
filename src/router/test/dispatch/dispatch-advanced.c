@@ -38,6 +38,8 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+void payloadMkSerial(SansgridSerial *sg_serial);
+
 // Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
 void sgSerialTestSetWriter(FILE *FPTR);
@@ -62,6 +64,7 @@ void *routingTableRuntime(void *arg) {
 		sg_fly = *sg_fly_union.formdata;
 		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly.datatype, sg_fly.network_name);
 #endif
+		free(sg_serial);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	}
 
@@ -109,6 +112,7 @@ void *spiWriter(void *arg) {
 	SansgridSerial sg_serial;
 	FILE *FPTR;
 
+	payloadMkSerial(&sg_serial);
 	sg_fly.datatype = SG_FLY;
 	snprintf(sg_fly.network_name, 78, "Ping");
 	memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
@@ -148,6 +152,7 @@ START_TEST (testAdvancedDispatch) {
 
 	queue = queueInit(200);
 	fail_unless((queue != NULL), "Error: Queue not allocated!");
+	sgSerialTestSetReader(NULL);
 
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);
