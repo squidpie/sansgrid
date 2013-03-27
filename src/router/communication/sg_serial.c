@@ -1,4 +1,4 @@
-/* A thread-safe queue implementation 
+/* Definitions for communication functions
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -15,22 +15,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *
  */
 
 #include <stdint.h>
+#include "../../sg_serial.h"
 
-typedef struct Queue Queue;
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
+	// Send size bytes of serialdata
+	return -1;
+}
 
-// Construct/Destruct
-Queue *queueInit(uint32_t size);
-Queue *queueDestroy(Queue*);
-// Queue State
-int queueSize(Queue*);
-// Queuing Operations
-int queueTryEnqueue(Queue *queue, uint8_t *serial_data);
-int queueEnqueue(Queue *queue, uint8_t *serial_data);
-int queueTryDequeue(Queue *queue, uint8_t **serial_data);
-int queueDequeue(Queue *queue, uint8_t **serial_data);
+int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
+	// Receive serialdata, size of packet stored in size
+	return -1;
+}
 
 
 // vim: ft=c ts=4 noet sw=4:

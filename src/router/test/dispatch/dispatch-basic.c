@@ -17,10 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
+ *
+ * A test to make sure the queue really is atomic.
+ *
  * Has multiple writers, one heartbeat, and one reader.
  * All of these atomically access the queue.
  *
- * This is ultimately a test of a possible solution to having
+ * This is ultimately a test of a solution to having
  * 2 inputs (one from apache, one from SPI)
  * 2 outputs (one to apache, one to SPI)
  * with a heartbeat going out over SPI periodically.
@@ -39,9 +42,10 @@
 #include <stdlib.h>					// malloc(), free()
 #include <stdint.h>					// Exact-Width Integers
 #include <pthread.h>				// POSIX threads
-#include <time.h>					// nanosleep()
+#include <check.h>
 
-#include "../sync_queue.h"
+#include "../../dispatch/dispatch.h"
+#include "../tests.h"
 
 
 #define NUM_DATA 		100			// Amount of data to send through
@@ -85,11 +89,15 @@ static void *writerFunc(void *arg) {
 		datastring = (char*)malloc(DATA_LENGTH*sizeof(char));
 		sprintf(datastring, "%i", i);
 		data = (uint8_t*)datastring;
+#if TESTS_DEBUG_LEVEL > 0
 		printf("W");
+#endif
 
 		// queue data onto the queue
 		if ((excode = queueTryEnqueue(queue, data)) == -1) {
+#if TESTS_DEBUG_LEVEL > 0
 			printf("F\n");
+#endif
 			excode = queueEnqueue(queue, data);
 		}
 
@@ -126,7 +134,8 @@ static void *heartbeatFunc(void *arg) {
 		datastring = (char*)malloc(DATA_LENGTH*sizeof(char));
 		sprintf(datastring, "H %i", i);
 		data = (uint8_t*)datastring;
-		excode = queueEnqueue(queue, data);
+		if ((excode = queueEnqueue(queue, data)) == -1)
+			break;
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
 
 	}
@@ -152,19 +161,23 @@ static void *readerFunc(void *arg) {
 		// When we're using non-blocking functions, make sure we aren't
 		// 	cancelled
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
-		if (queueTryDequeue(queue, &data) == -1) {
+		if (queueTryDequeue(queue, (void**)&data) == -1) {
 			// queue is empty. Block until data is available
+#if TESTS_DEBUG_LEVEL > 0
 			printf("E\n");
+#endif
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
-			queueDequeue(queue, &data);
+			queueDequeue(queue, (void**)&data);
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);
 		}
 
+#if TESTS_DEBUG_LEVEL > 0
 		if (data[0] == 'H') {
 			printf(" %s ", data);
 		} else {
 			printf("R");
 		}
+#endif
 
 		free(data);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldtype);
@@ -175,8 +188,41 @@ static void *readerFunc(void *arg) {
 
 
 
-int main(void) {
-	// Main function
+START_TEST (testDispatchBasic) {
+	// Simple tests for the queue
+	int i;
+	Queue *queue;
+	uint8_t *in_data, *out_data;
+	int excode;
+
+	queue = queueInit(QUEUE_SIZE);
+	fail_unless((queue != NULL), "Error: Queue not initialized!");
+
+	for (i=0; i<QUEUE_SIZE-1; i++) {
+		// Write data to the queue
+		out_data = (uint8_t*)malloc(1*sizeof(uint8_t));
+		*out_data = (i & 0xFF);
+		excode = queueTryEnqueue(queue, out_data);
+		fail_unless((excode == 0), "Error: Queue Full!");
+	}
+
+	for (i=0; i<QUEUE_SIZE-1; i++) {
+		// Read data from the queue
+		excode = queueTryDequeue(queue, (void**)&in_data);
+		fail_unless((excode == 0), "Error: No data to read!");
+		fail_unless((in_data != NULL), "Error: invalid pointer!");
+		fail_unless((*in_data == (i & 0xFF)), 
+				"Error: Expected %i, got %i", (i & 0xFF), *in_data);
+		free(in_data);
+	}
+	queueDestroy(queue);
+
+}
+END_TEST
+
+
+START_TEST (testDispatchWithLotsOfThreads) {
+	// Throw a lot of threads at the queue
 	
 	// Thread Variables
 	pthread_t writer_thread_1,
@@ -190,19 +236,14 @@ int main(void) {
 	Queue *queue;
 
 
-	if (sizeof(char) != sizeof(uint8_t)) {
-		// We do direct conversions from uint8_t to char.
-		// If these aren't the same size, just stop right here.
-		printf("ERROR: sizeof(char) != sizeof(uint8_t)\n");
-		exit(EXIT_FAILURE);
-	}
+	// We do direct conversions from uint8_t to char.
+	// If these aren't the same size, just stop right here.
+	fail_unless((sizeof(char) == sizeof(uint8_t)),
+			"ERROR: sizeof(char) != sizeof(uint8_t)");
 
 	// Create the queue
 	queue = queueInit(QUEUE_SIZE);
-	if (!queue) {
-		printf("ERROR: Invalid queue size!\n");
-		exit(EXIT_FAILURE);
-	}
+	fail_unless((queue != NULL), "ERROR: Invalid queue size!");
 
 	// Create all threads
 	pthread_create(&reader_thread, NULL, readerFunc, (void*)queue);
@@ -229,7 +270,21 @@ int main(void) {
 	// Clean up
 	queueDestroy(queue);
 	
-	return EXIT_SUCCESS;
+}
+END_TEST
+
+
+
+Suite *dispatchBasicTesting (void) {
+	Suite *s = suite_create("Basic Dispatch testing");
+
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testDispatchBasic);
+	tcase_add_test(tc_core, testDispatchWithLotsOfThreads);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
 }
 
 

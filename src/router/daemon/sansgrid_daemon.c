@@ -29,7 +29,12 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <pthread.h>
 
+#include "sansgrid_daemon.h"
+#include "../dispatch/dispatch.h"
+#include "../routing/routing.h"
+#include "../sansgrid_router/sansgrid_router.h"
 
 #if defined(SYSLOG) && defined(LOG_FILE)
 #undef LOG_FILE
@@ -48,11 +53,10 @@ static int syslog_open = FALSE;
 #endif
 	
 
-int main(void) {
+int daemon_init(void) {
 	pid_t pid;
 	pid_t sid;
 
-	//int fd;
 
 	pid = fork();
 
@@ -61,8 +65,10 @@ int main(void) {
 		exit(EXIT_FAILURE);
 
 	// kill parent process
-	if (pid > 0)
+	if (pid > 0) {
+		printf("Running as process %i\n", pid);
 		exit(EXIT_SUCCESS);
+	}
 
 	// change the file mode mask
 	umask(0);
@@ -88,16 +94,8 @@ int main(void) {
 	close(STDERR_FILENO);
 
 	// daemon-specific initialization goes here
-	
 
-
-	// The Big Loop
-	while (1) {
-		// do stuff here
-		sleep(30);	// wait 30 seconds
-	}
-
-	exit(EXIT_SUCCESS);
+	return 0;
 }
 
 

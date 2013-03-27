@@ -26,17 +26,20 @@
  * Link with -lpthread
  */
 
+#include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdlib.h>
 #include <errno.h>
 
-#include "sync_queue.h"
+#include "dispatch.h"
+
+
 
 struct Queue {
-	uint8_t **list;					// actual data storage
+	void **list;					// actual data storage
 	uint32_t size;					// number of indeces in the list
-	// Entry/Exit points
+	// Head/Tail points
 	uint32_t queue_index_end;		// where data is added
 	uint32_t queue_index_start;		// where data is taken
 	// Synchronization Primitives
@@ -53,15 +56,18 @@ static void modInc(uint32_t *a, uint32_t m) {
 }
 
 
-static int enqueue(Queue *queue, uint8_t *serial_data, int (*fn)(sem_t*)) {
+static int enqueue(Queue *queue, void *serial_data, int (*sem_fn)(sem_t*)) {
 	// put a piece of data onto the queue
 	// Use the semaphore function supplied to determine the action
 	// 		if the queue is full
-	if (fn(&queue->queue_full_lock) == -1)
+
+	if (sem_fn(&queue->queue_full_lock) == -1)
 		return -1;
+
 	pthread_mutex_lock(&queue->queue_lock);		// get atomic access to queue
 
 	queue->list[queue->queue_index_end] = serial_data;
+	//printf("Enqueue: %i: %p\n", queue->queue_index_end, serial_data);
 	modInc(&queue->queue_index_end, queue->size);
 
 	sem_post(&queue->queue_empty_lock);			// signal more data is available
@@ -72,13 +78,16 @@ static int enqueue(Queue *queue, uint8_t *serial_data, int (*fn)(sem_t*)) {
 
 
 
-static int dequeue(Queue *queue, uint8_t **serial_data, int (*fn)(sem_t*)) {
+static int dequeue(Queue *queue, void **serial_data, int (*sem_fn)(sem_t*)) {
 	// take a piece of data off the queue
-	if (fn(&queue->queue_empty_lock) == -1) 
+
+	if (sem_fn(&queue->queue_empty_lock) == -1) 
 		return -1;
+
 	pthread_mutex_lock(&queue->queue_lock);		// get atomic access to queue
 
 	*serial_data = queue->list[queue->queue_index_start];
+	//printf("Dequeue: %i: %p\n", queue->queue_index_start, *serial_data);
 	modInc(&queue->queue_index_start, queue->size);
 
 	sem_post(&queue->queue_full_lock);			// signal more space is available
@@ -92,6 +101,7 @@ static int dequeue(Queue *queue, uint8_t **serial_data, int (*fn)(sem_t*)) {
 
 Queue *queueInit(uint32_t size) {
 	// Create a queue with size elements
+
 	Queue *queue;
 
 	if (size < 2)
@@ -102,13 +112,14 @@ Queue *queueInit(uint32_t size) {
 		// TODO: Log an error here
 		return NULL;		// allocation error
 	}
+
 	queue->size = size;
 
 	pthread_mutex_init(&queue->queue_lock, NULL);
 	sem_init(&queue->queue_empty_lock, 0, 0);
 	sem_init(&queue->queue_full_lock, 0, queue->size-1);
 
-	queue->list = (uint8_t**)malloc(queue->size*sizeof(uint8_t*));
+	queue->list = (void**)malloc(queue->size*sizeof(void*));
 	if (!queue->list) {
 		// TODO: Log an error here
 		return NULL;
@@ -124,6 +135,7 @@ Queue *queueInit(uint32_t size) {
 
 Queue *queueDestroy(Queue *queue) {
 	// Free up a queue
+
 	free(queue->list);
 	pthread_mutex_destroy(&queue->queue_lock);
 	sem_destroy(&queue->queue_empty_lock);
@@ -149,7 +161,7 @@ int queueSize(Queue *queue) {
 
 
 
-int queueTryEnqueue(Queue *queue, uint8_t *serial_data) {
+int queueTryEnqueue(Queue *queue, void *serial_data) {
 	// try to put data onto the queue
 	// If the queue is full, return an error
 
@@ -158,7 +170,7 @@ int queueTryEnqueue(Queue *queue, uint8_t *serial_data) {
 
 
 
-int queueEnqueue(Queue *queue, uint8_t *serial_data) {
+int queueEnqueue(Queue *queue, void *serial_data) {
 	// Put data onto the queue
 	// If the queue is full, block until space is available
 
@@ -167,7 +179,7 @@ int queueEnqueue(Queue *queue, uint8_t *serial_data) {
 
 
 
-int queueTryDequeue(Queue *queue, uint8_t **serial_data) {
+int queueTryDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.
 	// If the queue is empty, return an error
 
@@ -176,7 +188,7 @@ int queueTryDequeue(Queue *queue, uint8_t **serial_data) {
 
 
 
-int queueDequeue(Queue *queue, uint8_t **serial_data) {
+int queueDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.
 	// If the queue is empty, block until data is available
 
