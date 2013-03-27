@@ -59,6 +59,9 @@ int main(void) {
 	srunner_add_suite(sr, dispatchAdvancedTesting());
 	srunner_add_suite(sr, payloadSizeTesting());
 	srunner_add_suite(sr, payloadTesting());
+
+	// Uncomment to better debug segfaults
+	//srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

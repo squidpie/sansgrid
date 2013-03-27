@@ -58,6 +58,9 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	exit_code = fn(routing_table, sg_serial);
 	// Commit handler
 	payloadStateCommit(&sg_serial_read);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Handled with status: %i\n", exit_code);
+#endif
 
 #if TESTS_DEBUG_LEVEL > 1
 	printf("Sent: ");
