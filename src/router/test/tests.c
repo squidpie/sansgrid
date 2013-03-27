@@ -57,8 +57,8 @@ int main(void) {
 	srunner_add_suite(sr, routingBasicTestSuite());
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());
-	srunner_add_suite(sr, payloadSizeTesting());
-	srunner_add_suite(sr, payloadTesting());
+	//srunner_add_suite(sr, payloadSizeTesting());
+	//srunner_add_suite(sr, payloadTesting());
 
 	// Uncomment to better debug segfaults
 	srunner_set_fork_status(sr, CK_NOFORK);

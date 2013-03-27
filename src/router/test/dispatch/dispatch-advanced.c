@@ -50,7 +50,7 @@ void *routingTableRuntime(void *arg) {
 	int oldstate;
 	SansgridSerial *sg_serial;
 #if TESTS_DEBUG_LEVEL > 0
-	SansgridFly sg_fly;
+	SansgridFly *sg_fly;
 	SANSGRID_UNION(SansgridFly, SGFU) sg_fly_union;
 	int numpackets = 0;
 #endif
@@ -61,8 +61,8 @@ void *routingTableRuntime(void *arg) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 #if TESTS_DEBUG_LEVEL > 0
 		sg_fly_union.serialdata = sg_serial->payload;
-		sg_fly = *sg_fly_union.formdata;
-		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly.datatype, sg_fly.network_name);
+		sg_fly = sg_fly_union.formdata;
+		printf("Packet %i:\t0x%x\t%s\n", numpackets++, sg_fly->datatype, sg_fly->network_name);
 #endif
 		free(sg_serial);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
@@ -82,13 +82,13 @@ void *spiReader(void *arg) {
 	FILE *FPTR;
 	uint32_t excode;
 
-	if (!(FPTR = fopen("rstubin.fifo", "r"))) {
-		fail("Can't open fifo for reading");
-	}
-	sgSerialTestSetReader(FPTR);
 
 	for (i=0; i<10; i++) {
 		
+		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
+			fail("Can't open fifo for reading");
+		}
+		sgSerialTestSetReader(FPTR);
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -98,9 +98,9 @@ void *spiReader(void *arg) {
 			queueEnqueue(queue, sg_serial);
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
+		fclose(FPTR);
 	}
 
-	fclose(FPTR);
 	pthread_exit(arg);
 }
 
@@ -110,7 +110,7 @@ void *spiWriter(void *arg) {
 	int i;
 	SansgridFly sg_fly;
 	SansgridSerial sg_serial;
-	FILE *FPTR;
+	FILE *FPTR = NULL;
 
 	payloadMkSerial(&sg_serial);
 	sg_fly.datatype = SG_FLY;
@@ -118,20 +118,22 @@ void *spiWriter(void *arg) {
 	memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 
 
-	if (!(FPTR = fopen("rstubin.fifo", "w"))) {
-		fail("Can't open fifo for writing");
-	}
-	sgSerialTestSetWriter(FPTR);
 
 	for (i=0; i<10; i++) {
 		// write ping 10 times, then signal exiting using 
 		// the pipe
 		
+		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
+			fail("Can't open fifo for writing");
+		}
+		sgSerialTestSetWriter(FPTR);
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
+		printf("Ping Start\n");
+		fclose(FPTR);
+		printf("Next ping\n");
 	}
 
-	fclose(FPTR);
 
 	pthread_exit(arg);
 }
@@ -152,7 +154,6 @@ START_TEST (testAdvancedDispatch) {
 
 	queue = queueInit(200);
 	fail_unless((queue != NULL), "Error: Queue not allocated!");
-	sgSerialTestSetReader(NULL);
 
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);

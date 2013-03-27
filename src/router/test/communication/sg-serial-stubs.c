@@ -55,7 +55,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 	sg_serial_union.formdata = sg_serial;
 	
-	for (i=0; i<sizeof(SansgridSerial); i++) {
+	for (i=0; i<sizeof(SansgridSerial) && FPTR_SPI_WRITE; i++) {
 		putc(sg_serial_union.serialdata[i], FPTR_SPI_WRITE);
 	}
 	
