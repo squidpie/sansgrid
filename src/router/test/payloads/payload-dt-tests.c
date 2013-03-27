@@ -34,7 +34,8 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	sgTCPTestSetReadlock(&tcp_readlock);
 
 
-	// Call Eyeball handler
+	// Set which fifos we're writing to
+	// (This is so we don't read back bad data)
 	switch (test_node->read_dir) {
 		case SG_TEST_COMM_WRITE_SPI:
 			sem_post(&spi_readlock);
@@ -85,6 +86,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	SansgridSing sg_sing;
 	SansgridMock sg_mock;
 	SansgridPeacock sg_peacock;
+	SansgridSquawk sg_squawk;
 	SansgridNest sg_nest;
 	SansgridSerial sg_serial;
 	uint8_t ip_addr[IP_SIZE];
@@ -147,9 +149,30 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	}
 	if (test_struct->squawk) {
 		payloadMkSerial(&sg_serial);
-		fail("Squawk not implemented yet!");
-		//memcpy(&sg_serial.
-		return -1;
+		switch (test_struct->squawk_mode) {
+			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			case SG_SQUAWK_SERVER_DENY_SENSOR:
+			case SG_SQUAWK_SERVER_RESPOND:
+				memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_SPI;
+				break;
+			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
+			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+				memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_TCP;
+				break;
+			default:
+				// error
+				fail("Squawk: bad mode");
+				break;
+		}
+		payloadMkSquawk(&sg_squawk, test_struct);
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk,
+				routerHandleSquawk, "Squawking");
+		if (exit_code)
+			return exit_code;
 	}
 	if (test_struct->nest) {
 		payloadMkSerial(&sg_serial);
@@ -294,12 +317,15 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 }
 
 
-void testSquawkPayload(PayloadTestStruct *test_struct) {
+void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
 	PayloadTestNode squawk;
 	test_struct->squawk = &squawk;
-	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+
+	// Server Challenges sensor
 	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+	// FIXME: Can only take a certain peck path
 	testPeckPayload(test_struct);
 }
 
@@ -397,7 +423,7 @@ START_TEST (testSquawk) {
 #endif
 	PayloadTestStruct test_struct;
 	testStructInit(&test_struct);
-	testSquawkPayload(&test_struct);
+	testSquawkPayloadAuthBoth(&test_struct);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Squawked\n");
 #endif
