@@ -59,6 +59,16 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	// Commit handler
 	payloadStateCommit(&sg_serial_read);
 
+#if TESTS_DEBUG_LEVEL > 1
+	printf("Sent: ");
+	for (int i=0; i<PAYLOAD_SIZE; i++)
+		printf("%.2x", sg_serial->payload[i]);
+	printf("\n");
+	printf("Read: ");
+	for (int i=0; i<PAYLOAD_SIZE; i++)
+		printf("%.2x", sg_serial_read->payload[i]);
+	printf("\n");
+#endif
 	if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
 		fail("Packet Mismatch");
 	int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->origin_ip);
@@ -169,6 +179,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 				break;
 		}
 		payloadMkSquawk(&sg_squawk, test_struct);
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk,
 				routerHandleSquawk, "Squawking");
 		if (exit_code)
@@ -320,13 +331,16 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
 	PayloadTestNode squawk;
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
 	test_struct->squawk = &squawk;
+	test_struct->peck = &peck;
+	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Challenges sensor
+	squawk.read_dir = SG_TEST_COMM_WRITE_SPI;
 	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
-	// FIXME: Can only take a certain peck path
-	testPeckPayload(test_struct);
+	testEyeballPayload(test_struct);
 }
 
 
