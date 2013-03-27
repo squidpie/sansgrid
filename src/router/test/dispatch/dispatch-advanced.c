@@ -82,13 +82,13 @@ void *spiReader(void *arg) {
 	FILE *FPTR;
 	uint32_t excode;
 
+	if (!(FPTR = fopen("rstubin.fifo", "r"))) {
+		fail("Can't open fifo for reading");
+	}
+	sgSerialTestSetReader(FPTR);
 
 	for (i=0; i<10; i++) {
 		
-		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
-			fail("Can't open fifo for reading");
-		}
-		sgSerialTestSetReader(FPTR);
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -98,8 +98,8 @@ void *spiReader(void *arg) {
 			queueEnqueue(queue, sg_serial);
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
-		fclose(FPTR);
 	}
+	fclose(FPTR);
 
 	pthread_exit(arg);
 }
@@ -118,22 +118,22 @@ void *spiWriter(void *arg) {
 	memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 
 
+	if (!(FPTR = fopen("rstubin.fifo", "w"))) {
+		fail("Can't open fifo for writing");
+	}
+	sgSerialTestSetWriter(FPTR);
 
 	for (i=0; i<10; i++) {
 		// write ping 10 times, then signal exiting using 
 		// the pipe
 		
-		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
-			fail("Can't open fifo for writing");
-		}
-		sgSerialTestSetWriter(FPTR);
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
-		printf("Ping Start\n");
-		fclose(FPTR);
-		printf("Next ping\n");
 	}
 
+	//printf("Ping Start\n");
+	fclose(FPTR);
+	//printf("Next ping\n");
 
 	pthread_exit(arg);
 }
