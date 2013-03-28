@@ -33,7 +33,7 @@
 
 #include "sansgrid_daemon.h"
 #include "../dispatch/dispatch.h"
-#include "../routing/routing.h"
+#include "../routing_table/routing_table.h"
 #include "../sansgrid_router/sansgrid_router.h"
 
 #if defined(SYSLOG) && defined(LOG_FILE)

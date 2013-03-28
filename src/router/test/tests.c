@@ -23,8 +23,8 @@
 #include <stdint.h>
 
 #include "tests.h"
-#include "../routing/routing.h"
-#include "communication/sg-communication-stubs.h"
+#include "../routing_table/routing_table.h"
+#include "communication/sg_communication_stubs.h"
 
 
 void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {

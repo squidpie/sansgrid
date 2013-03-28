@@ -20,9 +20,9 @@
  */
 #include <stdint.h>
 #include <string.h>
-#include "handlers.h"
+#include "payload_handlers.h"
 #include "../../payloads.h"
-#include "../routing/routing.h"
+#include "../routing_table/routing_table.h"
 #include "../../sg_serial.h"
 #include "../communication/sg_tcp.h"
 

@@ -18,7 +18,7 @@
  *
  *
  */
-#include "payload-tests.h"
+#include "payload_tests.h"
 
 
 sem_t spi_readlock,

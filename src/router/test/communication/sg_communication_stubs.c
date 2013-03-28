@@ -26,7 +26,7 @@
 #include <sys/types.h>
 #include "../../../sg_serial.h"
 #include "../tests.h"
-#include "sg-communication-stubs.h"
+#include "sg_communication_stubs.h"
 
 struct TalkStub {
 	FILE *FPTR_SPI_WRITE,		// Writing file descriptor

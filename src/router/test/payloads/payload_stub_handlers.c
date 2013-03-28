@@ -21,7 +21,7 @@
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
-#include "payload-tests.h"
+#include "payload_tests.h"
 
 void payloadMkSerial(SansgridSerial *sg_serial) {
 	for (int i=0; i<IP_SIZE; i++) {

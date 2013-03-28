@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 #include "../../payloads.h"
-#include "../routing/routing.h"
+#include "../routing_table/routing_table.h"
 #include "../../sg_serial.h"
 
 

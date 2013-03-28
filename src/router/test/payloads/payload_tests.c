@@ -21,7 +21,7 @@
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
-#include "payload-tests.h"
+#include "payload_tests.h"
 TalkStub *ts_serial,
 		 *ts_tcp;
 pthread_t serial_reader_thr,
