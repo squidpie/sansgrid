@@ -45,7 +45,7 @@
 #include "../../../payloads.h"
 #include "../../routing/routing.h"
 #include "../../dt_handlers/handlers.h"
-
+#include "../communication/sg-communication-stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
@@ -91,14 +91,6 @@ typedef struct PayloadTestStruct {
 	PayloadTestNode *chirp;
 } PayloadTestStruct;
 
-
-// Setup fifo reading/writing
-void sgSerialTestSetReader(FILE *FPTR);
-void sgSerialTestSetReadlock(sem_t *readlock);
-void sgSerialTestSetWriter(FILE *FPTR);
-void sgTCPTestSetReader(FILE *FPTR);
-void sgTCPTestSetReadlock(sem_t *readlock);
-void sgTCPTestSetWriter(FILE *FPTR);
 
 Queue *dispatch;
 RoutingTable *routing_table;

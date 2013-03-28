@@ -28,10 +28,12 @@ sem_t spi_readlock,
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
+	TalkStub *ts_serial = talkStubUseSerial(1),
+			 *ts_tcp = talkStubUseTCP(1);
 	int exit_code;
 	SansgridSerial *sg_serial_read;
-	sgSerialTestSetReadlock(&spi_readlock);
-	sgTCPTestSetReadlock(&tcp_readlock);
+	talkStubSetReadlock(ts_serial, &spi_readlock);
+	talkStubSetReadlock(ts_tcp, &tcp_readlock);
 
 
 	// Set which fifos we're writing to

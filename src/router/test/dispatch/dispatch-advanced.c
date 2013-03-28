@@ -35,16 +35,14 @@
 
 #include "../../../sg_serial.h"
 #include "../../../payloads.h"
-
+#include "../communication/sg-communication-stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+TalkStub *ts_serial = NULL;
+
 void payloadMkSerial(SansgridSerial *sg_serial);
 
-// Setup fifo reading/writing
-void sgSerialTestSetReader(FILE *FPTR);
-void sgSerialTestSetWriter(FILE *FPTR);
-void sgSerialTestUseBarrier(int);
 
 static void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
@@ -95,7 +93,7 @@ static void *spiReader(void *arg) {
 		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
 			fail("Can't open fifo for reading");
 		}
-		sgSerialTestSetReader(FPTR);
+		talkStubSetReader(ts_serial, FPTR);
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -110,7 +108,7 @@ static void *spiReader(void *arg) {
 		}
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor failed to close");
-		sgSerialTestSetReader(NULL);
+		talkStubSetReader(ts_serial, NULL);
 	}
 
 #if TESTS_DEBUG_LEVEL > 1
@@ -141,14 +139,14 @@ static void *spiWriter(void *arg) {
 		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
 			fail("Can't open fifo for writing");
 		}
-		sgSerialTestSetWriter(FPTR);
+		talkStubSetWriter(ts_serial, FPTR);
 		snprintf(sg_fly.network_name, 78, "Ping %i", i);
 		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor Failed to close");
-		sgSerialTestSetWriter(NULL);
+		talkStubSetWriter(ts_serial, NULL);
 	}
 
 
@@ -168,6 +166,7 @@ START_TEST (testAdvancedDispatch) {
 			  routing_table_thread;
 	sem_t readlock, writelock;
 	void *arg;
+	ts_serial = talkStubUseSerial(1);
 
 
 	struct stat buffer;
@@ -180,7 +179,7 @@ START_TEST (testAdvancedDispatch) {
 		mkfifo("rstubin.fifo", 0644);
 	sem_init(&readlock, 0, 0);
 	sem_init(&writelock, 0, 0);
-	sgSerialTestUseBarrier(1);
+	talkStubUseBarrier(ts_serial, 1);
 
 	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
 	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
@@ -199,7 +198,7 @@ START_TEST (testAdvancedDispatch) {
 	sem_destroy(&readlock);
 	sem_destroy(&writelock);
 
-	sgSerialTestUseBarrier(0);
+	talkStubUseBarrier(ts_serial, 0);
 
 
 	unlink("rstubin.fifo");

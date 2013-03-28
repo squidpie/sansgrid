@@ -22,6 +22,8 @@
  */
 
 #include "payload-tests.h"
+TalkStub *ts_serial,
+		 *ts_tcp;
 pthread_t serial_reader_thr,
   		  tcp_reader_thr;
 static FILE *FPTR_SPI_WRITER,
@@ -48,7 +50,7 @@ void *spiPayloadReader(void *arg) {
 	if (!(FPTR_SPI_READER = fopen("spi.fifo", "r"))) {
 		fail("Can't open serial pipe for reading!");
 	}
-	sgSerialTestSetReader(FPTR_SPI_READER);
+	talkStubSetReader(ts_serial, FPTR_SPI_READER);
 
 	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read packet");
@@ -75,7 +77,7 @@ void *tcpPayloadReader(void *arg) {
 	if (!(FPTR_TCP_READER = fopen("tcp.fifo", "r"))) {
 		fail("Can't open TCP pipe for reading!");
 	}
-	sgTCPTestSetReader(FPTR_TCP_READER);
+	talkStubSetReader(ts_tcp, FPTR_TCP_READER);
 
 	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read TCP packet");
@@ -95,6 +97,8 @@ void *tcpPayloadReader(void *arg) {
 int32_t payloadRoutingInit(void) {
 	uint8_t base[IP_SIZE];
 
+	ts_serial = talkStubUseSerial(1);
+	ts_tcp = talkStubUseTCP(1);
 	dispatch = queueInit(200);
 	fail_if((dispatch == NULL), "Error: dispatch is not initialized!");
 	for (int i=0; i<IP_SIZE; i++)
@@ -130,8 +134,8 @@ int32_t payloadStateInit(void) {
 	if (!(FPTR_TCP_WRITER = fopen("tcp.fifo", "w"))) {
 		fail("Error: Can't open TCP pipe for writing!");
 	}
-	sgSerialTestSetWriter(FPTR_SPI_WRITER);
-	sgTCPTestSetWriter(FPTR_TCP_WRITER);
+	talkStubSetWriter(ts_serial, FPTR_SPI_WRITER);
+	talkStubSetWriter(ts_tcp, FPTR_TCP_WRITER);
 
 	return 0;
 }

@@ -24,6 +24,7 @@
 
 #include "tests.h"
 #include "../routing/routing.h"
+#include "communication/sg-communication-stubs.h"
 
 
 void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
