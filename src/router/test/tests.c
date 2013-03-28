@@ -23,7 +23,8 @@
 #include <stdint.h>
 
 #include "tests.h"
-#include "../routing/routing.h"
+#include "../routing_table/routing_table.h"
+#include "communication/sg_communication_stubs.h"
 
 
 void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
@@ -53,12 +54,16 @@ int main(void) {
 	int number_failed;
 
 
-	SRunner *sr = srunner_create(makeMasterSuite());
+	SRunner *sr;
+   	sr = srunner_create(makeMasterSuite());
 	srunner_add_suite(sr, routingBasicTestSuite());
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());
 	srunner_add_suite(sr, payloadSizeTesting());
 	srunner_add_suite(sr, payloadTesting());
+
+	// Uncomment to better debug segfaults
+	srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

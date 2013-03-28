@@ -22,7 +22,7 @@
 #include <check.h>
 #include <stdlib.h>
 
-#include "../../routing/routing.h"
+#include "../../routing_table/routing_table.h"
 #include "../../../payloads.h"
 #include "../tests.h"
 

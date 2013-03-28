@@ -20,9 +20,9 @@
  */
 #include <stdint.h>
 #include <string.h>
-#include "handlers.h"
+#include "payload_handlers.h"
 #include "../../payloads.h"
-#include "../routing/routing.h"
+#include "../routing_table/routing_table.h"
 #include "../../sg_serial.h"
 #include "../communication/sg_tcp.h"
 
@@ -128,6 +128,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return -1;
 	}
 
+	free(dev_prop);
 	return 0;
 }
 
@@ -285,20 +286,28 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
 			// Server Challenges sensor
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+					SG_DEVSTATUS_NESTING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// sensor challenge coming
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
 			// Sensor challenges server
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
@@ -307,10 +316,14 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_SERVER_RESPOND:
 			// Server Responds to challenge
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+					SG_DEVSTATUS_NESTING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:

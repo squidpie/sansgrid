@@ -18,7 +18,7 @@
  *
  *
  */
-#include "payload-tests.h"
+#include "payload_tests.h"
 
 
 sem_t spi_readlock,
@@ -28,13 +28,16 @@ sem_t spi_readlock,
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
+	TalkStub *ts_serial = talkStubUseSerial(1),
+			 *ts_tcp = talkStubUseTCP(1);
 	int exit_code;
 	SansgridSerial *sg_serial_read;
-	sgSerialTestSetReadlock(&spi_readlock);
-	sgTCPTestSetReadlock(&tcp_readlock);
+	talkStubSetReadlock(ts_serial, &spi_readlock);
+	talkStubSetReadlock(ts_tcp, &tcp_readlock);
 
 
-	// Call Eyeball handler
+	// Set which fifos we're writing to
+	// (This is so we don't read back bad data)
 	switch (test_node->read_dir) {
 		case SG_TEST_COMM_WRITE_SPI:
 			sem_post(&spi_readlock);
@@ -57,7 +60,20 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	exit_code = fn(routing_table, sg_serial);
 	// Commit handler
 	payloadStateCommit(&sg_serial_read);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Handled with status: %i\n", exit_code);
+#endif
 
+#if TESTS_DEBUG_LEVEL > 1
+	printf("Sent: ");
+	for (int i=0; i<PAYLOAD_SIZE; i++)
+		printf("%.2x", sg_serial->payload[i]);
+	printf("\n");
+	printf("Read: ");
+	for (int i=0; i<PAYLOAD_SIZE; i++)
+		printf("%.2x", sg_serial_read->payload[i]);
+	printf("\n");
+#endif
 	if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
 		fail("Packet Mismatch");
 	int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->origin_ip);
@@ -71,6 +87,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
+	free(sg_serial_read);
 	return exit_code;
 }
 
@@ -85,6 +102,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	SansgridSing sg_sing;
 	SansgridMock sg_mock;
 	SansgridPeacock sg_peacock;
+	SansgridSquawk sg_squawk;
 	SansgridNest sg_nest;
 	SansgridSerial sg_serial;
 	uint8_t ip_addr[IP_SIZE];
@@ -142,6 +160,34 @@ static int testPayload(PayloadTestStruct *test_struct) {
 		payloadMkPeacock(&sg_peacock, test_struct);
 		memcpy(&sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->peacock, routerHandlePeacock, "Peacocking");
+		if (exit_code)
+			return exit_code;
+	}
+	if (test_struct->squawk) {
+		payloadMkSerial(&sg_serial);
+		switch (test_struct->squawk_mode) {
+			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			case SG_SQUAWK_SERVER_DENY_SENSOR:
+			case SG_SQUAWK_SERVER_RESPOND:
+				memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_SPI;
+				break;
+			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
+			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+				memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_TCP;
+				break;
+			default:
+				// error
+				fail("Squawk: bad mode");
+				break;
+		}
+		payloadMkSquawk(&sg_squawk, test_struct);
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk,
+				routerHandleSquawk, "Squawking");
 		if (exit_code)
 			return exit_code;
 	}
@@ -288,6 +334,22 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 }
 
 
+void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
+	// Call squawk tests with all valid options
+	PayloadTestNode squawk;
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	test_struct->squawk = &squawk;
+	test_struct->peck = &peck;
+	test_struct->peck_mode = SG_PECK_RECOGNIZED;
+
+	// Server Challenges sensor
+	squawk.read_dir = SG_TEST_COMM_WRITE_SPI;
+	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+	testEyeballPayload(test_struct);
+}
+
+
 
 // Unit test definitions
 
@@ -374,6 +436,20 @@ START_TEST (testNest) {
 }
 END_TEST
 
+
+START_TEST (testSquawk) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Squawking\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testSquawkPayloadAuthBoth(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Squawked\n");
+#endif
+}
+END_TEST
+
 Suite *payloadTesting (void) {
 	Suite *s = suite_create("Payload Handling Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -383,6 +459,7 @@ Suite *payloadTesting (void) {
 	tcase_add_test(tc_core, testMock);
 	tcase_add_test(tc_core, testPeacock);
 	tcase_add_test(tc_core, testNest);
+	tcase_add_test(tc_core, testSquawk);
 
 
 	suite_add_tcase(s, tc_core);

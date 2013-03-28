@@ -43,9 +43,9 @@
 #include "../../../sg_serial.h"
 #include "../../communication/sg_tcp.h"
 #include "../../../payloads.h"
-#include "../../routing/routing.h"
-#include "../../dt_handlers/handlers.h"
-
+#include "../../routing_table/routing_table.h"
+#include "../../payload_handlers/payload_handlers.h"
+#include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
@@ -92,14 +92,6 @@ typedef struct PayloadTestStruct {
 } PayloadTestStruct;
 
 
-// Setup fifo reading/writing
-void sgSerialTestSetReader(FILE *FPTR);
-void sgSerialTestSetReadlock(sem_t *readlock);
-void sgSerialTestSetWriter(FILE *FPTR);
-void sgTCPTestSetReader(FILE *FPTR);
-void sgTCPTestSetReadlock(sem_t *readlock);
-void sgTCPTestSetWriter(FILE *FPTR);
-
 Queue *dispatch;
 RoutingTable *routing_table;
 sem_t tcp_readlock,
@@ -112,6 +104,7 @@ void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs);
 void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs);
 void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs);
 void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs);
+void payloadMkSquawk(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);

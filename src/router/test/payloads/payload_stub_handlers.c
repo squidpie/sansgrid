@@ -21,7 +21,7 @@
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
 
-#include "payload-tests.h"
+#include "payload_tests.h"
 
 void payloadMkSerial(SansgridSerial *sg_serial) {
 	for (int i=0; i<IP_SIZE; i++) {
@@ -119,7 +119,15 @@ void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
 }
 
 
+void payloadMkSquawk(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
+	int i;
+	sg_squawk->datatype = test_specs->squawk_mode;
+	for (i=0; i<80; i++)
+		sg_squawk->data[i] = 0x0;
 
+	return;
+}
+	
 
 // vim: ft=c ts=4 noet sw=4:
 

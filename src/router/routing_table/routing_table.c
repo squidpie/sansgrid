@@ -30,7 +30,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "routing.h"
+#include "routing_table.h"
 #include "../../payloads.h"
 
 
@@ -172,10 +172,13 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 	// Free any memory associated with the routing table
 	
 	int i;
+	uint8_t ip_addr[IP_SIZE];
 
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
-		if (table->routing_table[i])
-			free(table->routing_table[i]);
+		if (table->routing_table[i]) {
+			maskip(ip_addr, table->base, i);
+			routingTableFreeIP(table, ip_addr);
+		}
 	}
 
 	free(table);
