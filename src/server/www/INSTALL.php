@@ -1,10 +1,11 @@
 <?
+include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 $hostname = "localhost";		// MySQL hostname
 $username = "sansgrid";			// MySQL user name
 $password = "psu";				// MySQL password for above user
 
 // Establish connection with server.
-$db = @mysqli_connect("$localhost", "$username", "$password") or die ("Couldn't connect to database.");
+$db = @mysqli_connect("$domain", "$db_user", "$db_pass") or die ("Couldn't connect to database.");
 
 // Check for existence of "sansgrid" database. If it exists we should delete it. 
 if ( mysqli_select_db($db, 'sansgrid') ) {
@@ -38,7 +39,7 @@ if ($db->connect_errno) {
 #$query = "CREATE TABLE server (id_server int() NOT NULL UNIQUE PRIMARY AUTO_INCREMENT, server_name VARCHAR(250))";
 
 // Table: router
-$query = "CREATE TABLE router (id_router int , router_key VARCHAR(250), note VARCHAR(250))";
+$query = "CREATE TABLE router (id_router int NOT NULL UNIQUE AUTO_INCREMENT, router_key VARCHAR(250), note VARCHAR(250))";
 #$query = "CREATE TABLE 'router' ('id_router' int , 'router_key' VARCHAR(250), 'note' VARCHAR(250))";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.<br>$query");
 

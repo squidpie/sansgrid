@@ -66,6 +66,7 @@ div#main p {
 	}
 
 
+/* ************************************************************************** */
 /* Styling menu */
 nav ul {
 	margin: 0;
@@ -190,3 +191,15 @@ nav ul li:hover > ul {
 	display: block; 
 	}
 
+
+/* ************************************************************************** */
+/* Table style */
+table.sansgrid {
+	border-collapse: collapse;
+}
+
+table.sansgrid td,
+table.sansgrid th {
+	padding: .2em .4em;
+	border: 1px solid lightgrey;
+}
