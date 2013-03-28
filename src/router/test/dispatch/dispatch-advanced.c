@@ -44,7 +44,7 @@ void payloadMkSerial(SansgridSerial *sg_serial);
 // Setup fifo reading/writing
 void sgSerialTestSetReader(FILE *FPTR);
 void sgSerialTestSetWriter(FILE *FPTR);
-void sgSerialTestSetRWSync(sem_t *readlock, sem_t *writelock);
+void sgSerialTestUseBarrier(int);
 
 static void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
@@ -180,7 +180,7 @@ START_TEST (testAdvancedDispatch) {
 		mkfifo("rstubin.fifo", 0644);
 	sem_init(&readlock, 0, 0);
 	sem_init(&writelock, 0, 0);
-	sgSerialTestSetRWSync(&readlock, &writelock);
+	sgSerialTestUseBarrier(1);
 
 	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
 	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
@@ -199,7 +199,7 @@ START_TEST (testAdvancedDispatch) {
 	sem_destroy(&readlock);
 	sem_destroy(&writelock);
 
-	sgSerialTestSetRWSync(NULL, NULL);
+	sgSerialTestUseBarrier(0);
 
 
 	unlink("rstubin.fifo");

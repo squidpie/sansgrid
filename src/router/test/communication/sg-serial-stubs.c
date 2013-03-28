@@ -23,15 +23,16 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
+#include <sys/types.h>
 #include "../../../sg_serial.h"
 #include "../tests.h"
 
 static FILE *FPTR_SPI_WRITE = NULL,
 			*FPTR_SPI_READ = NULL;
 static sem_t *SPI_READ = NULL;
-static sem_t *spi_read_sync = NULL;
-static sem_t *spi_write_sync = NULL;
-
+static sem_t write_in_progress,
+			 read_in_progress;
+static int use_barrier = 0;
 
 void sgSerialTestSetReader(FILE *FPTR, sem_t *readlock) {
 	FPTR_SPI_READ = FPTR;
@@ -45,9 +46,18 @@ void sgSerialTestSetReadlock(sem_t *readlock) {
 	SPI_READ = readlock;
 }
 
-void sgSerialTestSetRWSync(sem_t *readlock, sem_t *writelock) {
-	spi_read_sync = readlock;
-	spi_write_sync = writelock;
+void sgSerialTestUseBarrier(int value) {
+	if (value && !use_barrier) {
+		// initialize
+		sem_init(&write_in_progress, 0, 0);
+		sem_init(&read_in_progress, 0, 0);
+	}
+	else if (!value && use_barrier) {
+		// destroy
+		sem_destroy(&write_in_progress);
+		sem_destroy(&read_in_progress);
+	}
+	use_barrier = value;
 }
 
 
@@ -62,10 +72,10 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 	sg_serial_union.formdata = sg_serial;
 	
-	if (spi_write_sync)
-		sem_post(spi_write_sync);
-	if (spi_read_sync)
-		sem_wait(spi_read_sync);
+	if (use_barrier) {
+		sem_post(&write_in_progress);
+		sem_wait(&read_in_progress);
+	}
 	for (i=0; i<sizeof(SansgridSerial) && FPTR_SPI_WRITE; i++) {
 		putc(sg_serial_union.serialdata[i], FPTR_SPI_WRITE);
 	}
@@ -84,10 +94,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		return -1;
 
 	// Read from the pipe 
-	if (spi_read_sync)
-		sem_post(spi_read_sync);
-	if (spi_write_sync)
-		sem_wait(spi_write_sync);
+	if (use_barrier) {
+		sem_post(&read_in_progress);
+		sem_wait(&write_in_progress);
+	}
 	for (i=0; i<(sizeof(SansgridSerial)) && FPTR_SPI_READ; i++) {
 		lptr[i] = fgetc(FPTR_SPI_READ);
 	}
