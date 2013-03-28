@@ -71,6 +71,7 @@ function deleteRouter() {
 ?>
 <html>
 <head>
+<title><? print $project_title;?></title>
 <link rel="stylesheet" type="text/css" href="<? print $project_url;?>/style.css"> 
 </head>
 
