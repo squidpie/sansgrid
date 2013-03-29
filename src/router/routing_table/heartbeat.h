@@ -22,7 +22,9 @@
 
 #ifndef __SG_ROUTING_HEARTBEAT_H__
 #define __SG_ROUTING_HEARTBEAT_H__
+
 #define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
+#define HEARTBEAT_UINTERVAL 4000000	// interval, in usecs, between device heartbeats 
 
 #include "../../payloads.h"
 

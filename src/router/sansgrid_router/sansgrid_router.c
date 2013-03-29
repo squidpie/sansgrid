@@ -112,8 +112,17 @@ void *spiReaderRuntime(void *arg) {
 }
 
 
-//void *heartbeatRuntime(void *arg) {
+void *heartbeatRuntime(void *arg) {
 	// handle pings
+
+	int32_t count;
+	while (1) {
+		count = routingTableGetDeviceCount(routing_table);
+		sleepMicro(HEARTBEAT_UINTERVAL / count);
+	}
+
+	pthread_exit(arg);
+}
 	
 	
 

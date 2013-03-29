@@ -211,9 +211,11 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		memcpy(dev_prop, properties, sizeof(DeviceProperties));
 		table->routing_table[index]->properties = dev_prop;
 		table->routing_table[index]->lost_pings = 0;
+		table->table_alloc++;
+		return 0;
 	}
-
-	return 0;
+	else
+		return 1;
 }
 
 
@@ -239,12 +241,7 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	if (!routingTableAssignIPStatic(table, ip_addr, properties)) {
-		table->table_alloc++;
-		return 0;
-	}
-	else
-		return -1;
+	return routingTableAssignIPStatic(table, ip_addr, properties);
 }
 
 
@@ -394,6 +391,11 @@ enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *ta
 }
 	
 	
+
+int32_t routingTableGetDeviceCount(RoutingTable *table) {
+	return table->table_alloc;
+}
+
 
 
 // vim: ft=c ts=4 noet sw=4:

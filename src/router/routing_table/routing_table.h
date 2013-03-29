@@ -71,7 +71,7 @@ int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[I
 int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status);
 enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
-
+int32_t routingTableGetDeviceCount(RoutingTable *table);
 
 
 #endif
