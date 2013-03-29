@@ -110,6 +110,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	SansgridPeacock sg_peacock;
 	SansgridSquawk sg_squawk;
 	SansgridNest sg_nest;
+	SansgridChirp sg_chirp;
 	SansgridSerial sg_serial;
 	uint8_t ip_addr[IP_SIZE];
 
@@ -262,7 +263,23 @@ static int testPayload(PayloadTestStruct *test_struct) {
 		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkNest(&sg_nest, test_struct);
 		memcpy(&sg_serial.payload, &sg_nest, sizeof(SansgridNest));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest, routerHandleNest, "Nesting");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest,
+				routerHandleNest, "Nesting");
+		if (exit_code)
+			return exit_code;
+	}
+	if (test_struct->chirp) {
+		payloadMkSerial(&sg_serial);
+		payloadMkChirp(&sg_chirp, test_struct);
+		memcpy(&sg_serial.payload, &sg_chirp, sizeof(SansgridChirp));
+		if (test_struct->chirp_mode == SG_CHIRP_DATA_SENSOR_TO_SERVER)
+			memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		else if (test_struct->chirp_mode == SG_CHIRP_COMMAND_SERVER_TO_SENSOR)
+			memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+		else
+			fail("Chirp: Bad datatype");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->chirp,
+				routerHandleChirp, "Chirping");
 		if (exit_code)
 			return exit_code;
 	}
@@ -373,8 +390,12 @@ void testMockPayload(PayloadTestStruct *test_struct) {
 	// Call mock tests with all options
 	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING };
 	test_struct->mock = &mock;
+
+	// Test with key
 	test_struct->mock_mode = SG_MOCK_WITH_KEY;
 	testSingPayload(test_struct);
+
+	// Test without key
 	test_struct->mock_mode = SG_MOCK_WITHOUT_KEY;
 	testSingPayload(test_struct);
 	return;
@@ -514,6 +535,28 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 	return;
 }
 
+void testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
+	// Call Chirp tests from sensor to server with all valid options
+	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_LEASED };
+	test_struct->chirp = &chirp;
+
+	test_struct->chirp_mode = SG_CHIRP_DATA_SENSOR_TO_SERVER;
+	testNestPayload(test_struct);
+
+	return;
+}
+
+
+void testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
+	// Call Chirp tests from server to sensor with all valid options
+	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
+	test_struct->chirp = &chirp;
+
+	test_struct->chirp_mode = SG_CHIRP_COMMAND_SERVER_TO_SENSOR;
+	testNestPayload(test_struct);
+
+	return;
+}
 // Unit test definitions
 
 START_TEST (testEyeball) {
@@ -661,6 +704,34 @@ START_TEST (testNest) {
 END_TEST
 
 
+START_TEST (testChirpSensorToServer) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Chirping (Sensor to Server)\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testChirpPayloadSensorToServer(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Chirped (Sensor to Server)\n");
+#endif
+}
+END_TEST
+
+START_TEST (testChirpServerToSensor) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Chirping (Server to Sensor)\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testChirpPayloadServerToSensor(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Chirped (Server to Sensor)\n");
+#endif
+}
+END_TEST
+
+
+
 Suite *payloadTestEyeball(void) {
 	Suite *s = suite_create("Eyeball Payload Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -733,6 +804,18 @@ Suite *payloadTestNest(void) {
 	Suite *s = suite_create("Nest Payload Tests");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testNest);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+
+Suite *payloadTestChirp(void) {
+	Suite *s = suite_create("Chirp Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testChirpSensorToServer);
+	tcase_add_test(tc_core, testChirpServerToSensor);
 
 	suite_add_tcase(s, tc_core);
 

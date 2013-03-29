@@ -108,6 +108,7 @@ void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs
 void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs);
 void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
 void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
+void payloadMkChirp(SansgridChirp *sg_chirp, PayloadTestStruct *test_specs);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);

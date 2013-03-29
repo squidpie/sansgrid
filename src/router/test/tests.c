@@ -67,6 +67,7 @@ int main(void) {
 	srunner_add_suite(sr, payloadTestPeacock());
 	srunner_add_suite(sr, payloadTestSquawk());
 	srunner_add_suite(sr, payloadTestNest());
+	srunner_add_suite(sr, payloadTestChirp());
 
 
 	// Uncomment to better debug segfaults
