@@ -86,6 +86,12 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip)
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
+	if (!memcmp(sg_serial_read->origin_ip, sg_serial_read->dest_ip, IP_SIZE))
+		fail("Origin IP Matches Destination IP \
+				\n\tOrigin: %x \
+				\n\tDestination: %x", 
+				sg_serial_read->origin_ip[IP_SIZE-1],
+				sg_serial_read->dest_ip[IP_SIZE-1]);
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
 	free(sg_serial_read);
 	return exit_code;
@@ -191,6 +197,8 @@ static int testPayload(PayloadTestStruct *test_struct) {
 				break;
 		}
 		// Server: Challenge/Nochallenge
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkSquawkServer(&sg_squawk, test_struct);
 		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
@@ -199,6 +207,8 @@ static int testPayload(PayloadTestStruct *test_struct) {
 			return exit_code;
 
 		// Sensor: Respond
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
 		payloadMkSquawkSensor(&sg_squawk, test_struct);
 		sg_squawk.datatype = sensor_req_auth ?
 				SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
@@ -211,6 +221,8 @@ static int testPayload(PayloadTestStruct *test_struct) {
 
 		// If sensor requires challenge, send it
 		if (sensor_req_auth) {
+			payloadMkSerial(&sg_serial);
+			memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
 			payloadMkSquawkSensor(&sg_squawk, test_struct);
 			sg_squawk.datatype = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
 			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
@@ -220,6 +232,8 @@ static int testPayload(PayloadTestStruct *test_struct) {
 				return exit_code;
 		}
 		// Server response
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkSquawkServer(&sg_squawk, test_struct);
 		// TODO: Allow respond/deny here
 		sg_squawk.datatype = SG_SQUAWK_SERVER_RESPOND;
@@ -231,6 +245,8 @@ static int testPayload(PayloadTestStruct *test_struct) {
 
 		// Sensor accepts/rejects
 		// TODO: Allow respond/deny here
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
 		payloadMkSquawkSensor(&sg_squawk, test_struct);
 		sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
 		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
