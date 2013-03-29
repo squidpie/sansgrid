@@ -1,4 +1,4 @@
-/* Peacock Tests
+/* Payload Tests
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -570,20 +570,56 @@ START_TEST (testPeacock) {
 END_TEST
 
 
-START_TEST (testSquawk) {
+START_TEST (testSquawkAuthBoth) {
 #if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Squawking\n");
+	printf("\n\nTesting Squawking (Both Authenticate)\n");
 #endif
 	PayloadTestStruct test_struct;
 	// Test both authenticate
 	testStructInit(&test_struct);
 	testSquawkPayloadAuthBoth(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Squawked\n");
+#endif
+}
+END_TEST
+
+
+START_TEST (testSquawkAuthSensor) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Squawking (Sensor Authenticates)\n");
+#endif
+	PayloadTestStruct test_struct;
 	// Test sensor authenticates
 	testStructInit(&test_struct);
 	testSquawkPayloadAuthSensor(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Squawked\n");
+#endif
+}
+END_TEST
+
+
+START_TEST (testSquawkAuthServer) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Squawking (Server Authenticates)\n");
+#endif
+	PayloadTestStruct test_struct;
 	// Test server authenticates
 	testStructInit(&test_struct);
 	testSquawkPayloadAuthServer(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Squawked\n");
+#endif
+}
+END_TEST
+
+
+START_TEST (testSquawkNoAuth) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Squawking (Neither Authenticate)\n");
+#endif
+	PayloadTestStruct test_struct;
 	// Test no authentication
 	testStructInit(&test_struct);
 	testSquawkPayloadNoAuth(&test_struct);
@@ -592,6 +628,7 @@ START_TEST (testSquawk) {
 #endif
 }
 END_TEST
+
 
 
 START_TEST (testNest) {
@@ -608,22 +645,84 @@ START_TEST (testNest) {
 END_TEST
 
 
-Suite *payloadTesting (void) {
-	Suite *s = suite_create("Payload Handling Tests");
+Suite *payloadTestEyeball(void) {
+	Suite *s = suite_create("Eyeball Payload Tests");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testEyeball);
-	tcase_add_test(tc_core, testPeck);
-	tcase_add_test(tc_core, testSing);
-	tcase_add_test(tc_core, testMock);
-	tcase_add_test(tc_core, testPeacock);
-	tcase_add_test(tc_core, testSquawk);
-	tcase_add_test(tc_core, testNest);
-
 
 	suite_add_tcase(s, tc_core);
 
 	return s;
 }
+
+Suite *payloadTestPeck(void) {
+	Suite *s = suite_create("Peck Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testPeck);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+Suite *payloadTestSing(void) {
+	Suite *s = suite_create("Sing Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testSing);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+
+Suite *payloadTestMock(void) {
+	Suite *s = suite_create("Mock Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testMock);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+
+Suite *payloadTestPeacock(void) {
+	Suite *s = suite_create("Peacock Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testPeacock);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+
+
+Suite *payloadTestSquawk(void) {
+	Suite *s = suite_create("Squawk Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testSquawkAuthBoth);
+	tcase_add_test(tc_core, testSquawkAuthSensor);
+	tcase_add_test(tc_core, testSquawkAuthServer);
+	tcase_add_test(tc_core, testSquawkNoAuth);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
+
+Suite *payloadTestNest(void) {
+	Suite *s = suite_create("Nest Payload Tests");
+	TCase *tc_core = tcase_create("Core");
+	tcase_add_test(tc_core, testNest);
+
+	suite_add_tcase(s, tc_core);
+
+	return s;
+}
+
 
 
 // vim: ft=c ts=4 noet sw=4:
