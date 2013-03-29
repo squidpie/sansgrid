@@ -45,7 +45,7 @@ END_TEST
 
 
 Suite *payloadSizeTesting (void) {
-	Suite *s = suite_create("Payload Tests");
+	Suite *s = suite_create("Payload Size Test");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testPayloadSize);
 

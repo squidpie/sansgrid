@@ -60,7 +60,15 @@ int main(void) {
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());
 	srunner_add_suite(sr, payloadSizeTesting());
-	srunner_add_suite(sr, payloadTesting());
+	srunner_add_suite(sr, payloadTestEyeball());
+	srunner_add_suite(sr, payloadTestPeck());
+	srunner_add_suite(sr, payloadTestSing());
+	srunner_add_suite(sr, payloadTestMock());
+	srunner_add_suite(sr, payloadTestPeacock());
+	srunner_add_suite(sr, payloadTestSquawk());
+	srunner_add_suite(sr, payloadTestNest());
+	srunner_add_suite(sr, payloadTestChirp());
+
 
 	// Uncomment to better debug segfaults
 	srunner_set_fork_status(sr, CK_NOFORK);

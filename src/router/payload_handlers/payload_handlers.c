@@ -290,11 +290,18 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
+		case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
+			// Server Responds without challenge to sensor
+			// TODO: Confirm datatype addition
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+					SG_DEVSTATUS_SQUAWKING);
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			break;
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
-					SG_DEVSTATUS_NESTING);
+					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
@@ -320,6 +327,13 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
+			/*
+		case SG_SQUAWK_SENSOR_DENY_SERVER:
+			// Sensor deny server's response
+			// TODO: Confirm datatype addition
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			break;
+			*/
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
@@ -374,14 +388,19 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
+	
 
 	switch (sg_chirp->datatype) {
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 			// Command sent from server to sensor
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+					SG_DEVSTATUS_LEASED);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
 			// Data sent from server to sensor
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+					SG_DEVSTATUS_LEASED);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_DATA_STREAM_START:

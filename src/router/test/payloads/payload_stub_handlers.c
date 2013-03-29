@@ -119,13 +119,31 @@ void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
 }
 
 
-void payloadMkSquawk(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
+void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
 	int i;
-	sg_squawk->datatype = test_specs->squawk_mode;
+	sg_squawk->datatype = test_specs->squawk_server_mode;
 	for (i=0; i<80; i++)
 		sg_squawk->data[i] = 0x0;
 
 	return;
+}
+
+
+void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
+	int i;
+	sg_squawk->datatype = test_specs->squawk_sensor_mode;
+	for (i=0; i<80; i++)
+		sg_squawk->data[i] = 0x0;
+
+	return;
+}
+
+
+void payloadMkChirp(SansgridChirp *sg_chirp, PayloadTestStruct *test_specs) {
+	sg_chirp->datatype = test_specs->chirp_mode;
+	sg_chirp->datasize = 79;
+	for (int i=0; i<79; i++)
+		sg_chirp->data[i] = 0x0;
 }
 	
 

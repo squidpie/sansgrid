@@ -81,8 +81,10 @@ typedef struct PayloadTestStruct {
 	enum SansgridDataTypeEnum nest_mode;
 	PayloadTestNode *nest;
 	// squawk
-	enum SansgridDataTypeEnum squawk_mode;
-	PayloadTestNode *squawk;
+	enum SansgridDataTypeEnum squawk_server_mode;
+	enum SansgridDataTypeEnum squawk_sensor_mode;
+	PayloadTestNode *squawk_server;
+	PayloadTestNode *squawk_sensor;
 	// heartbeat
 	enum SansgridDataTypeEnum heartbeat_mode;
 	PayloadTestNode *heartbeat;
@@ -96,6 +98,9 @@ Queue *dispatch;
 RoutingTable *routing_table;
 sem_t tcp_readlock,
 	  spi_readlock;
+
+// Payload Test Structure functions
+void testStructInit(PayloadTestStruct *test_struct);
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs);
@@ -104,7 +109,9 @@ void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs);
 void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs);
 void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs);
 void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs);
-void payloadMkSquawk(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
+void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
+void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs);
+void payloadMkChirp(SansgridChirp *sg_chirp, PayloadTestStruct *test_specs);
 
 // Size checking handlers
 void checkSize(const char *pkname, size_t pksize);
@@ -118,12 +125,33 @@ int32_t payloadRoutingInit(void);
 int32_t payloadStateInit(void);
 int32_t payloadStateCommit(SansgridSerial **);
 
-// Tests
+// TestSuites
 Suite *payloadSizeTesting (void);
-Suite *payloadEyeballTesting (void);
-Suite *payloadPeckTesting (void);
-Suite *payloadSingTesting (void);
-Suite *payloadMockTesting (void);
+Suite *payloadTestEyeball(void);
+Suite *payloadTestPeck(void);
+Suite *payloadTestSing(void);
+Suite *payloadTestMock(void);
+Suite *payloadTestPeacock(void);
+Suite *payloadTestSquawk(void);
+Suite *payloadTestNest(void);
+Suite *payloadTestChirp(void);
+
+// Payload Tests
+int testPayload(PayloadTestStruct *test_struct);
+int testEyeballPayload(PayloadTestStruct *test_struct);
+int testPeckPayload(PayloadTestStruct *test_struct);
+int testSingPayload(PayloadTestStruct *test_struct);
+int testMockPayload(PayloadTestStruct *test_struct);
+int testPeacockPayload(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct);
+int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct);
+int testNestPayload(PayloadTestStruct *test_struct);
+int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct);
+int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct);
+
+
 
 #endif
 // vim: ft=c ts=4 noet sw=4:

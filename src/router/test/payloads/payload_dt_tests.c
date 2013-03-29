@@ -1,4 +1,4 @@
-/* Peacock Tests
+/* Payload Tests
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -86,6 +86,12 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip)
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
 		fail("No IP assigned");
+	if (!memcmp(sg_serial_read->origin_ip, sg_serial_read->dest_ip, IP_SIZE))
+		fail("Origin IP Matches Destination IP \
+				\n\tOrigin: %x \
+				\n\tDestination: %x", 
+				sg_serial_read->origin_ip[IP_SIZE-1],
+				sg_serial_read->dest_ip[IP_SIZE-1]);
 	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
 	free(sg_serial_read);
 	return exit_code;
@@ -93,7 +99,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 
 
 
-static int testPayload(PayloadTestStruct *test_struct) {
+int testPayload(PayloadTestStruct *test_struct) {
 	// unit test code to test the Eyeball data type
 	// (The next packet would be a Squawk)
 	int32_t exit_code;
@@ -104,6 +110,7 @@ static int testPayload(PayloadTestStruct *test_struct) {
 	SansgridPeacock sg_peacock;
 	SansgridSquawk sg_squawk;
 	SansgridNest sg_nest;
+	SansgridChirp sg_chirp;
 	SansgridSerial sg_serial;
 	uint8_t ip_addr[IP_SIZE];
 
@@ -163,40 +170,116 @@ static int testPayload(PayloadTestStruct *test_struct) {
 		if (exit_code)
 			return exit_code;
 	}
-	if (test_struct->squawk) {
+	if (test_struct->squawk_server) {
+		int sensor_req_auth = 0;
 		payloadMkSerial(&sg_serial);
-		switch (test_struct->squawk_mode) {
+		switch (test_struct->squawk_server_mode) {
 			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
 			case SG_SQUAWK_SERVER_DENY_SENSOR:
 			case SG_SQUAWK_SERVER_RESPOND:
 				memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
-				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_SPI;
 				break;
-			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+			default:
+				// error
+				fail("Squawk: bad mode");
+		}
+		switch (test_struct->squawk_sensor_mode) {
 			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+				sensor_req_auth = 1;
+			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 				memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
-				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_TCP;
 				break;
 			default:
 				// error
 				fail("Squawk: bad mode");
 				break;
 		}
-		payloadMkSquawk(&sg_squawk, test_struct);
+		// Server: Challenge/Nochallenge
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		payloadMkSquawkServer(&sg_squawk, test_struct);
 		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk,
-				routerHandleSquawk, "Squawking");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
+				routerHandleSquawk, "Squawking (Server challenge/nochallenge)");
 		if (exit_code)
 			return exit_code;
+
+		// Sensor: Respond
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+		payloadMkSquawkSensor(&sg_squawk, test_struct);
+		sg_squawk.datatype = sensor_req_auth ?
+				SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
+				: SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+				routerHandleSquawk, "Squawking (Sensor response)");
+		if (exit_code)
+			return exit_code;
+
+		// If sensor requires challenge, send it
+		if (sensor_req_auth) {
+			payloadMkSerial(&sg_serial);
+			memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+			payloadMkSquawkSensor(&sg_squawk, test_struct);
+			sg_squawk.datatype = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
+			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+					routerHandleSquawk, "Squawking (Sensor challenge)");
+			if (exit_code)
+				return exit_code;
+		}
+		// Server response
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		payloadMkSquawkServer(&sg_squawk, test_struct);
+		// TODO: Allow respond/deny here
+		sg_squawk.datatype = SG_SQUAWK_SERVER_RESPOND;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
+				routerHandleSquawk, "Squawking (Server response)");
+		if (exit_code)
+			return exit_code;
+
+		// Sensor accepts/rejects
+		// TODO: Allow respond/deny here
+		payloadMkSerial(&sg_serial);
+		memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+		payloadMkSquawkSensor(&sg_squawk, test_struct);
+		sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;;
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+				routerHandleSquawk, "Squawking (Sensor Accept/Reject)");
+		if (exit_code)
+			return exit_code;
+		
 	}
 	if (test_struct->nest) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
 		payloadMkNest(&sg_nest, test_struct);
 		memcpy(&sg_serial.payload, &sg_nest, sizeof(SansgridNest));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest, routerHandleNest, "Nesting");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest,
+				routerHandleNest, "Nesting");
+		if (exit_code)
+			return exit_code;
+	}
+	if (test_struct->chirp) {
+		payloadMkSerial(&sg_serial);
+		payloadMkChirp(&sg_chirp, test_struct);
+		memcpy(&sg_serial.payload, &sg_chirp, sizeof(SansgridChirp));
+		if (test_struct->chirp_mode == SG_CHIRP_DATA_SENSOR_TO_SERVER)
+			memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		else if (test_struct->chirp_mode == SG_CHIRP_COMMAND_SERVER_TO_SENSOR)
+			memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
+		else
+			fail("Chirp: Bad datatype");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->chirp,
+				routerHandleChirp, "Chirping");
 		if (exit_code)
 			return exit_code;
 	}
@@ -231,241 +314,13 @@ void testStructInit(PayloadTestStruct *test_struct) {
 	test_struct->sing = NULL;
 	test_struct->mock = NULL;
 	test_struct->peacock = NULL;
-	test_struct->squawk = NULL;
+	test_struct->squawk_server = NULL;
+	test_struct->squawk_sensor = NULL;
 	test_struct->nest = NULL;
 	test_struct->heartbeat = NULL;
 	test_struct->chirp = NULL;
 }
 
-void testEyeballPayload(PayloadTestStruct *test_struct) {
-	// Call Eyeball tests with all options
-	// Mate, NoMate
-	// Next payload is always pecking
-	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
-	test_struct->eyeball = &eyeball;
-	test_struct->eyeball_mode = SG_EYEBALL_MATE;
-	testPayload(test_struct);
-	// FIXME: This path is not implemented yet
-	//test_struct->eyeball_mode = SG_EYEBALL_NOMATE;
-	//testPayload(test_struct);
-	return;
-}
-
-void testPeckPayload(PayloadTestStruct *test_struct) {
-	// Call Peck tests with all options
-	PayloadTestNode peck;
-
-	// Set defaults
-	peck.read_dir = SG_TEST_COMM_WRITE_SPI;
-	// Assign nodes
-	test_struct->peck = &peck;
-
-	// Test device unrecognized
-	peck.next_packet = SG_DEVSTATUS_SINGING;
-	test_struct->peck_mode = SG_PECK_MATE;
-	testEyeballPayload(test_struct);
-
-	// Test device recognized
-	peck.next_packet = SG_DEVSTATUS_SQUAWKING;
-	test_struct->peck_mode = SG_PECK_RECOGNIZED;
-	testEyeballPayload(test_struct);
-
-	return;
-}
-
-
-void testSingPayload(PayloadTestStruct *test_struct) {
-	// Call Sing tests with all options
-	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SINGING };
-	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING };
-
-	// Set defaults
-	sing.read_dir = SG_TEST_COMM_WRITE_SPI;
-	sing.next_packet = SG_DEVSTATUS_MOCKING;
-	test_struct->eyeball_mode = SG_EYEBALL_MATE;
-	test_struct->peck_mode = SG_PECK_MATE;
-	// Assign nodes
-	test_struct->eyeball = &eyeball;
-	test_struct->peck = &peck;
-	test_struct->sing = &sing;
-
-	// Test server authenticating with key
-	test_struct->sing_mode = SG_SING_WITH_KEY;
-	testPayload(test_struct);
-
-	// Test server authenticating without key
-	test_struct->sing_mode = SG_SING_WITHOUT_KEY;
-	testPayload(test_struct);
-
-	return;
-}
-
-
-void testMockPayload(PayloadTestStruct *test_struct) {
-	// Call mock tests with all options
-	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING };
-	test_struct->mock = &mock;
-	test_struct->mock_mode = SG_MOCK_WITH_KEY;
-	testSingPayload(test_struct);
-	test_struct->mock_mode = SG_MOCK_WITHOUT_KEY;
-	testSingPayload(test_struct);
-	return;
-}
-
-
-void testPeacockPayload(PayloadTestStruct *test_struct) {
-	// Call peacock tests with all valid options
-	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING };
-	test_struct->peacock = &peacock;
-	test_struct->peacock_mode = SG_PEACOCK;
-	testMockPayload(test_struct);
-	return;
-}
-
-
-void testNestPayload(PayloadTestStruct *test_struct) {
-	// Call Nest tests with all valid options
-	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
-	test_struct->nest = &nest;
-	test_struct->nest_mode = SG_NEST;
-	testPeacockPayload(test_struct);
-	return;
-}
-
-
-void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
-	// Call squawk tests with all valid options
-	PayloadTestNode squawk;
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
-	test_struct->squawk = &squawk;
-	test_struct->peck = &peck;
-	test_struct->peck_mode = SG_PECK_RECOGNIZED;
-
-	// Server Challenges sensor
-	squawk.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
-	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
-	testEyeballPayload(test_struct);
-}
-
-
-
-// Unit test definitions
-
-START_TEST (testEyeball) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Eyeball\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testEyeballPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Eyeballed\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testPeck) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Peck\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testPeckPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Pecked\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testSing) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Singing\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testSingPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Sung\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testMock) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Mocking\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testMockPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Mocked\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testPeacock) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Peacocking\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testPeacockPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Peacocked\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testNest) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Nesting\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testNestPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Nested\n");
-#endif
-}
-END_TEST
-
-
-START_TEST (testSquawk) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Squawking\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testSquawkPayloadAuthBoth(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Squawked\n");
-#endif
-}
-END_TEST
-
-Suite *payloadTesting (void) {
-	Suite *s = suite_create("Payload Handling Tests");
-	TCase *tc_core = tcase_create("Core");
-	tcase_add_test(tc_core, testEyeball);
-	tcase_add_test(tc_core, testPeck);
-	tcase_add_test(tc_core, testSing);
-	tcase_add_test(tc_core, testMock);
-	tcase_add_test(tc_core, testPeacock);
-	tcase_add_test(tc_core, testNest);
-	tcase_add_test(tc_core, testSquawk);
-
-
-	suite_add_tcase(s, tc_core);
-
-	return s;
-}
 
 
 // vim: ft=c ts=4 noet sw=4:

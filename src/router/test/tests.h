@@ -23,7 +23,7 @@
 #include <check.h>
 #include <stdint.h>
 
-#define TESTS_DEBUG_LEVEL 1
+#define TESTS_DEBUG_LEVEL 0
 
 
 // General Debug
@@ -34,9 +34,17 @@ Suite *routingBasicTestSuite (void);
 // Dispatch
 Suite *dispatchBasicTesting (void);
 Suite *dispatchAdvancedTesting (void);
-// Payload
+// Payload size
 Suite *payloadSizeTesting (void);
-Suite *payloadTesting (void);
+// Payload tests
+Suite *payloadTestEyeball(void);
+Suite *payloadTestPeck(void);
+Suite *payloadTestSing(void);
+Suite *payloadTestMock(void);
+Suite *payloadTestPeacock(void);
+Suite *payloadTestSquawk(void);
+Suite *payloadTestNest(void);
+Suite *payloadTestChirp(void);
 
 #endif
 
