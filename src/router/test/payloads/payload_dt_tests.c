@@ -163,33 +163,83 @@ static int testPayload(PayloadTestStruct *test_struct) {
 		if (exit_code)
 			return exit_code;
 	}
-	if (test_struct->squawk) {
+	if (test_struct->squawk_server) {
+		int sensor_req_auth = 0;
 		payloadMkSerial(&sg_serial);
-		switch (test_struct->squawk_mode) {
+		switch (test_struct->squawk_server_mode) {
 			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
 			case SG_SQUAWK_SERVER_DENY_SENSOR:
 			case SG_SQUAWK_SERVER_RESPOND:
 				memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
-				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_SPI;
 				break;
-			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+			default:
+				// error
+				fail("Squawk: bad mode");
+		}
+		switch (test_struct->squawk_sensor_mode) {
 			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+				sensor_req_auth = 1;
+			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 				memcpy(&sg_serial.origin_ip, ip_addr, IP_SIZE);
-				test_struct->squawk->read_dir = SG_TEST_COMM_WRITE_TCP;
 				break;
 			default:
 				// error
 				fail("Squawk: bad mode");
 				break;
 		}
-		payloadMkSquawk(&sg_squawk, test_struct);
+		// Server: Challenge/Nochallenge
+		payloadMkSquawkServer(&sg_squawk, test_struct);
 		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk,
-				routerHandleSquawk, "Squawking");
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
+				routerHandleSquawk, "Squawking (Server challenge/nochallenge)");
 		if (exit_code)
 			return exit_code;
+
+		// Sensor: Respond
+		payloadMkSquawkSensor(&sg_squawk, test_struct);
+		sg_squawk.datatype = sensor_req_auth ?
+				SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
+				: SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+				routerHandleSquawk, "Squawking (Sensor response)");
+		if (exit_code)
+			return exit_code;
+
+		// If sensor requires challenge, send it
+		if (sensor_req_auth) {
+			payloadMkSquawkSensor(&sg_squawk, test_struct);
+			sg_squawk.datatype = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
+			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+					routerHandleSquawk, "Squawking (Sensor challenge)");
+			if (exit_code)
+				return exit_code;
+		}
+		// Server response
+		payloadMkSquawkServer(&sg_squawk, test_struct);
+		// TODO: Allow respond/deny here
+		sg_squawk.datatype = SG_SQUAWK_SERVER_RESPOND;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
+				routerHandleSquawk, "Squawking (Server response)");
+		if (exit_code)
+			return exit_code;
+
+		// Sensor accepts/rejects
+		// TODO: Allow respond/deny here
+		payloadMkSquawkSensor(&sg_squawk, test_struct);
+		sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
+		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+		test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;;
+		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+				routerHandleSquawk, "Squawking (Sensor Accept/Reject)");
+		if (exit_code)
+			return exit_code;
+		
 	}
 	if (test_struct->nest) {
 		payloadMkSerial(&sg_serial);
@@ -231,7 +281,8 @@ void testStructInit(PayloadTestStruct *test_struct) {
 	test_struct->sing = NULL;
 	test_struct->mock = NULL;
 	test_struct->peacock = NULL;
-	test_struct->squawk = NULL;
+	test_struct->squawk_server = NULL;
+	test_struct->squawk_sensor = NULL;
 	test_struct->nest = NULL;
 	test_struct->heartbeat = NULL;
 	test_struct->chirp = NULL;
@@ -336,19 +387,100 @@ void testNestPayload(PayloadTestStruct *test_struct) {
 
 void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
-	PayloadTestNode squawk;
+	PayloadTestNode squawk_server,
+					squawk_sensor;
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
-	test_struct->squawk = &squawk;
+	test_struct->squawk_server = &squawk_server;
+	test_struct->squawk_sensor = &squawk_sensor;
 	test_struct->peck = &peck;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Challenges sensor
-	squawk.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk.next_packet = SG_DEVSTATUS_SQUAWKING;
-	test_struct->squawk_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
+	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+
+	// Sensor Challenges sever
+	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
+	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
+
 	testEyeballPayload(test_struct);
 }
 
+
+void testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
+	// Call squawk: sensor requires authentication
+	// with all valid options
+	PayloadTestNode squawk_server,
+					squawk_sensor;
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	test_struct->squawk_server = &squawk_server;
+	test_struct->squawk_sensor = &squawk_sensor;
+	test_struct->peck = &peck;
+	test_struct->peck_mode = SG_PECK_RECOGNIZED;
+
+	// Server Doesn't challenge sensor
+	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
+	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR;
+
+	// Sensor Challenges server
+	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
+	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
+
+	testEyeballPayload(test_struct);
+}
+	
+
+void testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
+	// Call squawk: server requires authentication
+	// with all valid options
+	PayloadTestNode squawk_server,
+					squawk_sensor;
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	test_struct->squawk_server = &squawk_server;
+	test_struct->squawk_sensor = &squawk_sensor;
+	test_struct->peck = &peck;
+	test_struct->peck_mode = SG_PECK_RECOGNIZED;
+
+	// Server Doesn't challenge sensor
+	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
+	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
+
+	// Sensor Challenges server
+	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
+	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
+
+	testEyeballPayload(test_struct);
+}
+
+void testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
+	// Call squawk: No authentication
+	// with all valid options
+	PayloadTestNode squawk_server,
+					squawk_sensor;
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	test_struct->squawk_server = &squawk_server;
+	test_struct->squawk_sensor = &squawk_sensor;
+	test_struct->peck = &peck;
+	test_struct->peck_mode = SG_PECK_RECOGNIZED;
+
+	// Server Doesn't challenge sensor
+	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
+	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR;
+
+	// Sensor Challenges server
+	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
+	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
+	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
+
+	testEyeballPayload(test_struct);
+}
 
 
 // Unit test definitions
@@ -442,8 +574,18 @@ START_TEST (testSquawk) {
 	printf("\n\nTesting Squawking\n");
 #endif
 	PayloadTestStruct test_struct;
+	// Test both authenticate
 	testStructInit(&test_struct);
 	testSquawkPayloadAuthBoth(&test_struct);
+	// Test sensor authenticates
+	testStructInit(&test_struct);
+	testSquawkPayloadAuthSensor(&test_struct);
+	// Test server authenticates
+	testStructInit(&test_struct);
+	testSquawkPayloadAuthServer(&test_struct);
+	// Test no authentication
+	testStructInit(&test_struct);
+	testSquawkPayloadNoAuth(&test_struct);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Successfully Squawked\n");
 #endif

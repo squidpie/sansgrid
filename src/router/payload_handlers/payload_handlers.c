@@ -290,11 +290,18 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
+		case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
+			// Server Responds without challenge to sensor
+			// TODO: Confirm datatype addition
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+					SG_DEVSTATUS_SQUAWKING);
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			break;
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
-					SG_DEVSTATUS_NESTING);
+					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
@@ -319,6 +326,11 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			break;
+		case SG_SQUAWK_SENSOR_DENY_SERVER:
+			// Sensor deny server's response
+			// TODO: Confirm datatype addition
+			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response

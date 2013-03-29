@@ -119,14 +119,26 @@ void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
 }
 
 
-void payloadMkSquawk(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
+void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
 	int i;
-	sg_squawk->datatype = test_specs->squawk_mode;
+	sg_squawk->datatype = test_specs->squawk_server_mode;
 	for (i=0; i<80; i++)
 		sg_squawk->data[i] = 0x0;
 
 	return;
 }
+
+
+void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
+	int i;
+	sg_squawk->datatype = test_specs->squawk_sensor_mode;
+	for (i=0; i<80; i++)
+		sg_squawk->data[i] = 0x0;
+
+	return;
+}
+
+
 	
 
 // vim: ft=c ts=4 noet sw=4:
