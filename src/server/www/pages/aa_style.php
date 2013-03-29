@@ -1,0 +1,7 @@
+<?
+
+function get_stylesheet () {
+
+}
+
+?>
