@@ -1,1 +1,18 @@
+Errors/Issues
+- Currently the server is purely event-driven, hence there's no way to schedule
+  tasks. This is a notable problem including the following areas:
+
+  - After eyeballing, if we're waiting for mating permissions from the user, 
+    we have no solid way to time that out.
+
+To Do
+
 - Prevent multiple sends if refreshing router page after an add
+
+- Installer needs to create at least one user: the admin (should I prompt for
+  a password?).
+
+
+For SansGrid 2+
+
+- Test for blank fields and react appropriately to increase robustness.

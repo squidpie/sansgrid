@@ -1,17 +1,15 @@
 <?
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
-$hostname = "localhost";		// MySQL hostname
-$username = "sansgrid";			// MySQL user name
-$password = "psu";				// MySQL password for above user
 
 // Establish connection with server.
-$db = @mysqli_connect("$domain", "$db_user", "$db_pass") or die ("Couldn't connect to database.");
+$db = @mysqli_connect("$SG_domain", "$SG_db_user", "$SG_db_pass") or die ("Couldn't connect to database.");
 
 // Check for existence of "sansgrid" database. If it exists we should delete it. 
 if ( mysqli_select_db($db, 'sansgrid') ) {
 	// Database exists
 	print "The \"sansgrid\" database already exists. If you wish to begin a new installation please ";
 	print "delete it and run INSTALL.php again.";
+	// UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!! 
 	//die ("<br>");
 
 	// DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!
@@ -36,27 +34,32 @@ if ($db->connect_errno) {
 }
 
 // Table: server
-#$query = "CREATE TABLE server (id_server int() NOT NULL UNIQUE PRIMARY AUTO_INCREMENT, server_name VARCHAR(250))";
+$query = "CREATE TABLE server (id_server int NOT NULL UNIQUE AUTO_INCREMENT, server_key VARCHAR(250), verify_mating int(1) )";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'server', quitting.<br>$query");
 
 // Table: router
 $query = "CREATE TABLE router (id_router int NOT NULL UNIQUE AUTO_INCREMENT, router_key VARCHAR(250), note VARCHAR(250))";
-#$query = "CREATE TABLE 'router' ('id_router' int , 'router_key' VARCHAR(250), 'note' VARCHAR(250))";
-$result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.<br>$query");
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.");
 
 // Table: sensor
-$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum int, manid int, status VARCHAR(250), last_pulse TIMESTAMP)";
-$result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.<br>$query");
+$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum int, manid int, sn int, status VARCHAR(250), last_pulse TIMESTAMP)";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
 
 // Table: io
 $query = "CREATE TABLE io (id_io int NOT NULL UNIQUE AUTO_INCREMENT, id_sensor int, direction VARCHAR(10), value VARCHAR(250), last_edit TIMESTAMP)";
-$result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.<br>$query");
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
+
+// Generate and save server_id and set other system defaults
+$server_key = generateRandomHash(16);
+$query = "INSERT INTO server (server_key, verify_mating) VALUES ('$server_key', 0)";
+$result = mysqli_query($db, $query) or die ("Couldn't initialize new server.");
 
 
 mysqli_close($db);
 ?>
 <html>
 <head>
-<title>SansGrid</title>
+<title>SansGrid Installer</title>
 </head>
 <body>
 

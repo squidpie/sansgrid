@@ -3,8 +3,8 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 ?>
 <html>
 <head>
-<title><? print $project_title;?></title>
-<link rel="stylesheet" type="text/css" href="<? print $project_url;?>/style.css"> 
+<title><? print $SG_project_title;?></title>
+<link rel="stylesheet" type="text/css" href="<? print $SG_project_url;?>/style.css"> 
 </head>
 
 <body>

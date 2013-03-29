@@ -1,6 +1,6 @@
 <?
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
-$db = @mysqli_connect("$domain", "$db_user", "$db_pass", "sansgrid") or die ("Couldn't connect to database.");
+$db = returnDatabaseConnection();
 
 $status = "";
 $router_list = "";
@@ -71,8 +71,8 @@ function deleteRouter() {
 ?>
 <html>
 <head>
-<title><? print $project_title;?></title>
-<link rel="stylesheet" type="text/css" href="<? print $project_url;?>/style.css"> 
+<title><? print $SG['project_title'];?></title>
+<link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
 </head>
 
 <body>
@@ -92,7 +92,7 @@ function deleteRouter() {
 	</tr>
 	<tr>
 		<td> Router key: </td>
-		<td> <input type="textbox" name="hashkey" size="65em" readonly value="<? print generate_router_key();?>"> </td>
+		<td> <input type="textbox" name="hashkey" size="65em" readonly value="<? print generateRandomHash(64);?>"> </td>
 	</tr>
 	<tr>
 		<td> </td>

@@ -196,10 +196,15 @@ nav ul li:hover > ul {
 /* Table style */
 table.sansgrid {
 	border-collapse: collapse;
+	width: 98%;
 }
 
 table.sansgrid td,
 table.sansgrid th {
 	padding: .2em .4em;
 	border: 1px solid lightgrey;
+}
+
+table.sansgrid th.left {
+	text-align: left;
 }
