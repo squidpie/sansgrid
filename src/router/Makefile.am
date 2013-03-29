@@ -14,7 +14,15 @@ SANSGRID_TEST = test/communication/sg_communication_stubs.c \
 		test/payloads/payload_tests.c \
 		test/payloads/payload_stub_handlers.c \
 		test/payloads/payload_size_test.c \
-		test/payloads/payload_dt_tests.c
+		test/payloads/payload_dt_tests.c \
+		test/payloads/payload_dt_eyeball_tests.c \
+		test/payloads/payload_dt_peck_tests.c \
+		test/payloads/payload_dt_sing_tests.c \
+		test/payloads/payload_dt_mock_tests.c \
+		test/payloads/payload_dt_peacock_tests.c \
+		test/payloads/payload_dt_squawk_tests.c \
+		test/payloads/payload_dt_nest_tests.c \
+		test/payloads/payload_dt_chirp_tests.c
 
 			
 sansgrid_SOURCES = $(SANSGRID_BASE) \

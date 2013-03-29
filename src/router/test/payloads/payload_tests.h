@@ -98,6 +98,9 @@ Queue *dispatch;
 RoutingTable *routing_table;
 sem_t tcp_readlock,
 	  spi_readlock;
+
+// Payload Test Structure functions
+void testStructInit(PayloadTestStruct *test_struct);
 // Payload Stub Handlers
 void payloadMkSerial(SansgridSerial *sg_serial);
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs);
@@ -122,12 +125,33 @@ int32_t payloadRoutingInit(void);
 int32_t payloadStateInit(void);
 int32_t payloadStateCommit(SansgridSerial **);
 
-// Tests
+// TestSuites
 Suite *payloadSizeTesting (void);
-Suite *payloadEyeballTesting (void);
-Suite *payloadPeckTesting (void);
-Suite *payloadSingTesting (void);
-Suite *payloadMockTesting (void);
+Suite *payloadTestEyeball(void);
+Suite *payloadTestPeck(void);
+Suite *payloadTestSing(void);
+Suite *payloadTestMock(void);
+Suite *payloadTestPeacock(void);
+Suite *payloadTestSquawk(void);
+Suite *payloadTestNest(void);
+Suite *payloadTestChirp(void);
+
+// Payload Tests
+int testPayload(PayloadTestStruct *test_struct);
+int testEyeballPayload(PayloadTestStruct *test_struct);
+int testPeckPayload(PayloadTestStruct *test_struct);
+int testSingPayload(PayloadTestStruct *test_struct);
+int testMockPayload(PayloadTestStruct *test_struct);
+int testPeacockPayload(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct);
+int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct);
+int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct);
+int testNestPayload(PayloadTestStruct *test_struct);
+int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct);
+int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct);
+
+
 
 #endif
 // vim: ft=c ts=4 noet sw=4:
