@@ -375,14 +375,6 @@ void testPeacockPayload(PayloadTestStruct *test_struct) {
 }
 
 
-void testNestPayload(PayloadTestStruct *test_struct) {
-	// Call Nest tests with all valid options
-	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
-	test_struct->nest = &nest;
-	test_struct->nest_mode = SG_NEST;
-	testPeacockPayload(test_struct);
-	return;
-}
 
 
 void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
@@ -482,6 +474,29 @@ void testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	testEyeballPayload(test_struct);
 }
 
+void testNestPayload(PayloadTestStruct *test_struct) {
+	// Call Nest tests with all valid options
+	PayloadTestStruct test_struct_copy;
+	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
+	test_struct->nest = &nest;
+	test_struct->nest_mode = SG_NEST;
+	// Non-recognition path
+	memcpy(&test_struct_copy, test_struct, sizeof(PayloadTestStruct));
+	testPeacockPayload(test_struct);
+	// Recognition, both auth path
+	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
+	testSquawkPayloadAuthBoth(test_struct);
+	// Recognition, Server auth path
+	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
+	testSquawkPayloadAuthServer(test_struct);
+	// Recognition, Sensor auth path
+	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
+	testSquawkPayloadAuthSensor(test_struct);
+	// Recognition, No auth path
+	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
+	testSquawkPayloadNoAuth(test_struct);
+	return;
+}
 
 // Unit test definitions
 
@@ -555,20 +570,6 @@ START_TEST (testPeacock) {
 END_TEST
 
 
-START_TEST (testNest) {
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n\nTesting Nesting\n");
-#endif
-	PayloadTestStruct test_struct;
-	testStructInit(&test_struct);
-	testNestPayload(&test_struct);
-#if TESTS_DEBUG_LEVEL > 0
-	printf("Successfully Nested\n");
-#endif
-}
-END_TEST
-
-
 START_TEST (testSquawk) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Squawking\n");
@@ -592,6 +593,21 @@ START_TEST (testSquawk) {
 }
 END_TEST
 
+
+START_TEST (testNest) {
+#if TESTS_DEBUG_LEVEL > 0
+	printf("\n\nTesting Nesting\n");
+#endif
+	PayloadTestStruct test_struct;
+	testStructInit(&test_struct);
+	testNestPayload(&test_struct);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Successfully Nested\n");
+#endif
+}
+END_TEST
+
+
 Suite *payloadTesting (void) {
 	Suite *s = suite_create("Payload Handling Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -600,8 +616,8 @@ Suite *payloadTesting (void) {
 	tcase_add_test(tc_core, testSing);
 	tcase_add_test(tc_core, testMock);
 	tcase_add_test(tc_core, testPeacock);
-	tcase_add_test(tc_core, testNest);
 	tcase_add_test(tc_core, testSquawk);
+	tcase_add_test(tc_core, testNest);
 
 
 	suite_add_tcase(s, tc_core);
