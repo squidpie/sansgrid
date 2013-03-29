@@ -36,7 +36,6 @@
  */
 
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
 
 #include <stdio.h>					// I/O operations
 #include <stdlib.h>					// malloc(), free()
@@ -45,6 +44,7 @@
 #include <check.h>
 
 #include "../../dispatch/dispatch.h"
+#include "../../routing_table/heartbeat.h"
 #include "../tests.h"
 
 
@@ -52,26 +52,6 @@
 #define QUEUE_SIZE 		10			// number of entries in the queue
 #define DATA_LENGTH 	32 			// Size of the raw data used (in bytes)
 
-
-
-int sleepMicro(uint32_t usecs) {
-	// Sleep a specified number of microseconds
-
-	int excode;
-	struct timespec required, remaining;
-
-	// Set sleep time in microseconds
-	required.tv_sec = 0;
-	required.tv_nsec = 1000L*usecs;
-
-	do {
-		// sleep the full amount of time
-		excode = nanosleep(&required, &remaining);
-		required.tv_nsec = remaining.tv_nsec;
-	} while (excode);
-
-	return 0;
-}
 
 
 

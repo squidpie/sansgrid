@@ -19,6 +19,8 @@
  *
  */
 
+#include "../routing_table/heartbeat.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -31,6 +33,7 @@
 
 
 void usage(int status);
+
 
 
 void *dispatchRuntime(void *arg) {
@@ -108,6 +111,11 @@ void *spiReaderRuntime(void *arg) {
 	pthread_exit(arg);
 }
 
+
+//void *heartbeatRuntime(void *arg) {
+	// handle pings
+	
+	
 
 void fnExit(void) {
 	printf("Exiting\n");

@@ -22,7 +22,6 @@
  * facilitates creating/moving/deleting IP addresses.
  */
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -42,14 +41,16 @@ typedef struct RoutingNode {
 	// For now, this is separate from properties.
 	// Later, it may be combined with DeviceProperties
 	//struct DeviceProperties properties;
+	int32_t lost_pings;
 	DeviceProperties *properties;
 } RoutingNode;
 	
 
 struct RoutingTable {
-	uint32_t tableptr;
+	uint32_t tableptr;			// index, used for alloc
 	uint32_t table_alloc;
 	uint8_t base[IP_SIZE];
+	uint32_t hbptr;				// index, used for heartbeat
 	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 };
 
@@ -157,6 +158,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
 	table = (RoutingTable*)malloc(sizeof(RoutingTable));
 	table->tableptr = 0;
 	table->table_alloc = 0;
+	table->hbptr = 0;
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
 	
@@ -208,6 +210,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		memcpy(dev_prop, properties, sizeof(DeviceProperties));
 		table->routing_table[index]->properties = dev_prop;
+		table->routing_table[index]->lost_pings = 0;
 	}
 
 	return 0;
@@ -351,15 +354,46 @@ int32_t routingTableSetNextExpectedPacket(
 	return 0;
 }
 
-int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], int32_t hb_status) {
+
+int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Find the next device to send a heartbeat to, set ip_addr to the ip address of that device
+	int i;
+	if (table == NULL)
+		return -1;
+	if (!table->table_alloc)
+		return 0;
+	for (i=(table->hbptr+1)%ROUTING_ARRAYSIZE; 
+			!table->routing_table[i];
+			i = (i+1)%ROUTING_ARRAYSIZE) {
+	}
+	table->hbptr = i;
+	maskip(ip_addr, table->base, i);
+
+	return 1;
+}
+
+int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status) {
 	// Set the heartbeat status of a device
 	if (table == NULL || !table->table_alloc)
 		return -1;
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
-	return 0;
 	table->routing_table[index]->properties->heartbeat_status = hb_status;
+	return 0;
 }
+
+enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE]) {
+	if (table == NULL || !table->table_alloc)
+		return SG_DEVICE_NOT_PRESENT;
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return SG_DEVICE_NOT_PRESENT;
+	return table->routing_table[index]->properties->heartbeat_status;
+}
+	
+	
+
 
 // vim: ft=c ts=4 noet sw=4:

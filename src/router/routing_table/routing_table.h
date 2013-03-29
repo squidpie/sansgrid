@@ -38,12 +38,7 @@
 #include <stdlib.h>
 
 #include "../../payloads.h"
-
-enum SansgridHeartbeatStatusEnum {
-	SG_DEVICE_PRESENT,
-	SG_DEVICE_STALE,
-	SG_DEVICE_LOST
-};
+#include "heartbeat.h"
 
 
 //typedef struct DeviceIP DeviceIP;
@@ -73,7 +68,9 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
-int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], int32_t hb_status);
+int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status);
+enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 
 
 
