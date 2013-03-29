@@ -321,22 +321,26 @@ void testStructInit(PayloadTestStruct *test_struct) {
 	test_struct->chirp = NULL;
 }
 
-void testEyeballPayload(PayloadTestStruct *test_struct) {
+int testEyeballPayload(PayloadTestStruct *test_struct) {
 	// Call Eyeball tests with all options
 	// Mate, NoMate
 	// Next payload is always pecking
+	int exit_code;
 	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
 	test_struct->eyeball = &eyeball;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
-	testPayload(test_struct);
+	exit_code = testPayload(test_struct);
+	if (exit_code)
+		return exit_code;
 	// FIXME: This path is not implemented yet
 	//test_struct->eyeball_mode = SG_EYEBALL_NOMATE;
 	//testPayload(test_struct);
-	return;
+	return 0;
 }
 
-void testPeckPayload(PayloadTestStruct *test_struct) {
+int testPeckPayload(PayloadTestStruct *test_struct) {
 	// Call Peck tests with all options
+	int exit_code;
 	PayloadTestNode peck;
 
 	// Set defaults
@@ -347,19 +351,22 @@ void testPeckPayload(PayloadTestStruct *test_struct) {
 	// Test device unrecognized
 	peck.next_packet = SG_DEVSTATUS_SINGING;
 	test_struct->peck_mode = SG_PECK_MATE;
-	testEyeballPayload(test_struct);
+	exit_code = testEyeballPayload(test_struct);
+	if (exit_code)
+		return exit_code;
 
 	// Test device recognized
 	peck.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
-	testEyeballPayload(test_struct);
+	exit_code = testEyeballPayload(test_struct);
 
-	return;
+	return exit_code;
 }
 
 
-void testSingPayload(PayloadTestStruct *test_struct) {
+int testSingPayload(PayloadTestStruct *test_struct) {
 	// Call Sing tests with all options
+	int exit_code;
 	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SINGING };
 	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING };
@@ -376,46 +383,53 @@ void testSingPayload(PayloadTestStruct *test_struct) {
 
 	// Test server authenticating with key
 	test_struct->sing_mode = SG_SING_WITH_KEY;
-	testPayload(test_struct);
+	exit_code = testPayload(test_struct);
+	if (exit_code)
+		return exit_code;
 
 	// Test server authenticating without key
 	test_struct->sing_mode = SG_SING_WITHOUT_KEY;
-	testPayload(test_struct);
+	exit_code = testPayload(test_struct);
 
-	return;
+	return exit_code;
 }
 
 
-void testMockPayload(PayloadTestStruct *test_struct) {
+int testMockPayload(PayloadTestStruct *test_struct) {
 	// Call mock tests with all options
+	int exit_code;
 	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING };
 	test_struct->mock = &mock;
 
 	// Test with key
 	test_struct->mock_mode = SG_MOCK_WITH_KEY;
-	testSingPayload(test_struct);
+	exit_code = testSingPayload(test_struct);
+	if (exit_code)
+		return exit_code;
 
 	// Test without key
 	test_struct->mock_mode = SG_MOCK_WITHOUT_KEY;
-	testSingPayload(test_struct);
-	return;
+	exit_code = testSingPayload(test_struct);
+	return exit_code;
 }
 
 
-void testPeacockPayload(PayloadTestStruct *test_struct) {
+int testPeacockPayload(PayloadTestStruct *test_struct) {
 	// Call peacock tests with all valid options
+	int exit_code;
 	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING };
 	test_struct->peacock = &peacock;
 	test_struct->peacock_mode = SG_PEACOCK;
-	testMockPayload(test_struct);
-	return;
+	exit_code = testMockPayload(test_struct);
+	return exit_code;
 }
 
 
 
 
-void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
+int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
+	//int exit_code;
 	PayloadTestNode squawk_server,
 					squawk_sensor;
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
@@ -434,13 +448,14 @@ void testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
 
-	testEyeballPayload(test_struct);
+	return testEyeballPayload(test_struct);
 }
 
 
-void testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
+int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
 	// Call squawk: sensor requires authentication
 	// with all valid options
+	//int exit_code;
 	PayloadTestNode squawk_server,
 					squawk_sensor;
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
@@ -459,13 +474,14 @@ void testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
 	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
 
-	testEyeballPayload(test_struct);
+	return testEyeballPayload(test_struct);
 }
 	
 
-void testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
+int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	// Call squawk: server requires authentication
 	// with all valid options
+	//int exit_code;
 	PayloadTestNode squawk_server,
 					squawk_sensor;
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
@@ -484,12 +500,14 @@ void testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
 
-	testEyeballPayload(test_struct);
+	return testEyeballPayload(test_struct);
 }
 
-void testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
+
+int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	// Call squawk: No authentication
 	// with all valid options
+	//int exit_code;
 	PayloadTestNode squawk_server,
 					squawk_sensor;
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
@@ -508,55 +526,66 @@ void testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
 
-	testEyeballPayload(test_struct);
+	return testEyeballPayload(test_struct);
 }
 
-void testNestPayload(PayloadTestStruct *test_struct) {
+
+int testNestPayload(PayloadTestStruct *test_struct) {
 	// Call Nest tests with all valid options
+	int exit_code;
 	PayloadTestStruct test_struct_copy;
 	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
 	test_struct->nest = &nest;
 	test_struct->nest_mode = SG_NEST;
 	// Non-recognition path
 	memcpy(&test_struct_copy, test_struct, sizeof(PayloadTestStruct));
-	testPeacockPayload(test_struct);
+	exit_code = testPeacockPayload(test_struct);
+	if (exit_code)
+		return exit_code;
 	// Recognition, both auth path
 	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
-	testSquawkPayloadAuthBoth(test_struct);
+	exit_code = testSquawkPayloadAuthBoth(test_struct);
+	if (exit_code)
+		return exit_code;
 	// Recognition, Server auth path
 	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
-	testSquawkPayloadAuthServer(test_struct);
+	exit_code = testSquawkPayloadAuthServer(test_struct);
+	if (exit_code)
+		return exit_code;
 	// Recognition, Sensor auth path
 	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
-	testSquawkPayloadAuthSensor(test_struct);
+	exit_code = testSquawkPayloadAuthSensor(test_struct);
+	if (exit_code)
+		return exit_code;
 	// Recognition, No auth path
 	memcpy(test_struct, &test_struct_copy, sizeof(PayloadTestStruct));
-	testSquawkPayloadNoAuth(test_struct);
-	return;
+	exit_code = testSquawkPayloadNoAuth(test_struct);
+
+	return exit_code;
 }
 
-void testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
+int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from sensor to server with all valid options
 	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_LEASED };
 	test_struct->chirp = &chirp;
 
 	test_struct->chirp_mode = SG_CHIRP_DATA_SENSOR_TO_SERVER;
-	testNestPayload(test_struct);
+	return testNestPayload(test_struct);
 
-	return;
 }
 
 
-void testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
+int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from server to sensor with all valid options
 	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
 	test_struct->chirp = &chirp;
 
 	test_struct->chirp_mode = SG_CHIRP_COMMAND_SERVER_TO_SENSOR;
-	testNestPayload(test_struct);
-
-	return;
+	return testNestPayload(test_struct);
 }
+
+
+
 // Unit test definitions
 
 START_TEST (testEyeball) {
