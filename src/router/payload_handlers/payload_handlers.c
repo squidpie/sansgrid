@@ -327,11 +327,13 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
+			/*
 		case SG_SQUAWK_SENSOR_DENY_SERVER:
 			// Sensor deny server's response
 			// TODO: Confirm datatype addition
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			break;
+			*/
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
