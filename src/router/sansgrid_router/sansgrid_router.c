@@ -26,6 +26,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <string.h>
 #include "sansgrid_router.h"
 #include "../../payloads.h"
 #include "../payload_handlers/payload_handlers.h"
@@ -116,9 +117,24 @@ void *heartbeatRuntime(void *arg) {
 	// handle pings
 
 	int32_t count;
+	uint8_t ip_addr[IP_SIZE];
+	SansgridSerial sg_serial;
+	SansgridHeartbeat sg_hb;
+	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
+	for (int i=0; i<80; i++)
+		sg_hb.padding[i] = 0x0;
+	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+	for (int i=0; i<IP_SIZE; i++)
+		sg_serial.origin_ip[i] = 0x0;
+	sg_serial.origin_ip[IP_SIZE-1] = 0x1;
+	sg_serial.origin = 0x0;
+	sg_serial.timestamp = 0x0;
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
 		sleepMicro(HEARTBEAT_UINTERVAL / count);
+		routingTableFindNextDevice(routing_table, ip_addr);
+		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
 	}
 
 	pthread_exit(arg);
