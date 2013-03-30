@@ -23,11 +23,12 @@
  */
 
 
+#include <arpa/inet.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include <arpa/inet.h>
+#include <syslog.h>
+#include <time.h>
 
 #include "routing_table.h"
 #include "../../payloads.h"
@@ -69,6 +70,34 @@ static void createBase(uint8_t base[IP_SIZE]) {
 	return;
 }
 */
+
+
+static int tableAssertValid(RoutingTable *table) {
+	// Exit if the table isn't allocated
+	if (table == NULL) {
+		syslog(LOG_ERR, "routing table not initialized; quitting");
+		exit(EXIT_FAILURE);
+	}
+	return 0;
+}
+
+
+static int tableChkFull(RoutingTable *table) {
+	if (table->table_alloc >= ROUTING_ARRAYSIZE) {
+		syslog(LOG_DEBUG, "routing table full");
+		return 1;
+	}
+	return 0;
+}
+
+
+static int tableChkEmpty(RoutingTable *table) {
+	if (table->table_alloc == 0) {
+		syslog(LOG_DEBUG, "routing table empty");
+		return 1;
+	}
+	return 0;
+}
 
 
 
@@ -197,10 +226,9 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	DeviceProperties *dev_prop;
 	int32_t index;
 
-	if (table == NULL)
-		return -1;
-	if (table->table_alloc >= ROUTING_ARRAYSIZE)
-		return -1;
+	tableAssertValid(table);
+	if (tableChkFull(table))
+		return 1;
 
 	index = locationToTablePtr(ip_addr, table->base);
 
@@ -226,10 +254,10 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 
 	uint32_t tableptr;
 
-	if (table == NULL)
-		return -1;
-	if (table->table_alloc >= ROUTING_ARRAYSIZE)
-		return -1;
+
+	tableAssertValid(table);
+	if (tableChkFull(table))
+		return 1;
 
 	tableptr = table->tableptr;
 
@@ -252,9 +280,8 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	uint32_t index;
 
 
-	if (table == NULL)
-		return -1;
-	if (!table->table_alloc)
+	tableAssertValid(table);
+	if (tableChkEmpty(table))
 		return -1;
 
 	// table lookup
@@ -283,8 +310,7 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	uint32_t index;
 
 
-	if (table == NULL)
-		return 0;
+	tableAssertValid(table);
 	if (!table->table_alloc)
 		return 0;
 
@@ -307,6 +333,11 @@ int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, 
 	// return 0 if device is not found
 
 	DeviceProperties *table_dprop;
+
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return 0;
+
 	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (!table->routing_table[i])
 			continue;
@@ -329,8 +360,12 @@ int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
-	if (table == NULL || !table->table_alloc)
+
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
 		return SG_DEVSTATUS_NULL;
+
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return SG_DEVSTATUS_NULL;
@@ -342,8 +377,12 @@ int32_t routingTableSetNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE],
 		enum SansgridDeviceStatusEnum nextstatus) {
-	if (table == NULL || !table->table_alloc)
+
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
 		return -1;
+
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
@@ -355,8 +394,8 @@ int32_t routingTableSetNextExpectedPacket(
 int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Find the next device to send a heartbeat to, set ip_addr to the ip address of that device
 	int i;
-	if (table == NULL)
-		return -1;
+	tableAssertValid(table);
+
 	if (!table->table_alloc)
 		return 0;
 	for (i=(table->hbptr+1)%ROUTING_ARRAYSIZE; 
@@ -371,8 +410,11 @@ int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status) {
 	// Set the heartbeat status of a device
-	if (table == NULL || !table->table_alloc)
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
 		return -1;
+
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
@@ -382,8 +424,12 @@ int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_S
 
 enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
-	if (table == NULL || !table->table_alloc)
+
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
 		return SG_DEVICE_NOT_PRESENT;
+
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return SG_DEVICE_NOT_PRESENT;
@@ -393,6 +439,7 @@ enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *ta
 	
 
 int32_t routingTableGetDeviceCount(RoutingTable *table) {
+	tableAssertValid(table);
 	return table->table_alloc;
 }
 
