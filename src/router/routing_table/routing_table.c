@@ -241,8 +241,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		table->routing_table[index]->lost_pings = 0;
 		table->table_alloc++;
 		return 0;
-	}
-	else
+	} else
 		return 1;
 }
 

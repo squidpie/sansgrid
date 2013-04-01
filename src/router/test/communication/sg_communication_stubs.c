@@ -48,8 +48,7 @@ static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
 		free(ts);
 	if (!use_this) {
 		ts = NULL;
-	}
-	else {
+	} else {
 		ts = (TalkStub*)malloc(sizeof(TalkStub));
 		ts->FPTR_SPI_READ = NULL;
 		ts->FPTR_SPI_WRITE = NULL;
@@ -99,8 +98,7 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 		// initialize
 		sem_init(&ts->write_in_progress, 0, 0);
 		sem_init(&ts->read_in_progress, 0, 0);
-	}
-	else if (!value && ts->use_barrier) {
+	} else if (!value && ts->use_barrier) {
 		// destroy
 		sem_destroy(&ts->write_in_progress);
 		sem_destroy(&ts->read_in_progress);
