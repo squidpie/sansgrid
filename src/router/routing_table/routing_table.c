@@ -410,6 +410,7 @@ int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status) {
 	// Set the heartbeat status of a device
+	// A ping is a special case where it's handled based on the device's attributes
 	tableAssertValid(table);
 
 	if (!table->table_alloc)
@@ -418,7 +419,29 @@ int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_S
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
-	table->routing_table[index]->properties->heartbeat_status = hb_status;
+	enum SansgridHeartbeatStatusEnum device_status = table->routing_table[index]->properties->heartbeat_status;
+	if (hb_status != SG_DEVICE_PINGING) {
+		table->routing_table[index]->properties->heartbeat_status = hb_status;
+		// FIXME: set lost_pings based on hb_status?
+		table->routing_table[index]->lost_pings = 0;
+		return 0;
+	}
+	switch (device_status) {
+		case SG_DEVICE_NOT_PRESENT:
+			return -1;
+			break;
+		case SG_DEVICE_PINGING:
+		case SG_DEVICE_STALE:
+			// Haven't received the last ping
+			table->routing_table[index]->lost_pings++;
+			// TODO: Add "device lost" code here
+			break;
+		case SG_DEVICE_PRESENT:
+			table->routing_table[index]->properties->heartbeat_status = SG_DEVICE_PINGING;
+			break;
+		default:
+			return -1;
+	}
 	return 0;
 }
 
