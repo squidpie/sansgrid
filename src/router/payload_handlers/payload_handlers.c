@@ -183,6 +183,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		default:
 			// fallthrough/error
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			return 1;
 			break;
 	}
 
@@ -213,6 +214,7 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		default:
 			// error
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			return 1;
 			break;
 	}
 
@@ -243,6 +245,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			return 1;
 			break;
 	}
 
@@ -344,6 +347,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// error
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			return 1;
 			break;
 	}
 	return 0;
@@ -374,6 +378,8 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			return 1;
+			break;
 	}
 
 	return 0;
@@ -425,6 +431,7 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		default:
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			return -1;
 			break;
 	}
 
