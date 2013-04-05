@@ -23,7 +23,7 @@
 int testMockPayload(PayloadTestStruct *test_struct) {
 	// Call mock tests with all options
 	int exit_code;
-	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING };
+	PayloadTestNode mock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PEACOCKING, 0 };
 	test_struct->mock = &mock;
 
 	// Test with key

@@ -24,7 +24,7 @@ int testNestPayload(PayloadTestStruct *test_struct) {
 	// Call Nest tests with all valid options
 	int exit_code;
 	PayloadTestStruct test_struct_copy;
-	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
+	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED, 0};
 	test_struct->nest = &nest;
 	test_struct->nest_mode = SG_NEST;
 	// Non-recognition path

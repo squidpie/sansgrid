@@ -69,6 +69,7 @@ int main(void) {
 	srunner_add_suite(sr, payloadTestNest());
 	srunner_add_suite(sr, payloadTestChirp());
 
+	num_devices = 0;
 
 	// Uncomment to better debug segfaults
 	srunner_set_fork_status(sr, CK_NOFORK);

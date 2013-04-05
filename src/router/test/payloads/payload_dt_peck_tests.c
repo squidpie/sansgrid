@@ -26,6 +26,7 @@ int testPeckPayload(PayloadTestStruct *test_struct) {
 
 	// Set defaults
 	peck.read_dir = SG_TEST_COMM_WRITE_SPI;
+	peck.expected_exit_code = 0;
 	// Assign nodes
 	test_struct->peck = &peck;
 

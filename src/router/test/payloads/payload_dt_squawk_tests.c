@@ -23,22 +23,18 @@
 int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
 	//int exit_code;
-	PayloadTestNode squawk_server,
-					squawk_sensor;
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
+					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0};
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
 	test_struct->peck = &peck;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Challenges sensor
-	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
 
 	// Sensor Challenges sever
-	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
-	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
 
 	return testEyeballPayload(test_struct);
@@ -49,22 +45,18 @@ int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
 	// Call squawk: sensor requires authentication
 	// with all valid options
 	//int exit_code;
-	PayloadTestNode squawk_server,
-					squawk_sensor;
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
+					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0};
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
 	test_struct->peck = &peck;
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Doesn't challenge sensor
-	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR;
 
 	// Sensor Challenges server
-	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
-	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_CHALLENGE_SERVER;
 
 	return testEyeballPayload(test_struct);
@@ -75,8 +67,8 @@ int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	// Call squawk: server requires authentication
 	// with all valid options
 	//int exit_code;
-	PayloadTestNode squawk_server,
-					squawk_sensor;
+	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
+					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
@@ -84,13 +76,9 @@ int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Doesn't challenge sensor
-	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_CHALLENGE_SENSOR;
 
 	// Sensor Challenges server
-	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
-	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
 
 	return testEyeballPayload(test_struct);
@@ -101,8 +89,8 @@ int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	// Call squawk: No authentication
 	// with all valid options
 	//int exit_code;
-	PayloadTestNode squawk_server,
-					squawk_sensor;
+	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
+					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
 	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
@@ -110,13 +98,9 @@ int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	test_struct->peck_mode = SG_PECK_RECOGNIZED;
 
 	// Server Doesn't challenge sensor
-	squawk_server.read_dir = SG_TEST_COMM_WRITE_SPI;
-	squawk_server.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_server_mode = SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR;
 
 	// Sensor Challenges server
-	squawk_sensor.read_dir = SG_TEST_COMM_WRITE_TCP;
-	squawk_sensor.next_packet = SG_DEVSTATUS_SQUAWKING;
 	test_struct->squawk_sensor_mode = SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
 
 	return testEyeballPayload(test_struct);

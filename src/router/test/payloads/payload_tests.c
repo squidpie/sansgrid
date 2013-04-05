@@ -30,6 +30,7 @@ static FILE *FPTR_SPI_WRITER,
 	 		*FPTR_SPI_READER,
 	 		*FPTR_TCP_WRITER,
 	 		*FPTR_TCP_READER;
+static int payload_ref_count = 0;
 
 
 void checkSize(const char *pkname, size_t pksize) {
@@ -97,6 +98,8 @@ void *tcpPayloadReader(void *arg) {
 int32_t payloadRoutingInit(void) {
 	uint8_t base[IP_SIZE];
 
+	if (++payload_ref_count > 1)
+		return 0;
 	ts_serial = talkStubUseSerial(1);
 	ts_tcp = talkStubUseTCP(1);
 	dispatch = queueInit(200);
@@ -105,7 +108,20 @@ int32_t payloadRoutingInit(void) {
 		base[i] = 0x0;
 	routing_table = routingTableInit(base);
 	fail_if((routing_table == NULL), "Error: routing table is not initialized!");
+	sem_init(&spi_readlock, 0, 0);
+	sem_init(&tcp_readlock, 0, 0);
 
+	return 0;
+}
+
+
+int32_t payloadRoutingDestroy(void) {
+	if (--payload_ref_count > 0)
+		return 0;
+	queueDestroy(dispatch);
+	routingTableDestroy(routing_table);
+	sem_destroy(&spi_readlock);
+	sem_destroy(&tcp_readlock);
 	return 0;
 }
 

@@ -59,6 +59,7 @@ enum CommReadDirEnum {
 typedef struct PayloadTestNode {
 	enum CommReadDirEnum read_dir;
 	enum SansgridDeviceStatusEnum next_packet;
+	int expected_exit_code;
 } PayloadTestNode;
 
 typedef struct PayloadTestStruct {
@@ -122,6 +123,7 @@ void *tcpPayloadReader(void *arg);
 
 // Payload State
 int32_t payloadRoutingInit(void);
+int32_t payloadRoutingDestroy(void);
 int32_t payloadStateInit(void);
 int32_t payloadStateCommit(SansgridSerial **);
 

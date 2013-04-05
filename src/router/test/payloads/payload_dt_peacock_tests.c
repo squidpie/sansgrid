@@ -22,7 +22,7 @@
 int testPeacockPayload(PayloadTestStruct *test_struct) {
 	// Call peacock tests with all valid options
 	int exit_code;
-	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING };
+	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING, 0};
 	test_struct->peacock = &peacock;
 	test_struct->peacock_mode = SG_PEACOCK;
 	exit_code = testMockPayload(test_struct);

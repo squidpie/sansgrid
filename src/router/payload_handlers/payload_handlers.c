@@ -125,7 +125,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	} else {
 		// TODO: Not implemented yet
 		// Have to send a refusal back to sensor
-		return -1;
+		return 1;
 	}
 
 	free(dev_prop);
@@ -330,13 +330,6 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
-			/*
-		case SG_SQUAWK_SENSOR_DENY_SERVER:
-			// Sensor deny server's response
-			// TODO: Confirm datatype addition
-			routerFreeDevice(routing_table, sg_serial->origin_ip);
-			break;
-			*/
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
@@ -345,7 +338,6 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			// error
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
 			return 1;
 			break;
@@ -430,7 +422,6 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->origin_ip);
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
 			return -1;
 			break;
 	}

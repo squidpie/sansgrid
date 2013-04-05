@@ -74,6 +74,13 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 		printf("%.2x", sg_serial_read->payload[i]);
 	printf("\n");
 #endif
+	if (test_node->expected_exit_code != exit_code) {
+		fail("Exit code Mismatch \
+				\n\tExpected: %i \
+				\n\tGot: 	  %i", test_node->expected_exit_code, exit_code);
+	}
+	if (exit_code)
+		return exit_code;
 	if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
 		fail("Packet Mismatch");
 	int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->origin_ip);
@@ -81,7 +88,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	if (test_node->next_packet != (orig | dest))
 		fail("Control Flow Mismatch \
 				\n\tExpected: %i \
-				\n\tGot: %i", test_node->next_packet, 
+				\n\tGot:  	  %i", test_node->next_packet, 
 				(orig | dest));
 	if (!routingTableLookup(routing_table, sg_serial_read->origin_ip)
 			&& !routingTableLookup(routing_table, sg_serial_read->dest_ip))
@@ -100,8 +107,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 
 
 int testPayload(PayloadTestStruct *test_struct) {
-	// unit test code to test the Eyeball data type
-	// (The next packet would be a Squawk)
+	// unit test code to test data types
 	int32_t exit_code;
 	SansgridEyeball sg_eyeball;
 	SansgridPeck sg_peck;
@@ -114,17 +120,10 @@ int testPayload(PayloadTestStruct *test_struct) {
 	SansgridSerial sg_serial;
 	uint8_t ip_addr[IP_SIZE];
 
-	/*
-#if TESTS_DEBUG_LEVEL > 0
-	printf("\n");
-	printf("%s\n", message);
-#endif
-*/
 	// initialize dispatch/routing, set up fifos/threads
 	payloadRoutingInit();
-	sem_init(&spi_readlock, 0, 0);
-	sem_init(&tcp_readlock, 0, 0);
 
+	// Payloads
 	if (test_struct->eyeball) {
 		payloadMkSerial(&sg_serial);
 		payloadMkEyeball(&sg_eyeball, test_struct);
@@ -301,10 +300,7 @@ int testPayload(PayloadTestStruct *test_struct) {
 #endif
 
 	// Final Cleanup
-	queueDestroy(dispatch);
-	routingTableDestroy(routing_table);
-	sem_destroy(&spi_readlock);
-	sem_destroy(&tcp_readlock);
+	payloadRoutingDestroy();
 	return 0;
 }
 

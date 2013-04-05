@@ -23,7 +23,7 @@
 
 int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from sensor to server with all valid options
-	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_LEASED };
+	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_LEASED, 0};
 	test_struct->chirp = &chirp;
 
 	test_struct->chirp_mode = SG_CHIRP_DATA_SENSOR_TO_SERVER;
@@ -34,7 +34,7 @@ int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
 
 int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from server to sensor with all valid options
-	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED };
+	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED, 0};
 	test_struct->chirp = &chirp;
 
 	test_struct->chirp_mode = SG_CHIRP_COMMAND_SERVER_TO_SENSOR;

@@ -22,13 +22,14 @@
 int testSingPayload(PayloadTestStruct *test_struct) {
 	// Call Sing tests with all options
 	int exit_code;
-	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING };
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SINGING };
-	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING };
+	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING, 0};
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SINGING, 0};
+	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0};
 
 	// Set defaults
 	sing.read_dir = SG_TEST_COMM_WRITE_SPI;
 	sing.next_packet = SG_DEVSTATUS_MOCKING;
+	sing.expected_exit_code = 0;
 	test_struct->eyeball_mode = SG_EYEBALL_MATE;
 	test_struct->peck_mode = SG_PECK_MATE;
 	// Assign nodes
