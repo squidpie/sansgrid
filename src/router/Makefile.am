@@ -1,8 +1,8 @@
 bin_PROGRAMS = sansgrid 
 check_PROGRAMS = sgtest
 AM_CFLAGS = -Wall -std=c99
-SANSGRID_COMM = communication/sg_tcp.c \
-		communication/sg_serial.c
+SANSGRID_COMM = device/raspberry_pi/communication/sg_tcp.c \
+		device/raspberry_pi/communication/sg_serial.c
 
 SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
