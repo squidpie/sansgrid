@@ -33,8 +33,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "../../../sg_serial.h"
-#include "../../../payloads.h"
+#include "../../../../sg_serial.h"
+#include "../../../../payloads.h"
 #include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"

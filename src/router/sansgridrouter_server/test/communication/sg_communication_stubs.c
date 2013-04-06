@@ -24,7 +24,7 @@
 #include <semaphore.h>
 #include <string.h>
 #include <sys/types.h>
-#include "../../../sg_serial.h"
+#include "../../../../sg_serial.h"
 #include "../tests.h"
 #include "sg_communication_stubs.h"
 

@@ -23,9 +23,9 @@
 #ifndef __SG_ROUTER_MAIN_H__
 #define __SG_ROUTER_MAIN_H__
 
-#include "../dispatch/dispatch.h"
-#include "../routing_table/routing_table.h"
-#include "../daemon/sansgrid_daemon.h"
+#include "dispatch/dispatch.h"
+#include "routing_table/routing_table.h"
+#include "daemon/sansgrid_daemon.h"
 
 Queue *dispatch;
 RoutingTable *routing_table;

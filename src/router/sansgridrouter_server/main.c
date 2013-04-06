@@ -19,7 +19,7 @@
  *
  */
 
-#include "../routing_table/heartbeat.h"
+#include "routing_table/heartbeat.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -29,7 +29,7 @@
 #include <string.h>
 #include "sansgrid_router.h"
 #include "../../payloads.h"
-#include "../payload_handlers/payload_handlers.h"
+#include "payload_handlers/payload_handlers.h"
 #include "../../sg_serial.h"
 
 

@@ -40,7 +40,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../../sg_serial.h"
+#include "../../../../sg_serial.h"
 #include "../../device/raspberry_pi/communication/sg_tcp.h"
 #include "../../../payloads.h"
 #include "../../routing_table/routing_table.h"
