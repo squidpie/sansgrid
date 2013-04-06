@@ -1,4 +1,4 @@
-/* Tests
+/* Definitions for server communication functions
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -15,38 +15,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *
  */
 
-#ifndef __SANSGRID_ROUTER_TESTS_H__
-#define __SANSGRID_ROUTER_TESTS_H__
-
-#include <check.h>
 #include <stdint.h>
+#include "sg_tcp.h"
+#include "../../../sg_serial.h"
 
-#define TESTS_DEBUG_LEVEL 0
-uint32_t num_devices;				// number of devices being tested
+int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
+	// Send size bytes of serialdata
+	return -1;
+}
+
+int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
+	// Receive serialdata, size of packet stored in size
+	return -1;
+}
 
 
-// General Debug
-void routingTablePrint(uint8_t*);
-
-// Routing
-Suite *routingBasicTestSuite (void);
-// Dispatch
-Suite *dispatchBasicTesting (void);
-Suite *dispatchAdvancedTesting (void);
-// Payload size
-Suite *payloadSizeTesting (void);
-// Payload tests
-Suite *payloadTestEyeball(void);
-Suite *payloadTestPeck(void);
-Suite *payloadTestSing(void);
-Suite *payloadTestMock(void);
-Suite *payloadTestPeacock(void);
-Suite *payloadTestSquawk(void);
-Suite *payloadTestNest(void);
-Suite *payloadTestChirp(void);
-
-#endif
 
 // vim: ft=c ts=4 noet sw=4:
+

@@ -20,7 +20,7 @@
  */
 
 #include <stdint.h>
-#include "../../sg_serial.h"
+#include "../../../sg_serial.h"
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata

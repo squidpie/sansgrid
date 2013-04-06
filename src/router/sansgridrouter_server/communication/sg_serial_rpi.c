@@ -1,4 +1,5 @@
-/* Definitions for server communication functions
+/* Definitions for communication functions
+ * Specific to the Raspberry Pi Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -20,19 +21,17 @@
  */
 
 #include <stdint.h>
-#include "sg_tcp.h"
-#include "../../sg_serial.h"
+#include "../../../sg_serial.h"
 
-int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	return -1;
 }
 
-int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
+int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	return -1;
 }
-
 
 
 // vim: ft=c ts=4 noet sw=4:

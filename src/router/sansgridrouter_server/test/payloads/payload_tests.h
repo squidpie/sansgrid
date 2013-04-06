@@ -41,7 +41,7 @@
 #include <unistd.h>
 
 #include "../../../../sg_serial.h"
-#include "../../device/raspberry_pi/communication/sg_tcp.h"
+#include "../../communication/sg_tcp.h"
 #include "../../../payloads.h"
 #include "../../routing_table/routing_table.h"
 #include "../../payload_handlers/payload_handlers.h"

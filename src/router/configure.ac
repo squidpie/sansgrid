@@ -7,14 +7,10 @@ AM_INIT_AUTOMAKE([-Wall silent-rules foreign])
 AM_SILENT_RULES([yes])
 
 # Checks for programs.
-#AC_PROG_CXX
 AC_PROG_CC
-#AC_PROG_MAKE_SET
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lcheck':
 AC_CHECK_LIB([check], [srunner_create])
-# FIXME: Replace `main' with a function in `-lpthread':
 AC_CHECK_LIB([pthread], [pthread_create])
 
 # Checks for header files.
@@ -38,4 +34,9 @@ AC_CONFIG_FILES([Makefile \
                  #test/Makefile
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
+case $host in
+	*arm-linux*)	SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT) sg_tcp_rpi.$(OBJEXT)' ;;
+	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT) sg_tcp_generic.$(OBJEXT)' ;;
+esac
+AC_SUBST([SANSGRIDROUTER_SYSTEM])
 AC_OUTPUT
