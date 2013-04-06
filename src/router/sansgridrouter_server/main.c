@@ -31,6 +31,8 @@
 #include "../../payloads.h"
 #include "payload_handlers/payload_handlers.h"
 #include "../../sg_serial.h"
+#include <sys/stat.h>
+#include <sys/un.h>
 
 
 void usage(int status);
@@ -147,6 +149,80 @@ void fnExit(void) {
 }
 
 
+int sgSocketListen(void) {
+	int s, s2;
+	struct sockaddr_un local, remote;
+	socklen_t len;
+	char str[100];
+	char *home_path = getenv("HOME");
+
+	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!home_path) {
+		sprintf(str, "/home/vernon/.sansgrid");
+	} else {
+		strcpy(str, home_path);
+		strcat(str, "/.sansgrid");
+	}
+
+	local.sun_family = AF_UNIX;
+	mkdir(str, 0755);
+	strcat(str, "/command_socket");
+	strcpy(local.sun_path, str);
+	unlink(local.sun_path);
+	len = strlen(local.sun_path) + sizeof(local.sun_family);
+	if (bind(s, (struct sockaddr *)&local, len) == -1) {
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+
+	if (listen(s, 5) == -1) {
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+	int shutdown_server = 0;
+	do {
+		int done, n;
+		//printf("Waiting for a connection...\n");
+		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
+			perror("accept");
+			exit(EXIT_FAILURE);
+		}
+		
+		//printf("Connected.\n");
+		done = 0;
+		do {
+			n = recv(s2, str, 100, 0);
+			if (n <= 0) {
+				if (n < 0) perror("recv");
+				done = 1;
+			}
+			if (!done) {
+				if (str[n-1] == '\n')
+					str[n-1] = '\0';
+				else
+					str[n] = '\0';
+				//printf("Received %s\n", str);
+				if (!strcmp(str, "stop")) {
+					shutdown_server = 1;
+					done = 1;
+				}
+				if (send(s2, str, n, 0) < 0) {
+					perror("send");
+					done = 1;
+				}
+			}
+		} while (!done);
+		close(s2);
+	} while (!shutdown_server);
+
+	return 0;
+}
+
+
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
 				dispatch_thread;
@@ -210,6 +286,7 @@ int main(int argc, char *argv[]) {
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
 	}
+
 	atexit(fnExit);
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_base);
@@ -219,11 +296,15 @@ int main(int argc, char *argv[]) {
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 
-
+	sgSocketListen();
+	/*
 	while (1) {
 		sched_yield();
 	}
+	*/
 
+	pthread_cancel(serial_read_thread);
+	pthread_cancel(dispatch_thread);
 
 	pthread_join(serial_read_thread, &arg);
 	pthread_join(dispatch_thread, &arg);

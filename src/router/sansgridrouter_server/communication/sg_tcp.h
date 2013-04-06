@@ -22,7 +22,7 @@
 #define __SG_ROUTER_TCP_H__
 
 #include <stdint.h>
-#include "../../sg_serial.h"
+#include "../../../sg_serial.h"
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size);
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 

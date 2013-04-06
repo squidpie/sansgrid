@@ -20,15 +20,24 @@
  */
 
 #include <stdint.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include "../../../sg_serial.h"
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
+
 	return -1;
 }
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
+	sem_t blocker;
+	sem_init(&blocker, 0, 0);
+	sem_wait(&blocker);
+
+	sem_destroy(&blocker);
+
 	return -1;
 }
 
