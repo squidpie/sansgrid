@@ -1,4 +1,4 @@
-bin_PROGRAMS = sansgrid 
+bin_PROGRAMS = sansgridrouterd 
 check_PROGRAMS = sgtest
 AM_CFLAGS = -Wall -std=c99
 SANSGRID_COMM = device/raspberry_pi/communication/sg_tcp.c \
@@ -26,10 +26,10 @@ SANSGRID_TEST = test/communication/sg_communication_stubs.c \
 		test/payloads/payload_dt_chirp_tests.c
 
 			
-sansgrid_SOURCES = $(SANSGRID_BASE) \
-		   $(SANSGRID_COMM) \
-		   daemon/sansgrid_daemon.c \
-		   sansgrid_router/sansgrid_router.c
+sansgridrouterd_SOURCES = $(SANSGRID_BASE) \
+			  $(SANSGRID_COMM) \
+			  daemon/sansgrid_daemon.c \
+			  main.c
 sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/tests.c
