@@ -1,5 +1,7 @@
 <?
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
+
+
 ?>
 <html>
 <head>
@@ -13,6 +15,9 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 <? print get_header(); ?>
 
 <div id="main">
+
+<h2>Logs</h2>
+<? print returnLogTable(); ?>
 
 </div> 			<!-- end of <div id="main"> -->
 </div> 			<!-- end of <div id="page"> -->

@@ -12,6 +12,8 @@ To Do
 - Installer needs to create at least one user: the admin (should I prompt for
   a password?).
 
+- Need to write some sort of log maintainence function to be run during returnLogTable();
+
 
 For SansGrid 2+
 

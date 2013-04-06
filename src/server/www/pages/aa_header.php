@@ -18,7 +18,7 @@ function get_header() {
 	$msg .= "\t\t<li id=\"logo\"><a href=\"#\"></a></li>\n";
 	$msg .= "\t\t<li><a href=\"#\">Sensors</a>\n";
 	$msg .= "\t\t\t<ul>\n";
-	$msg .= "\t\t\t\t<li><a href=\"#\">History</a></li>\n";
+	$msg .= "\t\t\t\t<li><a href=\"$url/pages/logs.php\">Logs</a></li>\n";
 	$msg .= "\t\t\t\t<li><a href=\"#\">Compendium</a></li>\n";
 	$msg .= "\t\t\t\t</li>\n";
 	$msg .= "\t\t\t</ul>\n";

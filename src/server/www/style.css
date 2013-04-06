@@ -199,6 +199,11 @@ table.sansgrid {
 	width: 98%;
 }
 
+table.sansgrid th {
+	color: white;
+	background-color: #27272C;
+}
+
 table.sansgrid td,
 table.sansgrid th {
 	padding: .2em .4em;
@@ -208,3 +213,10 @@ table.sansgrid th {
 table.sansgrid th.left {
 	text-align: left;
 }
+
+
+/* ************************************************************************** */
+/* General style */
+.alignc { text-align: center; }
+.alignr { text-align: right; }
+.alignl { text-align: left; }

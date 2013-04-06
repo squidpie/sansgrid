@@ -47,7 +47,13 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', qui
 
 // Table: io
 $query = "CREATE TABLE io (id_io int NOT NULL UNIQUE AUTO_INCREMENT, id_sensor int, direction VARCHAR(10), value VARCHAR(250), last_edit TIMESTAMP)";
-$result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'io', quitting.");
+
+
+// Table: log
+$query = "CREATE TABLE log (id_log INT NOT NULL UNIQUE AUTO_INCREMENT, log VARCHAR(1024), time timestamp)";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitting.");
+
 
 // Generate and save server_id and set other system defaults
 $server_key = generateRandomHash(16);
