@@ -20,7 +20,7 @@
  */
 
 
-int daemon_init(void);
+int daemon_init(const char *config_path);
 
 
 

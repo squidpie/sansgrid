@@ -152,6 +152,8 @@ int main(int argc, char *argv[]) {
 				dispatch_thread;
 	int c;
 	int32_t no_daemonize = 0;
+	char *home_path = getenv("HOME");
+	char config_path[100];
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 	&no_daemonize, 	1},
@@ -196,8 +198,15 @@ int main(int argc, char *argv[]) {
 				abort();
 		}
 	}
+	
+	if (!home_path) {
+		printf("ERROR: Can't find home directory\n");
+		exit(EXIT_FAILURE);
+	}
+	snprintf(config_path, 100, "%s/.sansgrid", home_path);
+
 	if (!no_daemonize) {
-		int excode = daemon_init();
+		int excode = daemon_init(config_path);
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
 	}

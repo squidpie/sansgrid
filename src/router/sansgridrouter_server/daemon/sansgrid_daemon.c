@@ -53,11 +53,12 @@ static int syslog_open = FALSE;
 #endif
 	
 
-int daemon_init(void) {
+int daemon_init(const char *config_path) {
 	pid_t pid;
 	pid_t sid;
+	FILE *PIDFILE;
 
-
+	char pidpath[150];
 	pid = fork();
 
 	// exit if fork failed
@@ -66,7 +67,15 @@ int daemon_init(void) {
 
 	// kill parent process
 	if (pid > 0) {
+		snprintf(pidpath, 150, "%s/sansgridrouter.pid", config_path);
+		if ((PIDFILE = fopen(pidpath, "w")) == NULL) {
+			perror("fopen");
+			// FIXME: Kill child process too (here)
+			exit(EXIT_FAILURE);
+		}
 		printf("Running as process %i\n", pid);
+		fprintf(PIDFILE, "%i\n", pid);
+		fclose(PIDFILE);
 		exit(EXIT_SUCCESS);
 	}
 
