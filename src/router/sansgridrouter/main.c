@@ -358,14 +358,12 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "start")) {
 			// daemonize
-			int excode = daemon_init();
-			if (excode == EXIT_FAILURE)
-				exit(EXIT_FAILURE);
-			no_daemonize = 1;
+			no_daemonize = 0;
 		} else if (!strcmp(option, "restart")) {
 			// kill and start daemon
-			// TODO: Implement
-			exit(EXIT_FAILURE);
+			sgSocketSend("kill", 4);
+			sleep(1);
+			no_daemonize = 0;
 		} else if (!strcmp(option, "status")) {
 			// print the status of the router daemon
 			// TODO: Implement
