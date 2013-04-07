@@ -27,8 +27,6 @@
 #include "payloads.h"
 
 typedef struct SansgridSerial {
-	uint8_t origin;					// sensor, server, router
-	uint32_t timestamp;				// time that packet was received
 	uint8_t origin_ip[IP_SIZE];		// ip of the payload sender
 	uint8_t dest_ip[IP_SIZE];		// ip of the destination
 	uint8_t payload[81];			// payload

@@ -36,8 +36,6 @@
 
 
 
-
-
 typedef struct SansgridHatching {
 	// Datatype: 0xF1
 	uint8_t datatype;
@@ -45,14 +43,6 @@ typedef struct SansgridHatching {
 	uint8_t padding[64];
 } SansgridHatching;
 
-//SANSGRID_UNION(struct SansgridHatching, SansgridHatchingConv);
-
-/*
-union SansgridHatchingConv {
-	struct SansgridHatching formdata;
-	uint8_t serialdata[sizeof(struct SansgridHatching)];
-};
-*/
 
 
 typedef struct SansgridFly {
@@ -87,7 +77,8 @@ typedef struct SansgridEyeball {
 typedef struct SansgridPeck {
 	// Datatype: 0x01
 	uint8_t datatype;
-	uint8_t ip[IP_SIZE];
+	uint8_t router_ip[IP_SIZE];
+	uint8_t assigned_ip[IP_SIZE];
 	uint8_t server_id[16];
 	// Recognition:
 	// 	0x00	- Recognized
@@ -98,7 +89,7 @@ typedef struct SansgridPeck {
 	uint8_t manid[4];
 	uint8_t modnum[4];
 	uint8_t serial_number[8];
-	uint8_t padding[31];
+	uint8_t padding[15];
 } SansgridPeck;
 
 //SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
@@ -123,17 +114,32 @@ typedef struct SansgridMock {
 	uint8_t pubkey[80];
 } SansgridMock;
 
-//SANSGRID_UNION(struct SansgridMock, SansgridMockConv);
 
 
 
 typedef struct SansgridPeacock {
 	// Datatype:	0x0C
-	uint8_t datatype;
-	uint8_t capabilities[80];
+	uint8_t		datatype;
+	// I/O(A) capabilities
+	uint8_t		IO_A_id;
+	uint8_t		IO_A_classification;
+	uint8_t		IO_A_direction;
+	char 		IO_A_label[30];
+	uint8_t 	IO_A_units[6];
+
+	// I/O(B) capabilities
+	uint8_t		IO_B_id;
+	uint8_t		IO_B_classification;
+	uint8_t		IO_B_direction;
+	char 		IO_B_label[30];
+	uint8_t 	IO_B_units[6];
+
+	// If more I/O types are coming
+	uint8_t 	additional_IO_needed;
+
+	uint8_t 	padding;
 } SansgridPeacock;
 
-//SANSGRID_UNION(struct SansgridPeacock, SansgridPeacockConv);
 
 
 
@@ -143,7 +149,6 @@ typedef struct SansgridNest {
 	uint8_t padding[80];
 } SansgridNest;
 
-//SANSGRID_UNION(struct SansgridNest, SansgridNestConv);
 
 
 
@@ -160,7 +165,6 @@ typedef struct SansgridSquawk {
 	uint8_t data[80];
 } SansgridSquawk;
 
-//SANSGRID_UNION(struct SansgridSquawk, SansgridSquawkConv);
 
 
 
@@ -172,7 +176,6 @@ typedef struct SansgridHeartbeat {
 	uint8_t padding[80];
 } SansgridHeartbeat;
 
-//SANSGRID_UNION(struct SansgridHeartbeat, SansgridHeartbeatConv);
 
 
 
@@ -190,7 +193,6 @@ typedef struct SansgridChirp {
 	uint8_t data[79];
 } SansgridChirp;
 
-//SANSGRID_UNION(struct SansgridChirp, SansgridChirpConv);
 
 
 
@@ -260,5 +262,4 @@ enum SansgridDeviceStatusEnum {
 
 #endif
 
-//#undef SANSGRID_UNION
 // vim: ft=c ts=4 noet sw=4:
