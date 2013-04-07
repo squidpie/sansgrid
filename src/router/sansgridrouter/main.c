@@ -334,9 +334,6 @@ int main(int argc, char *argv[]) {
 				//memcpy(payload, optarg, strlen(optarg)+1);
 				// TODO: Process and send this to the daemon
 				break;
-			case 'k':
-				// Kill daemon
-				// TODO: implement
 			case 'v':
 				// version
 				// TODO: Give version
@@ -387,7 +384,6 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 	}
-
 	
 
 	if (!no_daemonize) {
@@ -401,16 +397,11 @@ int main(int argc, char *argv[]) {
 	routing_table = routingTableInit(router_base);
 	void *arg;
 
-
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 
+	// Listen for commands or data from the server
 	sgSocketListen();
-	/*
-	while (1) {
-		sched_yield();
-	}
-	*/
 
 	pthread_cancel(serial_read_thread);
 	pthread_cancel(dispatch_thread);
@@ -429,6 +420,8 @@ void usage(int status) {
 	else {
 		printf("Usage: sansgrid [OPTION]\n");
 		printf("\
+  -f  --foreground           Don't background daemon\n\
+  -p  --packet               Send a sansgrid payload to the server\n\
   -h, --help                 display this help and exit\n\
   -v, --version              output version information and exit\n");
 	}
