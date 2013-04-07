@@ -35,8 +35,11 @@ typedef struct SansgridSerial {
 
 
 // initialize serial connection
-// WARNING: This function will change
 int8_t sgSerialOpen(void);
+// Configure radio as a router radio
+// Radio will be configured as a sensor radio by default.
+int8_t sgSerialSetAsRouter(void);
+int8_t sgSerialSetAsSensor(void);
 // Send size bytes of serialdata serially
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size);
 // Get data from serial in. Data size will be in size.
