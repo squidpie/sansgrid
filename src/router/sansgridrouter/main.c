@@ -223,24 +223,85 @@ int sgSocketListen(void) {
 }
 
 
+int sgSocketSend(void) {
+	int s, t;
+	socklen_t len;
+	struct sockaddr_un remote;
+	char str[100];
+	char *home_path = getenv("HOME");
+
+	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Trying to connect...\n");
+
+	remote.sun_family = AF_UNIX;
+
+	if (!home_path) {
+		perror("getenv");
+		exit(EXIT_FAILURE);
+	}
+	strcpy(str, home_path);
+	strcat(str, "/.sansgrid/command_socket");
+	strcpy(remote.sun_path, str);
+	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+	if (connect(s, (struct sockaddr*)&remote, len) == -1) {
+		perror("connect");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Connected.\n");
+
+	while (printf("> "), fgets(str, 100, stdin), !feof(stdin)) {
+		if (send(s, str, strlen(str), 0) == -1) {
+			perror("send");
+			exit(EXIT_FAILURE);
+		}
+
+		if ((t = recv(s, str, 100, 0)) > 0) {
+			if (str[t-1] == '\n') {
+				str[t-1] = '\0';
+			} else {
+				str[t] = '\0';
+			}
+			printf("echo> %s\n", str);
+			if (!strcmp(str, "stop")) {
+				break;
+			}
+		} else {
+			if (t < 0) perror ("recv");
+			else printf("Server closed connection\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+	close(s);
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
 				dispatch_thread;
 	int c;
 	int32_t no_daemonize = 0;
 	char *home_path = getenv("HOME");
+	char *option = NULL;
 	char config_path[100];
 	while (1) {
 		const struct option long_options[] = {
-			{"foreground",	no_argument, 	&no_daemonize, 	1},
-			{"daemon", 		no_argument, 	&no_daemonize, 	0},
-			{"help", 		no_argument, 	0, 				'h'},
-			{"version", 	no_argument, 	0, 				'v'},
+			{"foreground",	no_argument, 		&no_daemonize, 	1},
+			{"daemon", 		no_argument, 		&no_daemonize, 	0},
+			{"payload",		required_argument, 	0,				'p'},
+			{"help", 		no_argument, 		0, 				'h'},
+			{"version", 	no_argument, 		0, 				'v'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
+		char *payload;
 
-		c = getopt_long(argc, argv, "fhv", long_options, &option_index);
+		c = getopt_long(argc, argv, "fhpv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -260,6 +321,14 @@ int main(int argc, char *argv[]) {
 				// help
 				usage(EXIT_SUCCESS);
 				break;
+			case 'p':
+				// Payload is given
+				//memcpy(payload, optarg, strlen(optarg)+1);
+				// TODO: Process and send this to the daemon
+				break;
+			case 'k':
+				// Kill daemon
+				// TODO: implement
 			case 'v':
 				// version
 				// TODO: Give version
@@ -272,6 +341,25 @@ int main(int argc, char *argv[]) {
 				break;
 			default:
 				abort();
+		}
+	}
+
+	while (optind < argc) {
+		// deal with non-option argv elements
+		printf("%s\n", argv[optind++]);
+		option = argv[optind++];
+		if (!strcmp(option, "kill")) {
+			// kill daemon
+			// TODO: Implement
+		} else if (!strcmp(option, "start")) {
+			// daemonize
+			// TODO: Implement
+		} else if (!strcmp(option, "restart")) {
+			// kill and start daemon
+			// TODO: Implement
+		} else if (!strcmp(option, "status")) {
+			// print the status of the router daemon
+			// TODO: Implement
 		}
 	}
 	

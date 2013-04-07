@@ -1,1 +1,1 @@
-SUBDIRS = sansgridrouter_server
+SUBDIRS = sansgridrouter

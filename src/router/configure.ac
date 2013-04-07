@@ -30,7 +30,7 @@ AC_FUNC_FORK
 AC_FUNC_MALLOC
 
 AC_CONFIG_FILES([Makefile \
-		 sansgridrouter_server/Makefile])
+		 sansgridrouter/Makefile])
                  #test/Makefile
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
