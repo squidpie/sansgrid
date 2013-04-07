@@ -229,6 +229,10 @@ int sgSocketSend(const char *data, const int size) {
 	char socket_path[150];
 	getSansgridDir(socket_path);
 
+	if (!isRunning()) {
+		printf("sansgridrouter isn't running\n");
+		exit(EXIT_SUCCESS);
+	}
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
@@ -259,6 +263,9 @@ int sgSocketSend(const char *data, const int size) {
 			str[t-1] = '\0';
 		} else {
 			str[t] = '\0';
+		}
+		if (!strcmp(str, "kill")) {
+			printf("Shutting down daemon...\n");
 		}
 		//printf("echo> %s\n", str);
 		//if (!strcmp(str, "stop")) {
