@@ -30,8 +30,6 @@ void payloadMkSerial(SansgridSerial *sg_serial) {
 	}
 	for (int i=0; i<81; i++)
 		sg_serial->payload[i] = 0x0;
-	sg_serial->timestamp = 0x0;
-	sg_serial->origin = 0x0;
 	return;
 }
 
@@ -61,8 +59,10 @@ void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 	SansgridEyeball sg_eyeball;
 
 	sg_peck->datatype = SG_PECK;
-	for (i=0; i<IP_SIZE; i++)
-		sg_peck->ip[i] = 0x0;
+	for (i=0; i<IP_SIZE; i++) {
+		sg_peck->router_ip[i] = 0x0;
+		sg_peck->assigned_ip[i] = 0x0;
+	}
 	for (i=0; i<16; i++)
 		sg_peck->server_id[i] = 0x0;
 	sg_peck->recognition = test_specs->peck_mode;
@@ -102,8 +102,25 @@ void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs) {
 	int i;
 	sg_peacock->datatype = test_specs->peacock_mode;
-	for (i=0; i<80; i++)
-		sg_peacock->capabilities[i] = 0x0;
+	sg_peacock->IO_A_id = 0x0;
+	sg_peacock->IO_A_classification = 0x0;
+	sg_peacock->IO_A_direction = 0x0;
+	for (i=0; i<30; i++)
+		sg_peacock->IO_A_label[i] = 0x0;
+	for (i=0; i<6; i++)
+		sg_peacock->IO_A_units[i] = 0x0;
+
+	sg_peacock->IO_B_id = 0x0;
+	sg_peacock->IO_B_classification = 0x0;
+	sg_peacock->IO_B_direction = 0x0;
+	for (i=0; i<30; i++)
+		sg_peacock->IO_B_label[i] = 0x0;
+	for (i=0; i<6; i++)
+		sg_peacock->IO_B_units[i] = 0x0;
+
+	sg_peacock->additional_IO_needed = 0x0;
+
+	sg_peacock->padding = 0x0;
 
 	return;
 }

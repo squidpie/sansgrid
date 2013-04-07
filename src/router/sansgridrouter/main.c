@@ -129,8 +129,6 @@ void *heartbeatRuntime(void *arg) {
 	for (int i=0; i<IP_SIZE; i++)
 		sg_serial.origin_ip[i] = 0x0;
 	sg_serial.origin_ip[IP_SIZE-1] = 0x1;
-	sg_serial.origin = 0x0;
-	sg_serial.timestamp = 0x0;
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
 		sleepMicro(HEARTBEAT_UINTERVAL / count);
