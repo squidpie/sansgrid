@@ -281,14 +281,64 @@ int sgSocketSend(void) {
 	return 0;
 }
 
+void getSansgridDir(char wd[150]) {
+	// Get the .sansgrid directory path
+	// Return success or failure
+	// pass the path back in wd
+	char *home_path = getenv("HOME");
+
+	if (!home_path) {
+		printf("ERROR: Can't find home directory\n");
+		exit(EXIT_FAILURE);
+	}
+	snprintf(wd, 120, "%s/.sansgrid", home_path);
+
+}
+
+	
+
+
+int isRunning(void) {
+	// Check to see if the sansgrid daemon is running
+	pid_t sgpid;
+	FILE *FPTR = NULL;
+	char config_path[150];
+	getSansgridDir(config_path);
+	strncat(config_path, "/sansgridrouter.pid", 150);
+
+	if (!(FPTR = fopen(config_path, "r"))) {
+		// no file to be read. Daemon can't be running
+		return 0;
+	} else if (!fscanf(FPTR, "%d", &sgpid)) { 
+		// no pid to be read. Daemon can't be running
+		fclose(FPTR);
+		return 0;
+	}
+	fclose(FPTR);
+
+	sprintf(config_path, "/proc/%d/cmdline", sgpid);
+	if (!(FPTR = fopen(config_path, "r"))) {
+		// PID doesn't exist. Daemon can't be running.
+		return 0;
+	} else if (!fscanf(FPTR, "%s", config_path)) {
+		// Couldn't read. Daemon isn't running
+		fclose(FPTR);
+		return 0;
+	}
+	fclose(FPTR);
+	return sgpid;
+}
+	
+
+
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
 				dispatch_thread;
 	int c;
 	int32_t no_daemonize = 0;
-	char *home_path = getenv("HOME");
 	char *option = NULL;
-	char config_path[100];
+	char config_path[150];
+	pid_t sgpid;
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
@@ -346,7 +396,6 @@ int main(int argc, char *argv[]) {
 
 	while (optind < argc) {
 		// deal with non-option argv elements
-		printf("%s\n", argv[optind++]);
 		option = argv[optind++];
 		if (!strcmp(option, "kill")) {
 			// kill daemon
@@ -360,14 +409,19 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(option, "status")) {
 			// print the status of the router daemon
 			// TODO: Implement
+		} else if (!strcmp(option, "running")) {
+			// check to see if the daemon is running
+			if ((sgpid = isRunning()) != 0) {
+				printf("Running as process %i\n", sgpid);
+			} else {
+				printf("sansgridrouter is not running\n");
+			}
+			exit(EXIT_SUCCESS);
 		}
 	}
+
+	getSansgridDir(config_path);
 	
-	if (!home_path) {
-		printf("ERROR: Can't find home directory\n");
-		exit(EXIT_FAILURE);
-	}
-	snprintf(config_path, 100, "%s/.sansgrid", home_path);
 
 	if (!no_daemonize) {
 		int excode = daemon_init(config_path);
