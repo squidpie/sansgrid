@@ -65,6 +65,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);

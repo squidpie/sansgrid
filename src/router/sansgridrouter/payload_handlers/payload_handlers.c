@@ -157,6 +157,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		return -1;
 	}
 	memcpy(&sg_serial->dest_ip, ip_addr, IP_SIZE);
+	routingTableGetRouterIP(routing_table, sg_serial->origin_ip);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
