@@ -149,30 +149,27 @@ void fnExit(void) {
 }
 
 
+
 int sgSocketListen(void) {
 	int s, s2;
 	struct sockaddr_un local, remote;
 	socklen_t len;
 	char str[100];
-	char *home_path = getenv("HOME");
+	char socket_path[150];
+	getSansgridDir(socket_path);
 
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	if (!home_path) {
-		sprintf(str, "/home/vernon/.sansgrid");
-	} else {
-		strcpy(str, home_path);
-		strcat(str, "/.sansgrid");
-	}
-
 	local.sun_family = AF_UNIX;
-	mkdir(str, 0755);
-	strcat(str, "/command_socket");
-	strcpy(local.sun_path, str);
+	mkdir(socket_path, 0755);
+	strcat(socket_path, "/command_socket");
+	strcpy(local.sun_path, socket_path);
+
 	unlink(local.sun_path);
+
 	len = strlen(local.sun_path) + sizeof(local.sun_family);
 	if (bind(s, (struct sockaddr *)&local, len) == -1) {
 		perror("bind");
@@ -206,10 +203,11 @@ int sgSocketListen(void) {
 				else
 					str[n] = '\0';
 				//printf("Received %s\n", str);
-				if (!strcmp(str, "stop")) {
+				if (!strcmp(str, "kill")) {
 					shutdown_server = 1;
 					done = 1;
 				}
+
 				if (send(s2, str, n, 0) < 0) {
 					perror("send");
 					done = 1;
@@ -223,112 +221,63 @@ int sgSocketListen(void) {
 }
 
 
-int sgSocketSend(void) {
+int sgSocketSend(const char *data, const int size) {
 	int s, t;
 	socklen_t len;
 	struct sockaddr_un remote;
 	char str[100];
-	char *home_path = getenv("HOME");
+	char socket_path[150];
+	getSansgridDir(socket_path);
 
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Trying to connect...\n");
+	//printf("Trying to connect...\n");
 
 	remote.sun_family = AF_UNIX;
 
-	if (!home_path) {
-		perror("getenv");
-		exit(EXIT_FAILURE);
-	}
-	strcpy(str, home_path);
-	strcat(str, "/.sansgrid/command_socket");
-	strcpy(remote.sun_path, str);
+	strcat(socket_path, "/command_socket");
+	strcpy(remote.sun_path, socket_path);
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 	if (connect(s, (struct sockaddr*)&remote, len) == -1) {
 		perror("connect");
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Connected.\n");
+	//printf("Connected.\n");
 
-	while (printf("> "), fgets(str, 100, stdin), !feof(stdin)) {
-		if (send(s, str, strlen(str), 0) == -1) {
-			perror("send");
-			exit(EXIT_FAILURE);
-		}
+	//while (printf("> "), fgets(str, 100, stdin), !feof(stdin)) {
+	if (send(s, data, size, 0) == -1) {
+		perror("send");
+		exit(EXIT_FAILURE);
+	}
 
-		if ((t = recv(s, str, 100, 0)) > 0) {
-			if (str[t-1] == '\n') {
-				str[t-1] = '\0';
-			} else {
-				str[t] = '\0';
-			}
-			printf("echo> %s\n", str);
-			if (!strcmp(str, "stop")) {
-				break;
-			}
+	if ((t = recv(s, str, 100, 0)) > 0) {
+		if (str[t-1] == '\n') {
+			str[t-1] = '\0';
 		} else {
-			if (t < 0) perror ("recv");
-			else printf("Server closed connection\n");
-			exit(EXIT_FAILURE);
+			str[t] = '\0';
 		}
+		//printf("echo> %s\n", str);
+		//if (!strcmp(str, "stop")) {
+		//	break;
+		//}
+	} else {
+		if (t < 0) perror ("recv");
+		else printf("Server closed connection\n");
+		exit(EXIT_FAILURE);
 	}
 	close(s);
 
 	return 0;
 }
 
-void getSansgridDir(char wd[150]) {
-	// Get the .sansgrid directory path
-	// Return success or failure
-	// pass the path back in wd
-	char *home_path = getenv("HOME");
-
-	if (!home_path) {
-		printf("ERROR: Can't find home directory\n");
-		exit(EXIT_FAILURE);
-	}
-	snprintf(wd, 120, "%s/.sansgrid", home_path);
-
-}
-
-	
 
 
-int isRunning(void) {
-	// Check to see if the sansgrid daemon is running
-	pid_t sgpid;
-	FILE *FPTR = NULL;
-	char config_path[150];
-	getSansgridDir(config_path);
-	strncat(config_path, "/sansgridrouter.pid", 150);
 
-	if (!(FPTR = fopen(config_path, "r"))) {
-		// no file to be read. Daemon can't be running
-		return 0;
-	} else if (!fscanf(FPTR, "%d", &sgpid)) { 
-		// no pid to be read. Daemon can't be running
-		fclose(FPTR);
-		return 0;
-	}
-	fclose(FPTR);
 
-	sprintf(config_path, "/proc/%d/cmdline", sgpid);
-	if (!(FPTR = fopen(config_path, "r"))) {
-		// PID doesn't exist. Daemon can't be running.
-		return 0;
-	} else if (!fscanf(FPTR, "%s", config_path)) {
-		// Couldn't read. Daemon isn't running
-		fclose(FPTR);
-		return 0;
-	}
-	fclose(FPTR);
-	return sgpid;
-}
-	
 
 
 int main(int argc, char *argv[]) {
@@ -339,6 +288,9 @@ int main(int argc, char *argv[]) {
 	char *option = NULL;
 	char config_path[150];
 	pid_t sgpid;
+
+	getSansgridDir(config_path);
+
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
@@ -349,7 +301,6 @@ int main(int argc, char *argv[]) {
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
-		char *payload;
 
 		c = getopt_long(argc, argv, "fhpv", long_options, &option_index);
 		if (c == -1)
@@ -399,16 +350,22 @@ int main(int argc, char *argv[]) {
 		option = argv[optind++];
 		if (!strcmp(option, "kill")) {
 			// kill daemon
-			// TODO: Implement
+			sgSocketSend("kill", 4);
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "start")) {
 			// daemonize
-			// TODO: Implement
+			int excode = daemon_init();
+			if (excode == EXIT_FAILURE)
+				exit(EXIT_FAILURE);
+			no_daemonize = 1;
 		} else if (!strcmp(option, "restart")) {
 			// kill and start daemon
 			// TODO: Implement
+			exit(EXIT_FAILURE);
 		} else if (!strcmp(option, "status")) {
 			// print the status of the router daemon
 			// TODO: Implement
+			exit(EXIT_FAILURE);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -417,14 +374,17 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
+		} else {
+			// bad option
+			printf("Unknown Arg: %s\n", option);
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	getSansgridDir(config_path);
 	
 
 	if (!no_daemonize) {
-		int excode = daemon_init(config_path);
+		int excode = daemon_init();
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
 	}
