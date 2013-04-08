@@ -70,7 +70,6 @@ typedef struct SansgridEyeball {
 	uint8_t padding[62];
 } SansgridEyeball;
 
-//SANSGRID_UNION(struct SansgridEyeball, SansgridEyeballConv);
 
 
 
@@ -92,7 +91,6 @@ typedef struct SansgridPeck {
 	uint8_t padding[15];
 } SansgridPeck;
 
-//SANSGRID_UNION(struct SansgridPeck, SansgridPeckConv);
 
 
 
@@ -103,7 +101,6 @@ typedef struct SansgridSing {
 	uint8_t pubkey[80];
 } SansgridSing;
 
-//SANSGRID_UNION(struct SansgridSing, SansgridSingConv);
 
 
 

@@ -22,10 +22,17 @@
 #define _POSIX_C_SOURCE 1		// required for strtok_r
 
 #include <stdint.h>
-#include "sg_tcp.h"
+#include <stdlib.h>
 #include <string.h>
+#include "sg_tcp.h"
 #include "../../../sg_serial.h"
 #include "../../../payloads.h"
+
+
+typedef struct Dictionary {
+	char *key;
+	char *value;
+} Dictionary;
 
 
 int handle_payload(char *str, char **key, char **value, char **saved) {
@@ -67,8 +74,39 @@ int8_t sgTCPGetEyeball(const char *payload, SansgridEyeball *eyeball) {
 }
 
 
+
+int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
+	uint32_t identifier = 0x0;
+	uint8_t datatype = ~0x0;
+	Dictionary dict[30];
+	int32_t size = 0;
+	char *saved 	= NULL,
+		 *key 		= NULL,
+		 *value 	= NULL;
+	do {
+		if (handle_payload(payload, &key, &value, &saved) == 1) {
+			dict[size].key = key;
+			dict[size].value = value;
+			if (!strcmp(key, "rdid")) {
+				// found the identifier
+				identifier = atoi(key);
+			} else if (!strcmp(key, "dt")) {
+				// found the datatype
+				datatype = atoi(key);
+			}
+			size++;
+		} else
+			break;
+	} while (1);
+
+	return 0;
+}
+
+
+
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
+
 	return -1;
 }
 
