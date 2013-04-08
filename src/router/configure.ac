@@ -35,8 +35,8 @@ AC_CONFIG_FILES([Makefile \
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
 case $host in
-	*arm-linux*)	SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT) sg_tcp_rpi.$(OBJEXT)' ;;
-	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT) sg_tcp_generic.$(OBJEXT)' ;;
+	*arm-linux*)	SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
+	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)' ;;
 esac
 AC_SUBST([SANSGRIDROUTER_SYSTEM])
 AC_OUTPUT

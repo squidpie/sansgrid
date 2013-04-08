@@ -27,10 +27,9 @@ SANSGRID_TEST = test/communication/sg_communication_stubs.c \
 sansgridrouter_SOURCES = $(SANSGRID_BASE) \
 			  $(SANSGRID_COMM) \
 			  daemon/sansgrid_daemon.c \
+			  communication/sg_tcp.c \
 			  main.c
-EXTRA_sansgridrouter_SOURCES = communication/sg_tcp_rpi.c \
-				communication/sg_serial_rpi.c \
-				communication/sg_tcp_generic.c \
+EXTRA_sansgridrouter_SOURCES = 	communication/sg_serial_rpi.c \
 				communication/sg_serial_generic.c
 sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM)
 sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM)
