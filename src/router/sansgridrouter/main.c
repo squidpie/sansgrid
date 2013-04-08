@@ -227,6 +227,7 @@ int sgSocketSend(const char *data, const int size) {
 	char socket_path[150];
 	getSansgridDir(socket_path);
 
+	//printf("%s\n", DATADIR);
 	if (!isRunning()) {
 		printf("sansgridrouter isn't running\n");
 		exit(EXIT_SUCCESS);
