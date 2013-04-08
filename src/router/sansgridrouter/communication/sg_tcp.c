@@ -19,9 +19,53 @@
  *
  */
 
+#define _POSIX_C_SOURCE 1		// required for strtok_r
+
 #include <stdint.h>
 #include "sg_tcp.h"
+#include <string.h>
 #include "../../../sg_serial.h"
+#include "../../../payloads.h"
+
+
+int handle_payload(char *str, char **key, char **value, char **saved) {
+	// Get key and value from string
+	// Notes:
+	// 	Function returns 0 only if both the key and value are null.
+	// 		This is to catch empty values but still return the key
+	// 	No checks are done for empty keys
+	// 	saved should start initialized as a ptr to NULL
+
+	*key = (*saved == NULL) ? strtok_r(&str[1],	"!",	saved) : 
+				  strtok_r(NULL,	"!",	saved);
+
+	if (*saved == NULL) {
+		*value = NULL;
+		return 1;
+	} else if (*saved[0] == '|') {
+		*value = NULL;
+		*saved = *saved+1;
+		return 1;
+	} else {
+		*value = strtok_r(NULL, "|", saved);
+	}
+
+
+	if (*key == NULL && *value == NULL) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+
+
+int8_t sgTCPGetEyeball(const char *payload, SansgridEyeball *eyeball) {
+	// Get an eyeball datatype from the payload
+
+	return -1;
+}
+
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
