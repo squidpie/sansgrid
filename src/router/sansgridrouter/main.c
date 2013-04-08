@@ -35,6 +35,10 @@
 #include <sys/un.h>
 
 
+#ifndef DATADIR
+#define DATADIR "../../router_to_server"
+#endif
+
 void usage(int status);
 
 
@@ -227,7 +231,7 @@ int sgSocketSend(const char *data, const int size) {
 	char socket_path[150];
 	getSansgridDir(socket_path);
 
-	//printf("%s\n", DATADIR);
+	printf("%s\n", DATADIR);
 	if (!isRunning()) {
 		printf("sansgridrouter isn't running\n");
 		exit(EXIT_SUCCESS);
