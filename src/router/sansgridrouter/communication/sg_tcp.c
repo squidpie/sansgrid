@@ -27,6 +27,7 @@
 #include "sg_tcp.h"
 #include "../../../sg_serial.h"
 #include "../../../payloads.h"
+#include "../payload_handlers/payload_handlers.h"
 
 
 typedef struct Dictionary {
@@ -67,39 +68,119 @@ int handle_payload(char *str, char **key, char **value, char **saved) {
 
 
 
-int8_t sgTCPGetEyeball(const char *payload, SansgridEyeball *eyeball) {
+int8_t convertEyeball(Dictionary dict[], SansgridSerial **sg_serial) {
 	// Get an eyeball datatype from the payload
 
+	return -1;
+}
+
+int8_t convertPeck(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a peck datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertSing(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a sing datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertMock(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a mock datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertPeacock(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a peacock datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertNest(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a nest datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertSquawk(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a squawk datatype from the payload
+	
+	return -1;
+}
+
+int8_t convertChirp(Dictionary dict[], SansgridSerial **sg_serial) {
+	// Get a squawk datatype from the payload
+	
 	return -1;
 }
 
 
 
 int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
+	int i;
 	uint32_t identifier = 0x0;
 	uint8_t datatype = ~0x0;
 	Dictionary dict[30];
 	int32_t size = 0;
+	int8_t exit_code = 0;
 	char *saved 	= NULL,
 		 *key 		= NULL,
 		 *value 	= NULL;
+
 	do {
 		if (handle_payload(payload, &key, &value, &saved) == 1) {
 			dict[size].key = key;
 			dict[size].value = value;
-			if (!strcmp(key, "rdid")) {
-				// found the identifier
-				identifier = atoi(key);
-			} else if (!strcmp(key, "dt")) {
-				// found the datatype
-				datatype = atoi(key);
-			}
 			size++;
 		} else
 			break;
 	} while (1);
 
-	return 0;
+	// Find payload type
+	for (i=0; i<size; i++) {
+		key = dict[i].key;
+		if (!strcmp(key, "dt")) {
+			// found the datatype
+			datatype = atoi(key);
+		}
+	}
+	if (datatype == ~0x0) {
+		return -1;
+	}
+	datatype = sgPayloadGetType(datatype);
+	switch(datatype) {
+		case SG_DEVSTATUS_EYEBALLING:
+			exit_code = convertEyeball(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_PECKING:
+			exit_code = convertPeck(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_SINGING:
+			exit_code = convertSing(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_MOCKING:
+			exit_code = convertMock(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_PEACOCKING:
+			exit_code = convertPeacock(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_NESTING:
+			exit_code = convertNest(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_SQUAWKING:
+			exit_code = convertSquawk(dict, sg_serial);
+			break;
+		case SG_DEVSTATUS_CHIRPING:
+			exit_code = convertChirp(dict, sg_serial);
+			break;
+		default:
+			exit_code = -1;
+			break;
+	}
+
+	return exit_code;
 }
 
 

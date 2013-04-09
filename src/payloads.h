@@ -247,6 +247,8 @@ enum SansgridPeckRecognitionEnum {
 
 enum SansgridDeviceStatusEnum {
 	SG_DEVSTATUS_NULL,
+	SG_DEVSTATUS_HATCHING,			// Hatching status
+	SG_DEVSTATUS_FLYING,			// Flying status
 	SG_DEVSTATUS_EYEBALLING,		// Eyeballing Status
 	SG_DEVSTATUS_PECKING,			// Pecking Status
 	SG_DEVSTATUS_SINGING,			// Singing Status
@@ -254,6 +256,10 @@ enum SansgridDeviceStatusEnum {
 	SG_DEVSTATUS_PEACOCKING,		// Peacocking Status
 	SG_DEVSTATUS_NESTING,			// Nesting Status
 	SG_DEVSTATUS_SQUAWKING,			// Squawking Status
+	SG_DEVSTATUS_HEARTBEAT,
+	SG_DEVSTATUS_CHIRPING,
+	
+	// Compound types
 	SG_DEVSTATUS_LEASED 			// Device Associated with Network
 };
 

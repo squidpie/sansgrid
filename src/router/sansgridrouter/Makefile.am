@@ -37,3 +37,4 @@ sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/tests.c
 
+AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\"

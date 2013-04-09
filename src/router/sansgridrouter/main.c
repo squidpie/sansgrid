@@ -35,6 +35,10 @@
 #include <sys/un.h>
 
 
+#ifndef DATADIR
+#define DATADIR "../../router_to_server"
+#endif
+
 void usage(int status);
 
 
@@ -45,6 +49,7 @@ void *dispatchRuntime(void *arg) {
 	while (1) {
 		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) 
 			exit(EXIT_FAILURE);
+		// FIXME: Use sgPayloadGetType, defined in payload_handlers.c
 		switch (sg_serial->payload[0]) {
 			case SG_HATCH:
 				routerHandleHatching(routing_table, sg_serial);
@@ -227,6 +232,13 @@ int sgSocketSend(const char *data, const int size) {
 	char socket_path[150];
 	getSansgridDir(socket_path);
 
+	// FIXME:
+	// 	I'll probably have to add a function
+	// 	to find the actual datadir; check the current directory,
+	// 	then check the PREFIX/share dir?
+	// 	But then it would break if there was a file with the same name in the current dir
+	// 	but wasn't for the same purpose. And it still might cause stale scripts...
+	printf("%s\n", DATADIR);
 	if (!isRunning()) {
 		printf("sansgridrouter isn't running\n");
 		exit(EXIT_SUCCESS);
