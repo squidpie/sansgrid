@@ -87,17 +87,19 @@ int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
 		if (handle_payload(payload, &key, &value, &saved) == 1) {
 			dict[size].key = key;
 			dict[size].value = value;
-			if (!strcmp(key, "rdid")) {
-				// found the identifier
-				identifier = atoi(key);
-			} else if (!strcmp(key, "dt")) {
-				// found the datatype
-				datatype = atoi(key);
-			}
 			size++;
 		} else
 			break;
 	} while (1);
+
+	// Find payload type
+	if (!strcmp(key, "rdid")) {
+		// found the identifier
+		identifier = atoi(key);
+	} else if (!strcmp(key, "dt")) {
+		// found the datatype
+		datatype = atoi(key);
+	}
 
 	return 0;
 }

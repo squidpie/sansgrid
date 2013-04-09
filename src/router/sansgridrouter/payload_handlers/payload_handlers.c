@@ -50,7 +50,73 @@ static void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZ
 
 	return;
 }
-	
+
+
+enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
+	// Return the generic data type of the payload
+	// e.g SG_DEVSTATUS_EYEBALLING, SG_DEVSTATUS_PECKING, etc
+	switch (dt) {
+		case SG_HATCH:
+			// Hatching
+			return SG_DEVSTATUS_HATCHING;
+			break;
+		case SG_FLY:
+			// Flying
+			return SG_DEVSTATUS_FLYING;
+			break;
+		case SG_EYEBALL:
+			// Eyeballing
+			return SG_DEVSTATUS_EYEBALLING;
+			break;
+		case SG_PECK:
+			// Pecking
+			return SG_DEVSTATUS_PECKING;
+			break;
+		case SG_SING_WITH_KEY:
+		case SG_SING_WITHOUT_KEY:
+			// Singing
+			return SG_DEVSTATUS_SINGING;
+			break;
+		case SG_MOCK_WITH_KEY:
+		case SG_MOCK_WITHOUT_KEY:
+			// Mocking
+			return SG_DEVSTATUS_MOCKING;
+			break;
+		case SG_PEACOCK:
+			// Peacocking
+			return SG_DEVSTATUS_PEACOCKING;
+			break;
+		case SG_NEST:
+			return SG_DEVSTATUS_NESTING;
+			break;
+		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
+		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
+		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
+		case SG_SQUAWK_SERVER_DENY_SENSOR:
+		case SG_SQUAWK_SERVER_RESPOND:
+		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+			return SG_DEVSTATUS_SQUAWKING;
+			break;
+		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
+		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
+			return SG_DEVSTATUS_HEARTBEAT;
+			break;
+		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
+		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
+		case SG_CHIRP_DATA_STREAM_START:
+		case SG_CHIRP_DATA_STREAM_CONTINUE:
+		case SG_CHIRP_DATA_STREAM_END:
+		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+		case SG_CHIRP_SENSOR_DISCONNECT:
+			return SG_DEVSTATUS_CHIRPING;
+			break;
+		default:
+			return SG_DEVSTATUS_NULL;
+			break;
+	}
+	return SG_DEVSTATUS_NULL;
+}
 
 
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {

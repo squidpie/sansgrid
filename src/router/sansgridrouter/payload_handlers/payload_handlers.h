@@ -29,6 +29,7 @@
 
 
 
+enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt);
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial);
