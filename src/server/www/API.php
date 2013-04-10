@@ -92,10 +92,12 @@ switch ( $data["dt"] ) {
 function processEyeball ($sent_from, $payload, $db) {
 	global $SG;
 
-	$modnum = $payload["modnum"];
-	$manid 	= $payload["manid"];
-	$sn 	= $payload["sn"];
-	$mode 	= $payload["mode"];
+	// Data from API
+	$router_id 	= $payload["rid"];
+	$modnum 	= $payload["modnum"];
+	$manid 		= $payload["manid"];
+	$sn 		= $payload["sn"];
+	$mode 		= $payload["mode"];
 	
 	// Do we recognize this sensor?
 	$query  = "SELECT COUNT(*) as count FROM sensor ";
@@ -143,7 +145,7 @@ function processEyeball ($sent_from, $payload, $db) {
 			$reply = appendToPayload($reply, "sn", 				$sn);
 
 			// Log it
-			$msg = "[$sent_from] - Eyeballing - New sensor entered network. ";
+			$msg  = "[$sent_from] - Eyeballing - New sensor entered network. ";
 			$msg .= "Sensor not ready to mate. ";
 			$msg .= "Manufacturer's ID = $manid, ";
 			$msg .= "model number = $modnum, ";
@@ -177,12 +179,18 @@ function processEyeball ($sent_from, $payload, $db) {
 				print "WARNING!!! this still needs to be added to the pipeline\n";
 				xmitToRouter($reply);
 
+
+				// Sleep for 250 ms after eyeball reply before sending peck. 
+				usleep(250000);		
+
+				print "WARNING!!! we now need to send a Sing packet!!!\n";
+
 			// ...else automatic mating is not allowed
 			} else {
 				$reply = appendToPayload("",	 "dt", 				"1");
 				$reply = appendToPayload($reply, "ipaddress", 		"");
 				$reply = appendToPayload($reply, "serverid", 		$server_key);
-				$reply = appendToPayload($reply, "recognition", 	"----");
+				$reply = appendToPayload($reply, "recognition", 	"4NEEDAPPROVAL");
 				$reply = appendToPayload($reply, "manid", 			$manid);
 				$reply = appendToPayload($reply, "modnum", 			$modnum);
 				$reply = appendToPayload($reply, "sn", 				$sn);
