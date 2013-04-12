@@ -30,6 +30,11 @@
 #include "../../../payloads.h"
 #include "../payload_handlers/payload_handlers.h"
 
+// Delimiters
+// Note: These are wide chars. They take up 2 bytes
+#define DELIM_VAL "α"
+#define DELIM_KEY "β"
+
 
 typedef struct Dictionary {
 	char *key;
@@ -45,18 +50,18 @@ int handle_payload(char *str, char **key, char **value, char **saved) {
 	// 	No checks are done for empty keys
 	// 	saved should start initialized as a ptr to NULL
 
-	*key = (*saved == NULL) ? strtok_r(&str[1],	"!",	saved) : 
-				  strtok_r(NULL,	"!",	saved);
+	*key = (*saved == NULL) ? strtok_r(&str[1],	DELIM_VAL,	saved) : 
+				  strtok_r(NULL,	DELIM_VAL,	saved);
 
 	if (*saved == NULL) {
 		*value = NULL;
 		return 1;
-	} else if (*saved[0] == '|') {
+	} else if (!strcmp(*saved, DELIM_KEY)) {
 		*value = NULL;
 		*saved = *saved+1;
 		return 1;
 	} else {
-		*value = strtok_r(NULL, "|", saved);
+		*value = strtok_r(NULL, DELIM_KEY, saved);
 	}
 
 
