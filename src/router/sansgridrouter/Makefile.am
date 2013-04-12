@@ -4,6 +4,7 @@ AM_CFLAGS = -Wall -std=c99
 
 SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
+		communication/sg_tcp_handler.c \
 		routing_table/routing_table.c \
 		routing_table/heartbeat.c
 SANSGRID_TEST = test/communication/sg_communication_stubs.c \

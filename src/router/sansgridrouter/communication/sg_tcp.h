@@ -23,6 +23,21 @@
 
 #include <stdint.h>
 #include "../../../sg_serial.h"
+
+// Delimiters
+// Note: These are wide chars. They take up 2 bytes
+#define DELIM_VAL "α"
+#define DELIM_KEY "β"
+
+typedef struct Dictionary {
+	char *key;
+	char *value;
+} Dictionary;
+
+int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial);
+
+
+// Low-level sending/receiving
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size);
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 

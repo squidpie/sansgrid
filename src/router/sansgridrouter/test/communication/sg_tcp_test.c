@@ -1,4 +1,4 @@
-/* Definitions for server communication functions
+/* Tests for router<-->server communication
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -15,35 +15,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
- *
  */
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
-
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <string.h>
-#include "sg_tcp.h"
-#include "../../../sg_serial.h"
-#include "../../../payloads.h"
-#include "../payload_handlers/payload_handlers.h"
-
-
-
-
-int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
-	// Send size bytes of serialdata
-
-	return -1;
-}
-
-int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	// Receive serialdata, size of packet stored in size
-	return -1;
-}
-
+#include <sys/types.h>
+#include "../../../../sg_serial.h"
+#include "../tests.h"
+#include "sg_communication_stubs.h"
 
 
 // vim: ft=c ts=4 noet sw=4:
