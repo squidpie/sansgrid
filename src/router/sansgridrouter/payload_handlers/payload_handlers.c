@@ -323,8 +323,20 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peacock data type
 	// Send a SansgridPeacock from sensor to server
-	routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
-			SG_DEVSTATUS_NESTING);
+	SansgridPeacock *sg_peacock;
+	SANSGRID_UNION(SansgridPeacock, SansgridPeacockConv) sg_peacock_union;
+
+	// Convert serial data to formatted data
+	sg_peacock_union.serialdata = sg_serial->payload;
+	sg_peacock = sg_peacock_union.formdata;
+
+	if (sg_peacock->additional_IO_needed == 1) {
+		routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+				SG_DEVSTATUS_PEACOCKING);
+	} else {
+		routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+				SG_DEVSTATUS_NESTING);
+	}
 	sgTCPSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;

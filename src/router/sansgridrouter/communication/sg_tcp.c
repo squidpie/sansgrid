@@ -21,6 +21,7 @@
 
 #define _POSIX_C_SOURCE 1		// required for strtok_r
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,9 +69,66 @@ int handle_payload(char *str, char **key, char **value, char **saved) {
 
 
 
-int8_t convertEyeball(Dictionary dict[], SansgridSerial **sg_serial) {
-	// Get an eyeball datatype from the payload
 
+void atox(char *str, uint8_t *hexarray, uint32_t hexsize) {
+	// convert the full string of hex values into an array
+	int i;
+	int index = 0;
+	char chunk[3];
+	int offset; 
+	uint32_t length;
+	uint32_t uval;
+
+	for (i=0; i<hexsize; i++)
+		hexarray[i] = 0x0;
+	if (str == NULL)
+		return;
+	length = strlen(str);
+	offset = hexsize - ((length+1)/2);
+
+	for (i=0; i<length;) {
+		if (((length ^ i) & 0x1) == 0x1) {
+			// make sure we catch case of 0x123
+			// where we should parse as 0x1  0x23
+			sscanf(&str[i], "%1s", chunk);
+			i++;
+		} else {
+			sscanf(&str[i], "%2s", chunk);
+			i += 2;
+		}
+		sscanf(chunk, "%x", &uval);
+		hexarray[i+offset] = (uval & 0xff);
+	}
+	return;
+}
+
+
+
+char *match(Dictionary dict[], int size, char *key) {
+	// Return the value at key.
+	int i;
+	for (i=0; i<size; i++) {
+		if (!strcmp(key, dict[i].key)) {
+			return dict[i].value;
+		}
+	}
+	return NULL;
+}
+
+
+
+int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial **sg_serial) {
+	// Get an eyeball datatype from the payload
+	char *datatype_c = match(dict, size, "dt");
+	char *manid = match(dict, size, "manid");
+	char *modnum = match(dict, size, "modnum");
+	char *sn = match(dict, size, "sn");
+	char *profile = match(dict, size, "profile");
+	char *mode = match(dict, size, "mode");
+	SansgridEyeball sg_eyeball = {
+		.datatype = 
+		.manid = 
+	};
 	return -1;
 }
 
@@ -137,6 +195,8 @@ int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
 		} else
 			break;
 	} while (1);
+	dict[size].key = NULL;
+	dict[size].value = NULL;
 
 	// Find payload type
 	for (i=0; i<size; i++) {
