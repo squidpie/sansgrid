@@ -19,7 +19,7 @@
  *
  */
 
-#define _POSIX_C_SOURCE 1		// required for strtok_r
+#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
 
 #include <stdio.h>
 #include <stdint.h>
@@ -70,10 +70,9 @@ int handle_payload(char *str, char **key, char **value, char **saved) {
 
 
 
-void atox(char *str, uint8_t *hexarray, uint32_t hexsize) {
+void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	// convert the full string of hex values into an array
 	int i;
-	int index = 0;
 	char chunk[3];
 	int offset; 
 	uint32_t length;
@@ -117,68 +116,135 @@ char *match(Dictionary dict[], int size, char *key) {
 
 
 
-int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial **sg_serial) {
+int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get an eyeball datatype from the payload
-	char *datatype_c = match(dict, size, "dt");
-	char *manid = match(dict, size, "manid");
-	char *modnum = match(dict, size, "modnum");
-	char *sn = match(dict, size, "sn");
-	char *profile = match(dict, size, "profile");
-	char *mode = match(dict, size, "mode");
-	SansgridEyeball sg_eyeball = {
-		.datatype = 
-		.manid = 
-	};
-	return -1;
+	SansgridEyeball sg_eyeball;
+
+	atox(&sg_eyeball.datatype,		match(dict, size, "dt"), 		1*sizeof(uint8_t));
+	atox(sg_eyeball.manid, 			match(dict, size, "manid"),		4*sizeof(uint8_t));
+	atox(sg_eyeball.modnum, 		match(dict, size, "modnum"),	4*sizeof(uint8_t));
+	atox(sg_eyeball.serial_number,	match(dict, size, "sn"), 		8*sizeof(uint8_t));
+	atox(&sg_eyeball.profile, 		match(dict, size, "profile"), 	1*sizeof(uint8_t));
+	atox(&sg_eyeball.mode, 			match(dict, size, "mode"), 		1*sizeof(uint8_t));
+
+	memset(sg_eyeball.padding, 0x0, 62*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_eyeball, sizeof(SansgridEyeball));
+
+	return 0;
 }
 
-int8_t convertPeck(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peck datatype from the payload
+	SansgridPeck sg_peck;
+
+	atox(&sg_peck.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_peck.router_ip, 		match(dict, size, "router_ip"),	IP_SIZE);
+	atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
+	atox(sg_peck.server_id,			match(dict, size, "sid"),		16*sizeof(uint8_t));
+	atox(&sg_peck.recognition,		match(dict, size,"recognition"),1*sizeof(uint8_t));
+	atox(sg_peck.manid,				match(dict, size, "manid"),		4*sizeof(uint8_t));
+	atox(sg_peck.modnum,			match(dict, size, "modnum"),	4*sizeof(uint8_t));
+	atox(sg_peck.serial_number,		match(dict, size, "sn"),		8*sizeof(uint8_t));
+
+	memset(sg_peck.padding, 0x0, 15*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_peck, sizeof(SansgridPeck));
 	
-	return -1;
+	return 0;
 }
 
-int8_t convertSing(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a sing datatype from the payload
+	SansgridSing sg_sing;
+
+	atox(&sg_sing.datatype,			match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_sing.pubkey, 			match(dict, size, "servpubkey"),80*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_sing, sizeof(SansgridSing));
 	
-	return -1;
+	return 0;
 }
 
-int8_t convertMock(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a mock datatype from the payload
+	SansgridMock sg_mock;
+
+	atox(&sg_mock.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_mock.pubkey,			match(dict, size, "senspubkey"),80*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_mock, sizeof(SansgridMock));
 	
-	return -1;
+	return 0;
 }
 
-int8_t convertPeacock(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
+	SansgridPeacock sg_peacock;
+
+	atox(&sg_peacock.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
+
+	atox(&sg_peacock.IO_A_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
+	memcpy(sg_peacock.IO_A_label, 	match(dict, size, "?"), 		30*sizeof(char));
+	atox(sg_peacock.IO_A_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
 	
-	return -1;
+	atox(&sg_peacock.IO_B_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
+	memcpy(sg_peacock.IO_B_label, 	match(dict, size, "?"),			30*sizeof(char));
+	atox(sg_peacock.IO_B_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
+
+	sg_peacock.padding = 0x0;
+
+	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
+
+	return 0;
 }
 
-int8_t convertNest(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a nest datatype from the payload
+	SansgridNest sg_nest;
+
+	atox(&sg_nest.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
 	
-	return -1;
+	memset(sg_nest.padding, 0x0, 80*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_nest, sizeof(SansgridNest));
+	
+	return 0;
 }
 
-int8_t convertSquawk(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
+	SansgridSquawk sg_squawk;
 	
-	return -1;
+	atox(&sg_squawk.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_squawk.data,			match(dict, size, "data"),		80*sizeof(uint8_t));
+
+	memcpy(sg_serial->payload, &sg_squawk, sizeof(SansgridSquawk));
+
+	return 0;
 }
 
-int8_t convertChirp(Dictionary dict[], SansgridSerial **sg_serial) {
+int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
+	SansgridChirp sg_chirp;
+
+	atox(&sg_chirp.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(&sg_chirp.datasize,		match(dict, size, "?"),			1*sizeof(uint8_t));
+	atox(sg_chirp.data,				match(dict, size, "data"),		79*sizeof(uint8_t));
 	
-	return -1;
+	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
+
+	return 0;
 }
 
 
 
-int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
+int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 	int i;
-	uint32_t identifier = 0x0;
 	uint8_t datatype = ~0x0;
 	Dictionary dict[30];
 	int32_t size = 0;
@@ -212,28 +278,28 @@ int8_t sgTCPHandle(char *payload, SansgridSerial **sg_serial) {
 	datatype = sgPayloadGetType(datatype);
 	switch(datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
-			exit_code = convertEyeball(dict, sg_serial);
+			exit_code = convertEyeball(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_PECKING:
-			exit_code = convertPeck(dict, sg_serial);
+			exit_code = convertPeck(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_SINGING:
-			exit_code = convertSing(dict, sg_serial);
+			exit_code = convertSing(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_MOCKING:
-			exit_code = convertMock(dict, sg_serial);
+			exit_code = convertMock(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_PEACOCKING:
-			exit_code = convertPeacock(dict, sg_serial);
+			exit_code = convertPeacock(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_NESTING:
-			exit_code = convertNest(dict, sg_serial);
+			exit_code = convertNest(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_SQUAWKING:
-			exit_code = convertSquawk(dict, sg_serial);
+			exit_code = convertSquawk(dict, size, sg_serial);
 			break;
 		case SG_DEVSTATUS_CHIRPING:
-			exit_code = convertChirp(dict, sg_serial);
+			exit_code = convertChirp(dict, size, sg_serial);
 			break;
 		default:
 			exit_code = -1;

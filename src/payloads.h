@@ -119,15 +119,15 @@ typedef struct SansgridPeacock {
 	uint8_t		datatype;
 	// I/O(A) capabilities
 	uint8_t		IO_A_id;
-	uint8_t		IO_A_classification;
-	uint8_t		IO_A_direction;
+	uint8_t		IO_A_class;
+	uint8_t		IO_A_direc;
 	char 		IO_A_label[30];
 	uint8_t 	IO_A_units[6];
 
 	// I/O(B) capabilities
 	uint8_t		IO_B_id;
-	uint8_t		IO_B_classification;
-	uint8_t		IO_B_direction;
+	uint8_t		IO_B_class;
+	uint8_t		IO_B_direc;
 	char 		IO_B_label[30];
 	uint8_t 	IO_B_units[6];
 

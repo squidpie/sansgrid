@@ -103,16 +103,16 @@ void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs
 	int i;
 	sg_peacock->datatype = test_specs->peacock_mode;
 	sg_peacock->IO_A_id = 0x0;
-	sg_peacock->IO_A_classification = 0x0;
-	sg_peacock->IO_A_direction = 0x0;
+	sg_peacock->IO_A_class= 0x0;
+	sg_peacock->IO_A_direc= 0x0;
 	for (i=0; i<30; i++)
 		sg_peacock->IO_A_label[i] = 0x0;
 	for (i=0; i<6; i++)
 		sg_peacock->IO_A_units[i] = 0x0;
 
 	sg_peacock->IO_B_id = 0x0;
-	sg_peacock->IO_B_classification = 0x0;
-	sg_peacock->IO_B_direction = 0x0;
+	sg_peacock->IO_B_class= 0x0;
+	sg_peacock->IO_B_direc= 0x0;
 	for (i=0; i<30; i++)
 		sg_peacock->IO_B_label[i] = 0x0;
 	for (i=0; i<6; i++)
