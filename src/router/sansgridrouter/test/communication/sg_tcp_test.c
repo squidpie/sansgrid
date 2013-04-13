@@ -20,17 +20,13 @@
 #include "sg_tcp_test.h"
 
 START_TEST (testAtoxOneByte) {
-	uint8_t expected;
+	uint16_t expected;
 	uint8_t hexarray;
 	char str[4];
 
 	// Test 0x00 .. 0xff
 	for (expected = 0x00; expected <= 0xff; expected++) {
-#if TESTS_DEBUG_LEVEL > 0
-		printf("expected: 0x%.2x\n", expected);
-#endif
 		snprintf(str, 3, "%.2x", expected);
-		printf("string is %s\n", str);
 		atox(&hexarray, str, 1);
 		fail_unless((hexarray == expected), "Conversion Mismatch: Expected 0x%.2x\tGot 0x%.2x", expected, hexarray);
 	}
