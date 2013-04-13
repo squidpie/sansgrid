@@ -33,11 +33,41 @@ START_TEST (testAtoxOneByte) {
 }
 END_TEST
 
+START_TEST (testAtoxMulti) {
+	int i;
+	uint16_t expected[16];
+	uint8_t expected_short[16];
+	char str[33];
+	uint8_t hexarray[16];
+
+	memset(expected, 0x0, sizeof(uint16_t));
+	memset(expected_short, 0x0, sizeof(uint8_t));
+
+	for (; expected[15] <= 0xff; expected[0]++) {
+		if (expected[0] > 0xff) {
+			expected[0] = 0x0;
+		}
+		for (i=0; i<16; i++) {
+			expected_short[i] = expected[i];
+			snprintf(&str[i*2], 3, "%.2x", expected_short[i]);
+		}
+		atox(hexarray, str, 16);
+		fail_unless(memcmp(hexarray, expected_short, 16*sizeof(uint8_t)), "Conversion Mismatch");
+
+		for (i=14; i>= 1; i--) {
+			expected[i] = expected[i-1];
+		}
+	}
+}
+END_TEST
+
+
 
 Suite *intraRouterTestAtox(void) {
 	Suite *s = suite_create("Hex String Conversion Tests");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testAtoxOneByte);
+	tcase_add_test(tc_core, testAtoxMulti);
 
 	suite_add_tcase(s, tc_core);
 

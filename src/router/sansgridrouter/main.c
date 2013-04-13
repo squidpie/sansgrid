@@ -131,14 +131,11 @@ void *heartbeatRuntime(void *arg) {
 	for (int i=0; i<80; i++)
 		sg_hb.padding[i] = 0x0;
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
-	for (int i=0; i<IP_SIZE; i++)
-		sg_serial.origin_ip[i] = 0x0;
-	sg_serial.origin_ip[IP_SIZE-1] = 0x1;
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
 		sleepMicro(HEARTBEAT_UINTERVAL / count);
 		routingTableFindNextDevice(routing_table, ip_addr);
-		memcpy(&sg_serial.dest_ip, ip_addr, IP_SIZE);
+		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
 	}
 

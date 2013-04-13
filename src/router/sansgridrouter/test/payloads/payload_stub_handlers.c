@@ -25,8 +25,7 @@
 
 void payloadMkSerial(SansgridSerial *sg_serial) {
 	for (int i=0; i<IP_SIZE; i++) {
-		sg_serial->dest_ip[i] = 0x0;
-		sg_serial->origin_ip[i] = 0x0;
+		sg_serial->ip_addr[i] = 0x0;
 	}
 	for (int i=0; i<81; i++)
 		sg_serial->payload[i] = 0x0;

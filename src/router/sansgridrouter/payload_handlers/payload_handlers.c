@@ -184,7 +184,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
 		routingTableAssignIP(routing_table, ip_addr, dev_prop);
-		memcpy(&sg_serial->origin_ip, ip_addr, IP_SIZE);
+		memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 
 		// Send packet to the server
 		sgTCPSend(sg_serial, sizeof(SansgridSerial));
@@ -222,14 +222,14 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		// error
 		return -1;
 	}
-	memcpy(&sg_serial->dest_ip, ip_addr, IP_SIZE);
-	routingTableGetRouterIP(routing_table, sg_serial->origin_ip);
+	memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
+	//routingTableGetRouterIP(routing_table, sg_serial->origin_ip);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
 			// Sensor Recognized
 			// Next packet: Squawk
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
@@ -237,7 +237,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor Not Recognized;
 			// Server will mate
 			// Next packet: Mate
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SINGING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
@@ -249,7 +249,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor refuses mate
 		default:
 			// fallthrough/error
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
 	}
@@ -268,7 +268,7 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_sing_union.serialdata = sg_serial->payload;
 	sg_sing = sg_sing_union.formdata;
 
-	routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_MOCKING);
 
 	switch (sg_sing->datatype) {
@@ -280,7 +280,7 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			// error
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
 	}
@@ -299,7 +299,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_mock_union.serialdata = sg_serial->payload;
 	sg_mock = sg_mock_union.formdata;
 
-	routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
 
 
@@ -311,7 +311,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
 	}
@@ -331,10 +331,10 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_peacock = sg_peacock_union.formdata;
 
 	if (sg_peacock->additional_IO_needed == 1) {
-		routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
 	} else {
-		routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_NESTING);
 	}
 	sgTCPSend(sg_serial, sizeof(SansgridSerial));
@@ -346,7 +346,7 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	// Send a SansgridNest from server to sensor
-	routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
@@ -368,56 +368,56 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
 			// Server Challenges sensor
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
 			// Server Responds without challenge to sensor
 			// TODO: Confirm datatype addition
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			// Sensor respond to server challenge,
 			// sensor challenge coming
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
 			// Sensor challenges server
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 			// Server denies sensor challenge request
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		case SG_SQUAWK_SERVER_RESPOND:
 			// Server Responds to challenge
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
 			// Sensor accepts server's response
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_NESTING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
 			// error
-			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
 	}
@@ -438,17 +438,17 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			// Heartbeat from router to sensor
-			routingTableSetHeartbeatStatus(routing_table, sg_serial->dest_ip,
+			routingTableSetHeartbeatStatus(routing_table, sg_serial->ip_addr,
 					SG_DEVICE_PINGING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
-			routingTableSetHeartbeatStatus(routing_table, sg_serial->origin_ip,
+			routingTableSetHeartbeatStatus(routing_table, sg_serial->ip_addr,
 					SG_DEVICE_PRESENT);
 			break;
 		default:
-			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
 	}
@@ -472,13 +472,13 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	switch (sg_chirp->datatype) {
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 			// Command sent from server to sensor
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->dest_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_LEASED);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
 			// Data sent from server to sensor
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->origin_ip,
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_LEASED);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
@@ -493,14 +493,14 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Currently undefined
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			// Network is disconnecting sensor
-			routerFreeDevice(routing_table, sg_serial->dest_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		case SG_CHIRP_SENSOR_DISCONNECT:
 			// Sensor is disconnecting from network
-			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
-			routerFreeDevice(routing_table, sg_serial->origin_ip);
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return -1;
 			break;
 	}
