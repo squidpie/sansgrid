@@ -27,8 +27,9 @@
 #include "payloads.h"
 
 typedef struct SansgridSerial {
-	uint8_t origin_ip[IP_SIZE];		// ip of the payload sender
-	uint8_t dest_ip[IP_SIZE];		// ip of the destination
+	uint8_t control;				// control byte
+	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
+									// contains origin or destination IP address
 	uint8_t payload[81];			// payload
 } SansgridSerial;
 
