@@ -56,9 +56,12 @@ int main(void) {
 
 	SRunner *sr;
    	sr = srunner_create(makeMasterSuite());
+	// routing tests
 	srunner_add_suite(sr, routingBasicTestSuite());
+	// dispatch tests
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());
+	// payload tests
 	srunner_add_suite(sr, payloadSizeTesting());
 	srunner_add_suite(sr, payloadTestEyeball());
 	srunner_add_suite(sr, payloadTestPeck());
@@ -68,6 +71,8 @@ int main(void) {
 	srunner_add_suite(sr, payloadTestSquawk());
 	srunner_add_suite(sr, payloadTestNest());
 	srunner_add_suite(sr, payloadTestChirp());
+	// intrarouter tests
+	srunner_add_suite(sr, intraRouterTestAtox());
 
 	num_devices = 0;
 

@@ -1,4 +1,4 @@
-/* Definitions for server communication functions
+/* Tests for router<-->server communication
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -15,34 +15,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
- *
  */
-#ifndef __SG_ROUTER_TCP_H__
-#define __SG_ROUTER_TCP_H__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
-#include "../../../sg_serial.h"
-
-// Delimiters
-// Note: These are wide chars. They take up 2 bytes
-#define DELIM_VAL "α"
-#define DELIM_KEY "β"
-
-typedef struct Dictionary {
-	char *key;
-	char *value;
-} Dictionary;
-
-void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
-int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial);
+#include <pthread.h>
+#include <semaphore.h>
+#include <string.h>
+#include <sys/types.h>
+#include <check.h>
+#include "../../../../sg_serial.h"
+#include "../tests.h"
+#include "../../communication/sg_tcp.h"
+#include "sg_communication_stubs.h"
 
 
-// Low-level sending/receiving
-int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size);
-int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 
-#endif
+Suite *intraRouterTestAtox(void);
 
 // vim: ft=c ts=4 noet sw=4:
 

@@ -22,7 +22,8 @@ SANSGRID_TEST = test/communication/sg_communication_stubs.c \
 		test/payloads/payload_dt_peacock_tests.c \
 		test/payloads/payload_dt_squawk_tests.c \
 		test/payloads/payload_dt_nest_tests.c \
-		test/payloads/payload_dt_chirp_tests.c
+		test/payloads/payload_dt_chirp_tests.c \
+		test/communication/sg_tcp_test.c
 
 			
 sansgridrouter_SOURCES = $(SANSGRID_BASE) \
