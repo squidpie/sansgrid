@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <SerialDebug.h>
 
+#include "../sg_serial.h"
 #include "sansgrid_radio.h"
 
 #define __ASSERT_USE_STDERR
@@ -10,8 +11,18 @@
 
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp);
 
+int8_t sgO(void) {
+	return 0;
+}
+
+typedef class sgSerial {
+	public:
+		int8_t (*sgOpen)(void);
+}sgSerial_t;
+
 const int ledPin = 13;
 int length;
+sgSerial master;
 sansgrid_radio xbee = sansgrid_radio();
 
 void setup() {
@@ -31,6 +42,7 @@ void setup() {
 		delay(50);
 		sansgrid_debug_init(SerialDebugger);
 	#endif
+	//master.sgSerialOpen();
 	SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
@@ -43,6 +55,7 @@ void setup() {
   	xbee.set_mode(ROUTER);
 	}
 	SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
+	master.sgOpen();
 }
 
 

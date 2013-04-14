@@ -23,31 +23,31 @@
 #define __SG_SERIAL_H__
 
 #include <stdint.h>
-#include <arpa/inet.h>
+//#include <arpa/inet.h>
 #include "payloads.h"
 
-typedef struct SansgridSerial {
+typedef struct SansgridSerial_t {
 	uint8_t control;				// control byte
 	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
 									// contains origin or destination IP address
 	uint8_t payload[81];			// payload
+	// initialize serial connection
+	typedef int8_t (*sgSerialOpen)(void);
+	// Configure radio as a router radio
+	// Radio will be configured as a sensor radio by default.
+	int8_t (*sgSerialSetAsRouter)(void);
+	int8_t (*sgSerialSetAsSensor)(void);
+	// Send size bytes of serialdata serially
+	int8_t (*sgSerialSend)(SansgridSerial_t *sg_serial, uint32_t size);
+	// Get data from serial in. Data size will be in size.
+	int8_t (*sgSerialReceive)(SansgridSerial_t **sg_serial, uint32_t *size);
+	// Finish serial connection
+	// WARNING: This function will change
+	int8_t (*sgSerialClose)(void);
 } SansgridSerial;
 
 
 
-// initialize serial connection
-int8_t sgSerialOpen(void);
-// Configure radio as a router radio
-// Radio will be configured as a sensor radio by default.
-int8_t sgSerialSetAsRouter(void);
-int8_t sgSerialSetAsSensor(void);
-// Send size bytes of serialdata serially
-int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size);
-// Get data from serial in. Data size will be in size.
-int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size);
-// Finish serial connection
-// WARNING: This function will change
-int8_t sgSerialClose(void);
 
 
 
