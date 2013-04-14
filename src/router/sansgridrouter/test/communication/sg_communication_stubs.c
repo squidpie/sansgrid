@@ -16,17 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+#define _POSIX_C_SOURCE 200809L          // Required for nanosleep()
 
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include "../../../../sg_serial.h"
 #include "../tests.h"
 #include "sg_communication_stubs.h"
+#ifdef SG_TEST_USE_EEPROM
+#include <wiringPi.h>
+#include <wiringPiSPI.h>
+
+static pthread_mutex_t eeprom_lock;
+static int eeprom_lock_initd = 0;
+#endif
 
 
 struct TalkStub {
@@ -128,16 +139,7 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 /*
  * Use a 64K SPI EEPROM for read/write
  */
-#include <stdint.h>
-#include "../../../sg_serial.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <wiringPi.h>
-#include <wiringPiSPI.h>
+
 
 
 #define KHZ(freq) (1000*freq)
@@ -150,23 +152,16 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 #define WRITE_ENABLE 	0x06
 #define WRITE_CYCLE		5000
 
-static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
-	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
-	uint8_t *buffer;
+static int eepromSend(uint8_t *buffer, uint16_t address, int size) { 
+	// Set up SPI
 	int i;
 	int fd;
 	// only 32 bytes can be written at a time; see below
 	int bounded_size = (size > 32 ? 32 : size);
 	// prepend the command and address to the data
 	uint8_t newbuffer[bounded_size+3];
+	struct timespec required, remaining;
 
-	if (!ts->use_barrier)
-		return -1;
-
-	sg_serial_union.formdata = sg_serial;
-	buffer = sg_serial_union.serialdata;
-
-	// Set up SPI
 	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
 		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
 
@@ -181,19 +176,47 @@ static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) 
 
 	// Write to specified address
 	newbuffer[0] = WRITE;
-	newbuffer[1] = ts->eeprom_address >> 8;
-	newbuffer[2] = ts->eeprom_address & 0xff;
+	newbuffer[1] = address >> 8;
+	newbuffer[2] = address & 0xff;
 
 	write(fd, newbuffer, bounded_size+3);
 	// Wait for the write to cycle
-	usleep(WRITE_CYCLE);
+	required.tv_sec = 0;
+	required.tv_nsec = 1000L*WRITE_CYCLE;
+	nanosleep(&required, &remaining);
 	close(fd);
 	if (size > 32) {
 		// Only one page (of 32 bytes) can be written
 		// at a time. If more than 32 bytes are being written,
 		// break the line into multiple pages
-		return talkStubSend(&buffer[32], ts->eeprom_address+0x0020, size-32);
+		return eepromSend(&buffer[32], address+0x0020, size-32);
 	}
+
+	return 0;
+}
+
+
+
+static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
+	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
+	uint8_t *buffer;
+
+	if (!eeprom_lock_initd) {
+		pthread_mutex_init(&eeprom_lock, NULL);
+		eeprom_lock_initd = 1;
+	}
+	if (!ts->use_barrier) {
+		talkStubUseBarrier(ts, 1);
+	}
+
+
+	sg_serial_union.formdata = sg_serial;
+	buffer = sg_serial_union.serialdata;
+
+	pthread_mutex_lock(&eeprom_lock);
+	eepromSend(buffer, ts->eeprom_address, size);
+
+	pthread_mutex_unlock(&eeprom_lock);
 
 	sem_post(&ts->write_in_progress);
 	sem_wait(&ts->read_in_progress);
@@ -202,18 +225,32 @@ static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) 
 }
 
 
-static int talkStubReceive(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
+static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts) {
 	// Read from an EEPROM chip over SPI
-	SANSGRID_UNION(SansgridSerial *sg_serial, SGSU) sg_serial_union;
 	int fd;
-	uint8_t *buffer;
-	uint8_t newbuffer[size+3];
+	uint8_t buffer[sizeof(SansgridSerial)];
+	uint8_t newbuffer[sizeof(SansgridSerial)+3];
 	int i;
 
-	if (!ts->use_barrier) 
-		return -1;
+	if (ts->valid_read) {
+		if (sem_trywait(ts->valid_read) == -1) {
+			return 1;
+		}
+	}
+	if (!eeprom_lock_initd) {
+		pthread_mutex_init(&eeprom_lock, NULL);
+		eeprom_lock_initd = 1;
+	}
+	if (!ts->use_barrier) {
+		talkStubUseBarrier(ts, 1);
+	}
+
+
+	*size = sizeof(SansgridSerial);
 
 	sem_wait(&ts->write_in_progress);
+
+	pthread_mutex_lock(&eeprom_lock);
 
 	// Set up reading from EEPROM
 	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
@@ -225,14 +262,17 @@ static int talkStubReceive(SansgridSerial *sg_serial, uint32_t size, TalkStub *t
 	newbuffer[2] = ts->eeprom_address & 0xff;
 
 	// Send command/address, read data
-	wiringPiSPIDataRW(0, newbuffer, size+3);
+	wiringPiSPIDataRW(0, newbuffer, *size+3);
 
 	// shift the command and address out of buffer
-	for (i=0; i<size; i++)
+	for (i=0; i<*size; i++)
 		buffer[i] = newbuffer[i+3];
+	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	// finish up
 	close(fd);
 
+	pthread_mutex_unlock(&eeprom_lock);
 	sem_post(&ts->read_in_progress);
 
 	return 0;
