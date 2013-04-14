@@ -27,6 +27,8 @@
 
 #ifndef __TALK_STUBS_H__
 #define __TALK_STUBS_H__
+// Use a 64K EEPROM Chip instead of named pipes
+//#define SG_TEST_USE_EEPROM
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,8 +44,12 @@ typedef struct TalkStub TalkStub;
 
 TalkStub *talkStubUseSerial(int use_serial);
 TalkStub *talkStubUseTCP(int use_tcp);
+#ifdef SG_TEST_USE_EEPROM
+void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
+#else
 void talkStubSetReader(TalkStub *ts, FILE *FPTR);
 void talkStubSetWriter(TalkStub *ts, FILE *FPTR);
+#endif
 void talkStubSetReadlock(TalkStub *ts, sem_t *readlock);
 void talkStubUseBarrier(TalkStub *ts, int value);
 
