@@ -34,30 +34,43 @@ START_TEST (testAtoxOneByte) {
 END_TEST
 
 START_TEST (testAtoxMulti) {
-	int i;
+	int i, j;
+	uint16_t incrementor;
 	uint16_t expected[16];
 	uint8_t expected_short[16];
-	char str[33];
+	char str[34];
+	char strin[3];
 	uint8_t hexarray[16];
 
-	memset(expected, 0x0, sizeof(uint16_t));
-	memset(expected_short, 0x0, sizeof(uint8_t));
+	memset(&expected, 0x0, 16*sizeof(uint16_t));
+	memset(&expected_short, 0x0, 16*sizeof(uint8_t));
 
-	for (; expected[15] <= 0xff; expected[0]++) {
+	for (incrementor = 0x0; incrementor < 0x100; incrementor++) {
+		expected[0] = incrementor;
 		for (i=0; i<16; i++) {
-			if (expected[i] > 0xff) {
-				expected_short[i] = 0x0;
-			} else {
-				expected_short[i] = expected[i];
-			}
-			snprintf(&str[i*2], 3, "%.2x", expected_short[i]);
+			expected_short[i] = (expected[i] & 0xff);
+			snprintf(strin, 3, "%.2x", expected_short[i]);
+			str[2*i] = strin[0];
+			str[2*i+1] = strin[1];
+			str[2*(i+1)] = '\0';
 		}
-		atox(hexarray, str, 16);
-		fail_unless(memcmp(hexarray, expected_short, 16*sizeof(uint8_t)), "Conversion Mismatch");
+		atox(hexarray, str, 16*sizeof(uint8_t));
+		str[32] = '\0';
+		for (j=0; j<16; j++) {
+			fail_unless((hexarray[j] == expected_short[j]),
+					"Conversion Mismatch at increment %i: index %i of %s: Expected 0x%x, Got 0x%x", 
+					incrementor, j, str, expected_short[j], hexarray[j]);
+		}
 
 		for (i=15; i>= 1; i--) {
 			expected[i] = expected[i-1];
 		}
+#if TESTS_DEBUG_LEVEL > 0
+		for (i=15; i>=1; i--) {
+			printf("%.2x", expected[i]);
+		}
+		printf(": 0x%.2x\n", incrementor);
+#endif
 	}
 }
 END_TEST

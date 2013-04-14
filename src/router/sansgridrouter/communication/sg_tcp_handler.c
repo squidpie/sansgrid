@@ -67,33 +67,38 @@ int extract_keyvalue(char *str, char **key, char **value, char **saved) {
 
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	// convert the full string of hex values into an array
-	int i;
+	int i_str, i_hex = 0;
 	int increment = 0;
 	char chunk[3];
-	int offset; 
 	uint32_t length;
 	uint32_t uval;
 
-	for (i=0; i<hexsize; i++)
-		hexarray[i] = 0x0;
+	for (i_hex=0; i_hex<hexsize; i_hex++)
+		hexarray[i_hex] = 0x0;
+	i_hex = 0;
 	if (str == NULL)
 		return;
 	length = strlen(str);
-	offset = hexsize - ((length+1)/2);
+	//offset = hexsize - ((length+1)/2);
 
-	for (i=0; i<length;) {
-		if (((length ^ i) & 0x1) == 0x1) {
+	for (i_str=0; i_str<length;) {
+		if (((length ^ i_str) & 0x1) == 0x1) {
 			// make sure we catch case of 0x123
 			// where we should parse as 0x1  0x23
-			sscanf(&str[i], "%1s", chunk);
+			chunk[0] = str[i_str];
+			chunk[1] = '\0';
+			//sscanf(&str[i], "%1s", chunk);
 			increment = 1;
 		} else {
-			sscanf(&str[i], "%2s", chunk);
+			chunk[0] = str[i_str];
+			chunk[1] = str[i_str+1];
+			chunk[2] = '\0';
+			//sscanf(&str[i], "%2s", chunk);
 			increment = 2;
 		}
 		sscanf(chunk, "%x", &uval);
-		hexarray[i+offset] = (uval & 0xff);
-		i+=increment;
+		hexarray[i_hex++] = (uval & 0xff);
+		i_str+=increment;
 	}
 	return;
 }
