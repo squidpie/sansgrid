@@ -1,56 +1,61 @@
-#include "SansgridRadio.h"
+#include "sgRadio.h"
 
-SnIpTable_t *snIpExpand(SnIpTable_t * current) {
-	SnIpTable_t * expanded = new SnIpTable_t[SNIPEXPANDFACTOR*current->size];
-	memcpy(current,expanded,current->size*sizeof(*current));
-	return expanded;
+SnIpTable::SnIpTable() {
+	table = new SnIpEntry[DEFAULTSNIPSIZE][SNIPTABLEWIDTH][SNIPBYTEWIDTH];
+	memset(table,0,DEFAULTSNIPSIZE * (SNIPTABLEWIDTH * SNIPBYTEDIWTH));
+	size = DEFAULTSNIPSIZE;
+	next = 0;
+}
+
+SnIpTable::~SnIpTable() {
+	delete [] table;
+}
+
+void SnIpTable::snIpExpand() {
+	SnIpEntry * expanded = new SnIpEntry[SNIPEXPANDFACTOR*size];
+	memcpy(table,expanded,(size*sizeof(SnIpEntry)));
+	delete [] table;
+	table = expanded;
 }
 
 
-int snIpfindSn(SnIpTable_t * table, uint64_t sn){
+int SnIpTable::snIpfindSn(uint8_t * sn){
 	int index;
-	for (index = 0; index < table->count; index++) {
-		if (table->head[index][SN] == sn) break;
+	for (index = 0; index < size; index++) {
+		if (!memcmp(&table[index][SN], sn, SNIPBYTEWIDTH)) break;
 	}
 	return index;
 }
 
-int snIpfindIp(SnIpTable_t * table, uint64_t ip){
+int SnIpTable::snIpfindIp(uint8_t * ip){
 	int index;
-	for (index = 0; index < table->count; index++) {
-		if (table->head[index][IP] == sn) break;
+	for (index = 0; index < size; index++) {
+		if (!memcmp(&table[index][IP], ip, SNIPBYTEWIDTH)) break;
 	}
 	return index;
 }
 
-int snIpGetEmptyIndex(SnIpTable_t * table){
-
+void SnIpTable::snIpInsertIp(uint8_t * ip, uint8_t * key){
+	snIpInsert(ip, snIpFindIp(key), IP);
 }
 
-void snIpInsertIp(uint64_t ip, int index){
-
+void SnIpTable::snIpInsertIp(uint8_t * ip, int index){
+	snIpInsert(ip, index, IP);
 }
 
-void snIpInsertSn(uint64_t sn, int index){
-
+void snIpInsertSn(uint8_t * sn, int index){
+	snIpInsert(sn, index, SN);
 }
 
-void sgDebugInit(SerialDebug &db) {
-	debugger = db;
-	debugger.debug(NOTIFICATION,__FUNC__,"debug init complete\n");
-	delay(100);
+void snIpInsert(uint8_t * data, int index, SnTableIndex type) {
+	memcpy(data, &table[index][type], SNIPBYTEWIDTH);
+	if (index == next) {
+		size++;
+		next++;
+	}
 }
 
-SansgridRadio::SansgridRadio(SansgridSerial * data) {
-	Radio = &Serial;
-	Radio->begin(9600);
-	router_mode = SENSOR;
-	packet = &(data->payload[0]);
-}
 
-SansgridRadio::~SansgridRadio() {
-	Radio->end();
-}
 
 void SansgridRadio::read() {
   for (int i = 0; Radio->available() > 0 && i < PACKET_SZ; i++) {
@@ -83,21 +88,25 @@ void SansgridRadio::atCmd(char * result,const char * cmd) {
 	Radio->println("ATCN");
 }
 
-int SansgridRadio::findSn(int sn) {
-  int rv;
-  for (rv = 0; rv < IP_TABLE_SZ; rv++) {
-    if (sn_table[rv][IP] == sn && sn_table[rv][SN] == sn) break;
-  }
-    
-  return rv;
-}
-
 int SansgridRadio::getEmptySnIndex() {
   int rv;
   for (rv = 0; rv < IP_TABLE_SZ; rv++) {
     if (sn_table[rv][SN] == 0 && sn_table[rv][IP] == 0) break;
   }
   return rv;
+}
+
+uint8_t * genDevKey() {
+	uint8_t * key;
+	key = new uint8_t[SNIPBYTEWIDTH];
+	for (int i = 0; i < SNIPBYTEWIDTH/2; i++) {
+		key[i] = packet_buffer[MANID];
+		key[++i] = packet_buffer[MODID];
+	}
+	for (int i = 0; i < SNIPBYTEWIDTH; i++) {
+		key[i] ^= packet_buffer[DEVSN];
+	}
+	return key;
 }
 
 void SansgridRadio::processPacket() {
@@ -107,11 +116,7 @@ void SansgridRadio::processPacket() {
 			debugger.debug(NOTIFICATION,__FUNC__,"Router Mode");
       if(packet_buffer[PACKET_ID] == EYEBALL_TYPE) {
   			debugger.debug(NOTIFICATION,__FUNC__,"Eyeball Packet");
-        index = getEmptySnIndex();
-     		//assert(index < IP_TABLE_SZ);
-				atCmd(tmp,"ATID");
-        memcpy(&packet_buffer[EYE_SN_ENTRY],&sn_table[index][SN],SN_LENGTH);
-        memcpy(&packet_buffer[EYE_SN_ENTRY],&sn_table[index][IP],SN_LENGTH);
+				sn_table->snIpInsertSn(&packet_buffer[XBSN]);
       }
       if (packet_buffer[PACKET_ID] == PECK_TYPE) {
 				debugger.debug(NOTIFICATION,__FUNC__,"Peck Packet");
@@ -119,9 +124,10 @@ void SansgridRadio::processPacket() {
         sn = btoi(&packet_buffer[PECK_SN_ENTRY], SN_LENGTH);
 				sprintf(tmp,"%X",packet_buffer[PECK_SN_ENTRY]);
         debugger.debug(NOTIFICATION,__FUNC__,tmp);
-        index = findSn(sn);
+        sn_table->snIpInsertIp(&packet_buffer[PECK_IP_ENTRY],genDevKey());
+			//	index = findSn(sn);
 				//assert(index < IP_TABLE_SZ);
-        memcpy(&packet_buffer[PECK_IP_ENTRY],&sn_table[index][IP],IP_LENGTH);
+        //memcpy(&packet_buffer[PECK_IP_ENTRY],&sn_table[index][IP],IP_LENGTH);
       }
   }
   else {

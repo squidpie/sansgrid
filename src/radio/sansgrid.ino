@@ -3,7 +3,7 @@
 #include <SerialDebug.h>
 
 #include <sgSerial.h>
-#include "SansgridRadio.h"
+#include "sgRadio.h"
 
 #define __ASSERT_USE_STDERR
 #define DEBUG true
@@ -15,7 +15,9 @@ const int ledPin = 13;
 int length;
 
 SansgridSerial SpiData;
-SansgridRadio Radio = SansgridRadio(&SpiData);
+SnIpTable RouteTable;
+SansgridRadio Radio = SansgridRadio(&SpiData, &RouteTable);
+
 
 void setup() {
 	#if DEBUG 

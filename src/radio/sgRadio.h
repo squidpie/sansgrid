@@ -24,6 +24,8 @@
 #define SPI_IRQ_PIN 8
 #define ROUTER_MODE_PIN 12
 
+#define SNIPEXPANDFACTOR 1.5
+
 enum RadioMode {
 	SENSOR,
 	ROUTER
@@ -42,22 +44,23 @@ int btoi(byte * b,int ln);
 void write_spi();
 void read_spi();
 
-typedef struct SnIpEntry_t {
+typedef struct {
 	uint64_t ip;
 	uint64_t sn;
-}SnIpEntry_t;
+}SnIpEntry;
 
-typedef struct SnIpTable_t {
-	SnIpEntry_t * head;
-	int count;
-}SnIpTable_t;
-
-SnIpTable_t * snIpExpand(SnIpTable_t *);
-int snIpfindSn(SnIpTable_t * table, uint64_t);
-int snIpfindIp(SnIpTable_t * table, uint64_t);
-int snIpGetEmptyIndex(SnIpTable_t * table);
-void snIpInsertIp(uint64_t, int);
-void snIpInsertSn(uint64_t, int);
+class SnIpTable {
+	SnIpEntry * table;
+	int next;
+	int size;
+	void snIpExpand(void);
+	void snIpInsert(uint64_t data, int index, SnTableIndex type = SN);
+	int snIpfindSn(uint64_t);
+	int snIpfindIp(uint64_t);
+	void snIpInsertIp(uint64_t ip, uint64_t key);
+	void snIpInsertIp(uint64_t ip, int index);
+	void snIpInsertSn(uint64_t sn, int index);
+};
 
 
 class SansgridRadio {
@@ -65,15 +68,16 @@ class SansgridRadio {
 		RadioMode router_mode;
 		uint8_t packet_buffer[PACKET_SZ];
 		uint8_t * packet;
-		int sn_table[IP_TABLE_SZ][2];
-		int getEmptyIndex();
+		int getEmptyIndex(void);
 		int findSn(int sn);
-		void processPacket();
+		void processPacket(void);
 		void atCmd(char *,const char *);
+		uint8_t * genDevKey(void);
+		SnIpTable * sn_table;
 		SerialDebug debug;
 		HardwareSerial * Radio;
 	public:
-		SansgridRadio(SansgridSerial *);
+		SansgridRadio(SansgridSerial *, SnIpTable *);
 		~SansgridRadio();
 		void read();
 		void write();
