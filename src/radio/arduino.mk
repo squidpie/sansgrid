@@ -180,7 +180,7 @@ AVRTOOLSPATH ?= $(subst :, , $(PATH)) $(ARDUINODIR)/hardware/tools \
 	$(ARDUINODIR)/hardware/tools/avr/bin
 
 # default path to find libraries
-LIBRARYPATH ?= libraries libs $(SKETCHBOOKDIR)/libraries $(ARDUINODIR)/libraries
+LIBRARYPATH += libraries libs $(SKETCHBOOKDIR)/libraries $(ARDUINODIR)/libraries
 
 # default serial device to a poor guess (something that might be an arduino)
 SERIALDEVGUESS := 0
@@ -269,6 +269,7 @@ ARDUINOCOREDIR := $(ARDUINODIR)/hardware/arduino/cores/arduino
 LIBRARYDIRS := $(foreach lib, $(LIBRARIES), \
 	$(firstword $(wildcard $(addsuffix /$(lib), $(LIBRARYPATH)))))
 LIBRARYDIRS += $(addsuffix /utility, $(LIBRARYDIRS))
+LIBRARYDIRS += $(SGLIBS)
 
 # files
 TARGET := $(if $(TARGET),$(TARGET),a.out)
