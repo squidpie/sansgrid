@@ -81,7 +81,9 @@ static void *spiReader(void *arg) {
 	uint32_t packet_size = 0;
 	Queue *queue = (Queue*)arg;
 	//int oldstate;
+#ifndef SG_TEST_USE_EEPROM
 	FILE *FPTR;
+#endif
 	int8_t excode;
 
 
@@ -90,10 +92,15 @@ static void *spiReader(void *arg) {
 #if TESTS_DEBUG_LEVEL > 1
 		printf("Reading %i\n", i);
 #endif
+
+#ifdef SG_TEST_USE_EEPROM
+		talkStubSetEEPROMAddress(ts_serial, 0x0000);
+#else
 		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
 			fail("Can't open fifo for reading");
 		}
 		talkStubSetReader(ts_serial, FPTR);
+#endif
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -106,9 +113,12 @@ static void *spiReader(void *arg) {
 				fail("Queue Enqueue Failure");
 			//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
+#ifdef SG_TEST_USE_EEPROM
+#else
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor failed to close");
 		talkStubSetReader(ts_serial, NULL);
+#endif
 	}
 
 #if TESTS_DEBUG_LEVEL > 1
@@ -123,7 +133,9 @@ static void *spiWriter(void *arg) {
 	int i;
 	SansgridFly sg_fly;
 	SansgridSerial sg_serial;
+#ifndef SG_TEST_USE_EEPROM
 	FILE *FPTR = NULL;
+#endif
 
 	payloadMkSerial(&sg_serial);
 	sg_fly.datatype = SG_FLY;
@@ -136,17 +148,25 @@ static void *spiWriter(void *arg) {
 #if TESTS_DEBUG_LEVEL > 1
 		printf("Writing %i\n", i);
 #endif
+
+#ifdef SG_TEST_USE_EEPROM
+		talkStubSetEEPROMAddress(ts_serial, 0x0000);
+#else
 		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
 			fail("Can't open fifo for writing");
 		}
 		talkStubSetWriter(ts_serial, FPTR);
+#endif
 		snprintf(sg_fly.network_name, 78, "Ping %i", i);
 		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
+#ifdef SG_TEST_USE_EEPROM
+#else
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor Failed to close");
 		talkStubSetWriter(ts_serial, NULL);
+#endif
 	}
 
 
