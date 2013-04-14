@@ -22,14 +22,16 @@
  */
 
 #include "payload_tests.h"
-TalkStub *ts_serial,
-		 *ts_tcp;
+static TalkStub *ts_serial = NULL,
+			    *ts_tcp = NULL;
 pthread_t serial_reader_thr,
   		  tcp_reader_thr;
+#ifndef SG_TEST_USE_EEPROM
 static FILE *FPTR_SPI_WRITER,
 	 		*FPTR_SPI_READER,
 	 		*FPTR_TCP_WRITER,
 	 		*FPTR_TCP_READER;
+#endif
 static int payload_ref_count = 0;
 
 
@@ -48,10 +50,14 @@ void *spiPayloadReader(void *arg) {
 	uint32_t packet_size;
 	int excode;
 
+#ifdef SG_TEST_USE_EEPROM
+	talkStubSetEEPROMAddress(ts_serial, 0x0000);
+#else
 	if (!(FPTR_SPI_READER = fopen("spi.fifo", "r"))) {
 		fail("Can't open serial pipe for reading!");
 	}
 	talkStubSetReader(ts_serial, FPTR_SPI_READER);
+#endif
 
 	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read packet");
@@ -63,7 +69,9 @@ void *spiPayloadReader(void *arg) {
 #endif
 	}
 
+#ifndef SG_TEST_USE_EEPROM
 	fclose(FPTR_SPI_READER);
+#endif
 	pthread_exit(arg);
 
 }
@@ -75,10 +83,14 @@ void *tcpPayloadReader(void *arg) {
 	uint32_t packet_size;
 	int excode;
 
+#ifdef SG_TEST_USE_EEPROM
+	talkStubSetEEPROMAddress(ts_tcp, 0x0060);
+#else
 	if (!(FPTR_TCP_READER = fopen("tcp.fifo", "r"))) {
 		fail("Can't open TCP pipe for reading!");
 	}
 	talkStubSetReader(ts_tcp, FPTR_TCP_READER);
+#endif
 
 	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read TCP packet");
@@ -90,7 +102,9 @@ void *tcpPayloadReader(void *arg) {
 #endif
 	}
 
+#ifndef SG_TEST_USE_EEPROM
 	fclose(FPTR_TCP_READER);
+#endif
 	pthread_exit(arg);
 }
 

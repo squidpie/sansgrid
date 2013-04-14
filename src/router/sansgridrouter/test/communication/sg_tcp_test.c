@@ -44,17 +44,18 @@ START_TEST (testAtoxMulti) {
 	memset(expected_short, 0x0, sizeof(uint8_t));
 
 	for (; expected[15] <= 0xff; expected[0]++) {
-		if (expected[0] > 0xff) {
-			expected[0] = 0x0;
-		}
 		for (i=0; i<16; i++) {
-			expected_short[i] = expected[i];
+			if (expected[i] > 0xff) {
+				expected_short[i] = 0x0;
+			} else {
+				expected_short[i] = expected[i];
+			}
 			snprintf(&str[i*2], 3, "%.2x", expected_short[i]);
 		}
 		atox(hexarray, str, 16);
 		fail_unless(memcmp(hexarray, expected_short, 16*sizeof(uint8_t)), "Conversion Mismatch");
 
-		for (i=14; i>= 1; i--) {
+		for (i=15; i>= 1; i--) {
 			expected[i] = expected[i-1];
 		}
 	}
