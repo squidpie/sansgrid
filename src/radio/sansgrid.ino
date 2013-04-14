@@ -2,22 +2,25 @@
 #include <assert.h>
 #include <SerialDebug.h>
 
-#include "sansgrid_radio.h"
+#include <sgSerial.h>
+#include "SansgridRadio.h"
 
 #define __ASSERT_USE_STDERR
-#define _DEBUG true
-#define _DEBUG_LEVEL 1
+#define DEBUG true
+#define DEBUG_LEVEL 1
 
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp);
 
 const int ledPin = 13;
 int length;
-sansgrid_radio xbee = sansgrid_radio();
+
+SansgridSerial SpiData;
+SansgridRadio Radio = SansgridRadio(&SpiData);
 
 void setup() {
-	#if _DEBUG 
+	#if DEBUG 
 		SerialDebugger.begin(9600);
-		switch(_DEBUG_LEVEL) {
+		switch(DEBUG_LEVEL) {
 			case 1:
 				SerialDebugger.enable(ERROR);
 			case 2:
@@ -29,8 +32,8 @@ void setup() {
 		SerialDebugger.debug(WARNING,__FUNC__,"Warn test\n");
 		SerialDebugger.debug(NOTIFICATION,__FUNC__,"Notify test\n");
 		delay(50);
-		sansgrid_debug_init(SerialDebugger);
 	#endif
+	sgDebugInit(SerialDebugger);
 	SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
@@ -40,7 +43,7 @@ void setup() {
   digitalWrite(SPI_IRQ_PIN, HIGH);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
     SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
-  	xbee.set_mode(ROUTER);
+  	Radio.set_mode(ROUTER);
 	}
 	SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
 }
@@ -51,13 +54,13 @@ void loop() {
   if (Serial.peek() >= 0) {
     SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
     Serial.flush();
-    xbee.read();
+    Radio.read();
 		write_spi();
   }
   if (digitalRead(SPI_IRQ_PIN) == LOW) {
     SerialDebugger.debug(NOTIFICATION,__FUNC__,"Writing\n");
     read_spi();
-    xbee.write();
+    Radio.write();
   }
     
 }
