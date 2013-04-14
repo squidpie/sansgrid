@@ -20,16 +20,19 @@
  *
  */
 
+//#ifdef SG_ARCH_PI
+
 #include <stdint.h>
 #include "../../../sg_serial.h"
-#include <wiringPi.h>
-#include <wiringPiSPI.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <wiringPi.h>
+#include <wiringPiSPI.h>
+
 
 #define KHZ(freq) (1000*freq)
 #define MHZ(freq) (1000*KHZ(freq))
@@ -41,7 +44,8 @@
 #define WRITE_ENABLE 	0x06
 #define WRITE_CYCLE	5000
 
-int spiWrite(char *buffer, uint16_t address, int size) {
+//int spiWrite(char *buffer, uint16_t address, int size) {
+int spiWrite(sgSerial *sg_serial, int size) {
 	int i;
 	int fd;
 	// only 32 bytes can be written at a time; see below
@@ -146,6 +150,9 @@ int main(void) {
 }
 */
 
+//#else
+//#error "Expected Raspberry Pi Architecture Definition"
+//#endif // SG_ARCH_PI
 
 // vim: ft=c ts=4 noet sw=4:
 
