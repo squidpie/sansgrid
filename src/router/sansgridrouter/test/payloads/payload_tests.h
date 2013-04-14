@@ -124,6 +124,8 @@ void *tcpPayloadReader(void *arg);
 // Payload State
 int32_t payloadRoutingInit(void);
 int32_t payloadRoutingDestroy(void);
+int32_t payloadRoutingAddReference(void);
+int32_t payloadRoutingRemoveReference(void);
 int32_t payloadStateInit(void);
 int32_t payloadStateCommit(SansgridSerial **);
 

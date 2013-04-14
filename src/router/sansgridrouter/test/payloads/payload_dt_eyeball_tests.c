@@ -57,7 +57,6 @@ END_TEST
 START_TEST (testMultEyeballs) {
 	int num_defined_here = 0;
 	int old_num_devices;
-	payloadRoutingInit();
 	if (num_devices == 0) {
 		old_num_devices = num_devices;
 		num_devices = 20;
@@ -73,7 +72,6 @@ START_TEST (testMultEyeballs) {
 	}
 	if (num_defined_here)
 		num_devices = old_num_devices;
-	payloadRoutingDestroy();
 } END_TEST
 
 

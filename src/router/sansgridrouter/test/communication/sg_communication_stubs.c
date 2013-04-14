@@ -46,8 +46,8 @@ struct TalkStub {
 	uint16_t eeprom_address;
 #else
 	// Used with named pipes
-	FILE *FPTR_SPI_WRITE,		// Writing file descriptor
-		 *FPTR_SPI_READ;		// Reading file descriptor
+	FILE *FPTR_PIPE_WRITE,		// Writing file descriptor
+		 *FPTR_PIPE_READ;		// Reading file descriptor
 #endif
 	sem_t *valid_read;			// Only return valid data if we're reading
 	sem_t write_in_progress,	// A write is in progress
@@ -62,6 +62,7 @@ static TalkStub *ts_serial = NULL,
 
 static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
 
+	mark_point();
 	if (ts)
 		free(ts);
 	if (!use_this) {
@@ -71,12 +72,13 @@ static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
 #ifdef SG_TEST_USE_EEPROM
 		ts->eeprom_address = 0x0;
 #else
-		ts->FPTR_SPI_READ = NULL;
-		ts->FPTR_SPI_WRITE = NULL;
+		ts->FPTR_PIPE_READ = NULL;
+		ts->FPTR_PIPE_WRITE = NULL;
 #endif
 		ts->valid_read = NULL;
 		ts->use_barrier = 0;
 	}
+	mark_point();
 	return ts;
 }
 
@@ -84,10 +86,12 @@ static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
  * Enable/Disable functions
  */
 TalkStub *talkStubUseSerial(int use_serial) {
+	mark_point();
 	return (ts_serial = talkStubUse(ts_serial, use_serial));
 }
 
 TalkStub *talkStubUseTCP(int use_tcp) {
+	mark_point();
 	return (ts_tcp = talkStubUse(ts_tcp, use_tcp));
 }
 
@@ -97,15 +101,18 @@ TalkStub *talkStubUseTCP(int use_tcp) {
  */
 #ifdef SG_TEST_USE_EEPROM
 void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address) {
+	mark_point();
 	ts->eeprom_address = address;
 }
 #else
 void talkStubSetReader(TalkStub *ts, FILE *FPTR) {
-	ts->FPTR_SPI_READ = FPTR;
+	mark_point();
+	ts->FPTR_PIPE_READ = FPTR;
 }
 
 void talkStubSetWriter(TalkStub *ts, FILE *FPTR) {
-	ts->FPTR_SPI_WRITE = FPTR;
+	mark_point();
+	ts->FPTR_PIPE_WRITE = FPTR;
 }
 #endif
 
@@ -115,6 +122,7 @@ void talkStubSetWriter(TalkStub *ts, FILE *FPTR) {
 void talkStubSetReadlock(TalkStub *ts, sem_t *readlock) {
 	// Set up an optional lock that drops data if
 	// the semaphore value == 0
+	mark_point();
 	ts->valid_read = readlock;
 }
 
@@ -122,6 +130,7 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 	// Read/Write synchronization locks
 	// This makes sure that one piece of data is read,
 	// and one piece of data is written at a time
+	mark_point();
 	if (value && !ts->use_barrier) {
 		// initialize
 		sem_init(&ts->write_in_progress, 0, 0);
@@ -132,6 +141,7 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 		sem_destroy(&ts->read_in_progress);
 	}
 	ts->use_barrier = value;
+	mark_point();
 }
 
 
@@ -232,27 +242,36 @@ static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub 
 	uint8_t newbuffer[sizeof(SansgridSerial)+3];
 	int i;
 
+	mark_point();
 	if (ts->valid_read) {
 		if (sem_trywait(ts->valid_read) == -1) {
 			return 1;
 		}
 	}
+
+	mark_point();
 	if (!eeprom_lock_initd) {
 		pthread_mutex_init(&eeprom_lock, NULL);
 		eeprom_lock_initd = 1;
 	}
+
+	mark_point();
 	if (!ts->use_barrier) {
 		talkStubUseBarrier(ts, 1);
 	}
 
 
+	mark_point();
 	*size = sizeof(SansgridSerial);
+	mark_point();
 
 	sem_wait(&ts->write_in_progress);
 
+	mark_point();
 	pthread_mutex_lock(&eeprom_lock);
 
 	// Set up reading from EEPROM
+	mark_point();
 	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
 		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
 
@@ -290,8 +309,9 @@ static int8_t talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *t
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
 
 
-	if (ts->FPTR_SPI_WRITE == NULL)
+	if (ts->FPTR_PIPE_WRITE == NULL)
 		return -1;
+	fail_if((sg_serial == NULL), "sg_serial is NULL!");
 
 	sg_serial_union.formdata = sg_serial;
 	
@@ -299,8 +319,8 @@ static int8_t talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *t
 		sem_post(&ts->write_in_progress);
 		sem_wait(&ts->read_in_progress);
 	}
-	for (i=0; i<sizeof(SansgridSerial) && ts->FPTR_SPI_WRITE; i++) {
-		putc(sg_serial_union.serialdata[i], ts->FPTR_SPI_WRITE);
+	for (i=0; i<sizeof(SansgridSerial) && ts->FPTR_PIPE_WRITE; i++) {
+		putc(sg_serial_union.serialdata[i], ts->FPTR_PIPE_WRITE);
 	}
 	
 	return 0;
@@ -313,32 +333,49 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 	int i;
 	char lptr[sizeof(SansgridSerial)+1];
 
-	if (ts->FPTR_SPI_READ == NULL)
+	fail_if((ts == NULL), "TalkStub is NULL!");
+	mark_point();
+	if (ts->FPTR_PIPE_READ == NULL) {
+#if TESTS_DEBUG_LEVEL > 0
+		printf("Read file descriptor is null!\n");
+#endif
 		return -1;
+	}
+	mark_point();
 
 	// Read from the pipe 
 	if (ts->use_barrier) {
 		sem_post(&ts->read_in_progress);
 		sem_wait(&ts->write_in_progress);
 	}
-	for (i=0; i<(sizeof(SansgridSerial)) && ts->FPTR_SPI_READ; i++) {
-		lptr[i] = fgetc(ts->FPTR_SPI_READ);
+	
+	mark_point();
+	for (i=0; i<(sizeof(SansgridSerial)) && ts->FPTR_PIPE_READ; i++) {
+		lptr[i] = fgetc(ts->FPTR_PIPE_READ);
 	}
+
+	mark_point();
 	if (ts->valid_read) {
 		if (sem_trywait(ts->valid_read) == -1) {
 			return 1;
 		}
 	}
+
+	mark_point();
 	if (i < sizeof(SansgridSerial)) {
 #if TESTS_DEBUG_LEVEL > 0
-		printf("(Serial) Dropping Packet at %i of %i\n", i, 
+		printf("Dropping Packet at %i of %i\n", i, 
 				sizeof(SansgridSerial));
 #endif
 		return 1;
 	}
+
+	mark_point();
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
+
+	mark_point();
 	return 0;
 }
 
@@ -348,19 +385,29 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
  * These hook directly into the send/receive stubs
  */
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
+	mark_point();
 	return talkStubSend(sg_serial, size, ts_serial);
 }
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	return talkStubReceive(sg_serial, size, ts_serial);
+	int8_t exit_code;
+	mark_point();
+	exit_code = talkStubReceive(sg_serial, size, ts_serial);
+	mark_point();
+	return exit_code;
 }
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
+	mark_point();
 	return talkStubSend(sg_serial, size, ts_tcp);
 }
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	return talkStubReceive(sg_serial, size, ts_tcp);
+	int8_t exit_code;
+	mark_point();
+	exit_code = talkStubReceive(sg_serial, size, ts_tcp);
+	mark_point();
+	return exit_code;
 }
 
 

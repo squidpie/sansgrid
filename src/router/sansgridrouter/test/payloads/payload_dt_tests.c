@@ -21,28 +21,30 @@
 #include "payload_tests.h"
 
 
-sem_t spi_readlock,
-  	  tcp_readlock;
-
 
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
-	TalkStub *ts_serial = talkStubUseSerial(1),
-			 *ts_tcp = talkStubUseTCP(1);
+	mark_point();
+
+	//TalkStub *ts_serial = talkStubUseSerial(1),
+			 //*ts_tcp = talkStubUseTCP(1);
 	int exit_code;
 	SansgridSerial *sg_serial_read;
-	talkStubSetReadlock(ts_serial, &spi_readlock);
-	talkStubSetReadlock(ts_tcp, &tcp_readlock);
+	//talkStubSetReadlock(ts_serial, &spi_readlock);
+	//talkStubSetReadlock(ts_tcp, &tcp_readlock);
 
+	mark_point();
 
 	// Set which fifos we're writing to
 	// (This is so we don't read back bad data)
 	switch (test_node->read_dir) {
 		case SG_TEST_COMM_WRITE_SPI:
 			sem_post(&spi_readlock);
+			sem_trywait(&tcp_readlock);
 			break;
 		case SG_TEST_COMM_WRITE_TCP:
+			sem_trywait(&spi_readlock);
 			sem_post(&tcp_readlock);
 			break;
 		case SG_TEST_COMM_WRITE_BOTH:
@@ -53,13 +55,18 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 			break;
 	}
 
+	mark_point();
+
 #if TESTS_DEBUG_LEVEL > 0
 	printf("%s\n", message);
 #endif
 	payloadStateInit();
+	mark_point();
 	exit_code = fn(routing_table, sg_serial);
+	mark_point();
 	// Commit handler
 	payloadStateCommit(&sg_serial_read);
+	mark_point();
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Handled with status: %i\n", exit_code);
 #endif
@@ -74,26 +81,31 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 		printf("%.2x", sg_serial_read->payload[i]);
 	printf("\n");
 #endif
+	mark_point();
 	if (test_node->expected_exit_code != exit_code) {
 		fail("Exit code Mismatch \
 				\n\tExpected: %i \
 				\n\tGot: 	  %i", test_node->expected_exit_code, exit_code);
 	}
-	if (exit_code)
-		return exit_code;
-	if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
-		fail("Packet Mismatch");
-	int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->ip_addr);
-	if (test_node->next_packet != orig)
-		fail("Control Flow Mismatch \
-				\n\tExpected: %i \
-				\n\tGot:  	  %i", test_node->next_packet, 
-				orig);
-	if (!routingTableLookup(routing_table, sg_serial_read->ip_addr))
-		fail("No IP assigned");
-	memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
+	if (!exit_code) {
+		if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
+			fail("Packet Mismatch");
+		int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->ip_addr);
+		if (test_node->next_packet != orig)
+			fail("Control Flow Mismatch \
+					\n\tExpected: %i \
+					\n\tGot:  	  %i", test_node->next_packet, 
+					orig);
+		if (!routingTableLookup(routing_table, sg_serial_read->ip_addr))
+			fail("No IP assigned");
+		memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
+	}
 
+	mark_point();
 	free(sg_serial_read);
+	mark_point();
+	//talkStubUseSerial(0);
+	//talkStubUseTCP(0);
 	return exit_code;
 }
 
@@ -101,7 +113,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 
 int testPayload(PayloadTestStruct *test_struct) {
 	// unit test code to test data types
-	int32_t exit_code;
+	int32_t exit_code = 0;
 	SansgridEyeball sg_eyeball;
 	SansgridPeck sg_peck;
 	SansgridSing sg_sing;
@@ -114,55 +126,53 @@ int testPayload(PayloadTestStruct *test_struct) {
 	uint8_t ip_addr[IP_SIZE];
 
 	// initialize dispatch/routing, set up fifos/threads
-	payloadRoutingInit();
+	payloadRoutingAddReference();
+	mark_point();
 
 	// Payloads
-	if (test_struct->eyeball) {
+	if (!exit_code && test_struct->eyeball) {
 		payloadMkSerial(&sg_serial);
 		payloadMkEyeball(&sg_eyeball, test_struct);
 		memcpy(&sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
+		mark_point();
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->eyeball, routerHandleEyeball, "Eyeballing");
-		if (exit_code)
-			return exit_code;
+		mark_point();
 		memcpy(&ip_addr, &sg_serial.ip_addr, IP_SIZE);
 	}
-	if (test_struct->peck) {
+	mark_point();
+	if (!exit_code && test_struct->peck) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		payloadMkPeck(&sg_peck, test_struct);
 		memcpy(&sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->peck, routerHandlePeck, "Pecking");
-		if (exit_code)
-			return exit_code;
 	}
-	if (test_struct->sing) {
+	mark_point();
+	if (!exit_code && test_struct->sing) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		payloadMkSing(&sg_sing, test_struct);
 		memcpy(&sg_serial.payload, &sg_sing, sizeof(SansgridSing));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->sing, routerHandleSing, "Singing");
-		if (exit_code)
-			return exit_code;
 	}
-	if (test_struct->mock) {
+	mark_point();
+	if (!exit_code && test_struct->mock) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		payloadMkMock(&sg_mock, test_struct);
 		memcpy(&sg_serial.payload, &sg_mock, sizeof(SansgridMock));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->mock, routerHandleMock, "Mocking");
-		if (exit_code)
-			return exit_code;
 	}
-	if (test_struct->peacock) {
+	mark_point();
+	if (!exit_code && test_struct->peacock) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		payloadMkPeacock(&sg_peacock, test_struct);
 		memcpy(&sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->peacock, routerHandlePeacock, "Peacocking");
-		if (exit_code)
-			return exit_code;
 	}
-	if (test_struct->squawk_server) {
+	mark_point();
+	if (!exit_code && test_struct->squawk_server) {
 		int sensor_req_auth = 0;
 		payloadMkSerial(&sg_serial);
 		switch (test_struct->squawk_server_mode) {
@@ -196,24 +206,22 @@ int testPayload(PayloadTestStruct *test_struct) {
 		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
 				routerHandleSquawk, "Squawking (Server challenge/nochallenge)");
-		if (exit_code)
-			return exit_code;
 
-		// Sensor: Respond
-		payloadMkSerial(&sg_serial);
-		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-		payloadMkSquawkSensor(&sg_squawk, test_struct);
-		sg_squawk.datatype = sensor_req_auth ?
-				SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
-				: SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
-		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
-				routerHandleSquawk, "Squawking (Sensor response)");
-		if (exit_code)
-			return exit_code;
+		if (!exit_code) {
+			// Sensor: Respond
+			payloadMkSerial(&sg_serial);
+			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
+			payloadMkSquawkSensor(&sg_squawk, test_struct);
+			sg_squawk.datatype = sensor_req_auth ?
+					SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
+					: SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
+			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+					routerHandleSquawk, "Squawking (Sensor response)");
+		}
 
 		// If sensor requires challenge, send it
-		if (sensor_req_auth) {
+		if (!exit_code && sensor_req_auth) {
 			payloadMkSerial(&sg_serial);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 			payloadMkSquawkSensor(&sg_squawk, test_struct);
@@ -221,46 +229,43 @@ int testPayload(PayloadTestStruct *test_struct) {
 			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
 					routerHandleSquawk, "Squawking (Sensor challenge)");
-			if (exit_code)
-				return exit_code;
 		}
-		// Server response
-		payloadMkSerial(&sg_serial);
-		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-		payloadMkSquawkServer(&sg_squawk, test_struct);
-		// TODO: Allow respond/deny here
-		sg_squawk.datatype = SG_SQUAWK_SERVER_RESPOND;
-		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
-				routerHandleSquawk, "Squawking (Server response)");
-		if (exit_code)
-			return exit_code;
+		if (!exit_code) {
+			// Server response
+			payloadMkSerial(&sg_serial);
+			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
+			payloadMkSquawkServer(&sg_squawk, test_struct);
+			// TODO: Allow respond/deny here
+			sg_squawk.datatype = SG_SQUAWK_SERVER_RESPOND;
+			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_server,
+					routerHandleSquawk, "Squawking (Server response)");
+		}
 
-		// Sensor accepts/rejects
-		// TODO: Allow respond/deny here
-		payloadMkSerial(&sg_serial);
-		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-		payloadMkSquawkSensor(&sg_squawk, test_struct);
-		sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
-		memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-		test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;;
-		exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
-				routerHandleSquawk, "Squawking (Sensor Accept/Reject)");
-		if (exit_code)
-			return exit_code;
-		
+		if (!exit_code) {
+			// Sensor accepts/rejects
+			// TODO: Allow respond/deny here
+			payloadMkSerial(&sg_serial);
+			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
+			payloadMkSquawkSensor(&sg_squawk, test_struct);
+			sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
+			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;;
+			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
+					routerHandleSquawk, "Squawking (Sensor Accept/Reject)");
+		}
 	}
-	if (test_struct->nest) {
+	mark_point();
+	if (!exit_code && test_struct->nest) {
 		payloadMkSerial(&sg_serial);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		payloadMkNest(&sg_nest, test_struct);
 		memcpy(&sg_serial.payload, &sg_nest, sizeof(SansgridNest));
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->nest,
 				routerHandleNest, "Nesting");
-		if (exit_code)
-			return exit_code;
 	}
-	if (test_struct->chirp) {
+	mark_point();
+	if (!exit_code && test_struct->chirp) {
 		payloadMkSerial(&sg_serial);
 		payloadMkChirp(&sg_chirp, test_struct);
 		memcpy(&sg_serial.payload, &sg_chirp, sizeof(SansgridChirp));
@@ -272,9 +277,8 @@ int testPayload(PayloadTestStruct *test_struct) {
 			fail("Chirp: Bad datatype");
 		exit_code = testPayloadSpecific(&sg_serial, test_struct->chirp,
 				routerHandleChirp, "Chirping");
-		if (exit_code)
-			return exit_code;
 	}
+	mark_point();
 
 
 #if TESTS_DEBUG_LEVEL > 0
@@ -291,7 +295,7 @@ int testPayload(PayloadTestStruct *test_struct) {
 #endif
 
 	// Final Cleanup
-	payloadRoutingDestroy();
+	payloadRoutingRemoveReference();
 	return 0;
 }
 

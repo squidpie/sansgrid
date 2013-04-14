@@ -39,7 +39,10 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
-TalkStub *ts_serial = NULL;
+struct ThreadArgs {
+	TalkStub *ts_serial;
+	Queue *queue;
+};
 
 void payloadMkSerial(SansgridSerial *sg_serial);
 
@@ -47,7 +50,7 @@ void payloadMkSerial(SansgridSerial *sg_serial);
 static void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
 	int i;
-	Queue *queue = (Queue*)arg;
+	struct ThreadArgs *thr_args = (struct ThreadArgs*)arg;
 	//int oldstate = 0;
 	SansgridSerial *sg_serial = NULL;
 #if TESTS_DEBUG_LEVEL > 0
@@ -57,7 +60,7 @@ static void *routingTableRuntime(void *arg) {
 #endif
 
 	for (i=0; i<10; i++) {
-		if (queueDequeue(queue, (void**)&sg_serial) == -1)
+		if (queueDequeue(thr_args->queue, (void**)&sg_serial) == -1)
 			fail("Dispatch Dequeue Failure");
 		fail_if((sg_serial == NULL), "serial_data not initialized!");
 		//pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -79,7 +82,7 @@ static void *spiReader(void *arg) {
 	int i;
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size = 0;
-	Queue *queue = (Queue*)arg;
+	struct ThreadArgs *thr_args = (struct ThreadArgs*)arg;
 	//int oldstate;
 #ifndef SG_TEST_USE_EEPROM
 	FILE *FPTR;
@@ -94,12 +97,12 @@ static void *spiReader(void *arg) {
 #endif
 
 #ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(ts_serial, 0x0000);
+		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
 #else
 		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
 			fail("Can't open fifo for reading");
 		}
-		talkStubSetReader(ts_serial, FPTR);
+		talkStubSetReader(thr_args->ts_serial, FPTR);
 #endif
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
@@ -109,7 +112,7 @@ static void *spiReader(void *arg) {
 		else if (excode == 0) {
 			// Enqueue
 			//pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-			if (queueEnqueue(queue, sg_serial) == -1)
+			if (queueEnqueue(thr_args->queue, sg_serial) == -1)
 				fail("Queue Enqueue Failure");
 			//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
@@ -117,7 +120,7 @@ static void *spiReader(void *arg) {
 #else
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor failed to close");
-		talkStubSetReader(ts_serial, NULL);
+		talkStubSetReader(thr_args->ts_serial, NULL);
 #endif
 	}
 
@@ -133,7 +136,9 @@ static void *spiWriter(void *arg) {
 	int i;
 	SansgridFly sg_fly;
 	SansgridSerial sg_serial;
-#ifndef SG_TEST_USE_EEPROM
+	struct ThreadArgs *thr_args = (struct ThreadArgs*)arg;
+#ifdef SG_TEST_USE_EEPROM
+#else
 	FILE *FPTR = NULL;
 #endif
 
@@ -150,12 +155,12 @@ static void *spiWriter(void *arg) {
 #endif
 
 #ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(ts_serial, 0x0000);
+		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
 #else
 		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
 			fail("Can't open fifo for writing");
 		}
-		talkStubSetWriter(ts_serial, FPTR);
+		talkStubSetWriter(thr_args->ts_serial, FPTR);
 #endif
 		snprintf(sg_fly.network_name, 78, "Ping %i", i);
 		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
@@ -163,9 +168,9 @@ static void *spiWriter(void *arg) {
 			fail("Failed to send packet");
 #ifdef SG_TEST_USE_EEPROM
 #else
+		talkStubSetWriter(thr_args->ts_serial, NULL);
 		if (fclose(FPTR) == EOF)
 			fail("File Descriptor Failed to close");
-		talkStubSetWriter(ts_serial, NULL);
 #endif
 	}
 
@@ -180,45 +185,47 @@ static void *spiWriter(void *arg) {
 
 START_TEST (testAdvancedDispatch) {
 	// unit test code for more dispatch testing
-	Queue *queue;
 	pthread_t spi_read_thread,
 			  spi_write_thread,
 			  routing_table_thread;
 	sem_t readlock, writelock;
 	void *arg;
-	ts_serial = talkStubUseSerial(1);
+	struct ThreadArgs thr_args  = {
+		.ts_serial = talkStubUseSerial(1),
+		.queue = queueInit(200)
+	};
 
 
 	struct stat buffer;
 	// parent
 
-	queue = queueInit(200);
-	fail_unless((queue != NULL), "Error: Queue not allocated!");
+	fail_unless((thr_args.queue != NULL), "Error: Queue not allocated!");
 
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);
 	sem_init(&readlock, 0, 0);
 	sem_init(&writelock, 0, 0);
-	talkStubUseBarrier(ts_serial, 1);
+	talkStubUseBarrier(thr_args.ts_serial, 1);
 
-	pthread_create(&spi_read_thread, NULL, &spiReader, queue);
-	pthread_create(&spi_write_thread, NULL, &spiWriter, queue);
-	pthread_create(&routing_table_thread, NULL, &routingTableRuntime, queue);
+	pthread_create(&spi_read_thread, NULL, &spiReader, &thr_args);
+	pthread_create(&spi_write_thread, NULL, &spiWriter, &thr_args);
+	pthread_create(&routing_table_thread, NULL, &routingTableRuntime, &thr_args);
 
 	
 
 
 	pthread_join(spi_read_thread, &arg);
 	pthread_join(spi_write_thread, &arg);
-	while (queueSize(queue) > 0)
+	while (queueSize(thr_args.queue) > 0)
 		sched_yield();
 	pthread_cancel(routing_table_thread);
 	pthread_join(routing_table_thread, &arg);
-	queueDestroy(queue);
+	queueDestroy(thr_args.queue);
 	sem_destroy(&readlock);
 	sem_destroy(&writelock);
 
-	talkStubUseBarrier(ts_serial, 0);
+	talkStubUseBarrier(thr_args.ts_serial, 0);
+	talkStubUseSerial(0);
 
 
 	unlink("rstubin.fifo");

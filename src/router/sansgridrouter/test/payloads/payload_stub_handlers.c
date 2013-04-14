@@ -24,6 +24,7 @@
 #include "payload_tests.h"
 
 void payloadMkSerial(SansgridSerial *sg_serial) {
+	sg_serial->control = 0x0;
 	for (int i=0; i<IP_SIZE; i++) {
 		sg_serial->ip_addr[i] = 0x0;
 	}
