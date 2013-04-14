@@ -131,18 +131,25 @@ int32_t payloadStateInit(void) {
 	// and file descriptors, and threads for
 	// tests
 
+#ifdef SG_TEST_USE_EEPROM
+#else
 	struct stat buffer;
 
 	if (stat("spi.fifo", &buffer) < 0)
 		mkfifo("spi.fifo", 0644);
 	if (stat("tcp.fifo", &buffer) < 0)
 		mkfifo("tcp.fifo", 0644);
+#endif
 
 
 
 	pthread_create(&serial_reader_thr, NULL, &spiPayloadReader, NULL);
 	pthread_create(&tcp_reader_thr, NULL, &tcpPayloadReader, NULL);
 	
+#ifdef SG_TEST_USE_EEPROM
+	talkStubSetEEPROMAddress(ts_serial, 0x0000);
+	talkStubSetEEPROMAddress(ts_serial, 0x0060);
+#else
 	// Initialize Pipes
 	if (!(FPTR_SPI_WRITER = fopen("spi.fifo", "w"))) {
 		fail("Error: Can't open serial pipe for writing!");
@@ -152,6 +159,7 @@ int32_t payloadStateInit(void) {
 	}
 	talkStubSetWriter(ts_serial, FPTR_SPI_WRITER);
 	talkStubSetWriter(ts_tcp, FPTR_TCP_WRITER);
+#endif
 
 	return 0;
 }
@@ -161,8 +169,11 @@ int32_t payloadStateInit(void) {
 int32_t payloadStateCommit(SansgridSerial **sg_serial_read) {
 	// Close writing file descriptors, join threads, remove pipes
 	void *arg;
+#ifdef SG_TEST_USE_EEPROM
+#else
 	fclose(FPTR_SPI_WRITER);
 	fclose(FPTR_TCP_WRITER);
+#endif
 
 
 	// Finish reading
@@ -170,9 +181,11 @@ int32_t payloadStateCommit(SansgridSerial **sg_serial_read) {
 	pthread_join(tcp_reader_thr, &arg);
 
 	
+#ifdef SG_TEST_USE_EEPROM
+#else
 	unlink("spi.fifo");
 	unlink("tcp.fifo");
-
+#endif
 
 	// Test current state
 	fail_if((queueSize(dispatch) == 0), "No data on the dispatch!");

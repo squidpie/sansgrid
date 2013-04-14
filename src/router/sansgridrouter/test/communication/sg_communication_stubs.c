@@ -28,9 +28,16 @@
 #include "../tests.h"
 #include "sg_communication_stubs.h"
 
+
 struct TalkStub {
+#ifdef SG_TEST_USE_EEPROM
+	// Only used when using EEPROM
+	uint16_t eeprom_address;
+#else
+	// Used with named pipes
 	FILE *FPTR_SPI_WRITE,		// Writing file descriptor
 		 *FPTR_SPI_READ;		// Reading file descriptor
+#endif
 	sem_t *valid_read;			// Only return valid data if we're reading
 	sem_t write_in_progress,	// A write is in progress
 		  read_in_progress;		// A read is in progress
@@ -50,8 +57,12 @@ static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
 		ts = NULL;
 	} else {
 		ts = (TalkStub*)malloc(sizeof(TalkStub));
+#ifdef SG_TEST_USE_EEPROM
+		ts->eeprom_address = 0x0;
+#else
 		ts->FPTR_SPI_READ = NULL;
 		ts->FPTR_SPI_WRITE = NULL;
+#endif
 		ts->valid_read = NULL;
 		ts->use_barrier = 0;
 	}
@@ -73,6 +84,11 @@ TalkStub *talkStubUseTCP(int use_tcp) {
 /*
  * File Descriptor setup
  */
+#ifdef SG_TEST_USE_EEPROM
+void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address) {
+	ts->eeprom_address = address;
+}
+#else
 void talkStubSetReader(TalkStub *ts, FILE *FPTR) {
 	ts->FPTR_SPI_READ = FPTR;
 }
@@ -80,6 +96,7 @@ void talkStubSetReader(TalkStub *ts, FILE *FPTR) {
 void talkStubSetWriter(TalkStub *ts, FILE *FPTR) {
 	ts->FPTR_SPI_WRITE = FPTR;
 }
+#endif
 
 /*
  * Lock Setup
@@ -107,7 +124,122 @@ void talkStubUseBarrier(TalkStub *ts, int value) {
 }
 
 
+#ifdef SG_TEST_USE_EEPROM
+/*
+ * Use a 64K SPI EEPROM for read/write
+ */
+#include <stdint.h>
+#include "../../../sg_serial.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <wiringPi.h>
+#include <wiringPiSPI.h>
 
+
+#define KHZ(freq) (1000*freq)
+#define MHZ(freq) (1000*KHZ(freq))
+
+// EEPROM-specific defines
+#define SPI_SPEED_MHZ	2
+#define WRITE 			0x02
+#define READ			0x03
+#define WRITE_ENABLE 	0x06
+#define WRITE_CYCLE		5000
+
+static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
+	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
+	uint8_t *buffer;
+	int i;
+	int fd;
+	// only 32 bytes can be written at a time; see below
+	int bounded_size = (size > 32 ? 32 : size);
+	// prepend the command and address to the data
+	uint8_t newbuffer[bounded_size+3];
+
+	if (!ts->use_barrier)
+		return -1;
+
+	sg_serial_union.formdata = sg_serial;
+	buffer = sg_serial_union.serialdata;
+
+	// Set up SPI
+	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
+		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
+
+	// Have to make room for command and address
+	for (i=3; i<bounded_size+3; i++)
+		newbuffer[i] = buffer[i-3];
+
+	// Allow writes to the EEPROM
+	// Has to be done before every write cycle
+	newbuffer[0] = WRITE_ENABLE;
+	write(fd, newbuffer, 1);
+
+	// Write to specified address
+	newbuffer[0] = WRITE;
+	newbuffer[1] = ts->eeprom_address >> 8;
+	newbuffer[2] = ts->eeprom_address & 0xff;
+
+	write(fd, newbuffer, bounded_size+3);
+	// Wait for the write to cycle
+	usleep(WRITE_CYCLE);
+	close(fd);
+	if (size > 32) {
+		// Only one page (of 32 bytes) can be written
+		// at a time. If more than 32 bytes are being written,
+		// break the line into multiple pages
+		return talkStubSend(&buffer[32], ts->eeprom_address+0x0020, size-32);
+	}
+
+	sem_post(&ts->write_in_progress);
+	sem_wait(&ts->read_in_progress);
+
+	return 0;
+}
+
+
+static int talkStubReceive(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
+	// Read from an EEPROM chip over SPI
+	SANSGRID_UNION(SansgridSerial *sg_serial, SGSU) sg_serial_union;
+	int fd;
+	uint8_t *buffer;
+	uint8_t newbuffer[size+3];
+	int i;
+
+	if (!ts->use_barrier) 
+		return -1;
+
+	sem_wait(&ts->write_in_progress);
+
+	// Set up reading from EEPROM
+	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
+		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
+
+	// Prepend command and address to buffer
+	newbuffer[0] = READ;
+	newbuffer[1] = ts->eeprom_address >> 8;
+	newbuffer[2] = ts->eeprom_address & 0xff;
+
+	// Send command/address, read data
+	wiringPiSPIDataRW(0, newbuffer, size+3);
+
+	// shift the command and address out of buffer
+	for (i=0; i<size; i++)
+		buffer[i] = newbuffer[i+3];
+	// finish up
+	close(fd);
+
+	sem_post(&ts->read_in_progress);
+
+	return 0;
+}
+
+
+#else
 /*
  * Generic Send/Receive functions.
  * These hook into both serial and TCP stubs
@@ -170,6 +302,7 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 	return 0;
 }
 
+#endif
 
 /* Serial/TCP API Definitions
  * These hook directly into the send/receive stubs
