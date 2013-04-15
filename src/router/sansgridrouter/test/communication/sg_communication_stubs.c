@@ -191,7 +191,7 @@ static int eepromSend(uint8_t *buffer, uint16_t address, int size) {
 	newbuffer[1] = address >> 8;
 	newbuffer[2] = address & 0xff;
 
-	printf("Writing to %x\n", address);
+	//printf("Writing to %x\n", address);
 	write(fd, newbuffer, bounded_size+3);
 	close(fd);
 	// Wait for the write to cycle
