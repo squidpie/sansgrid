@@ -49,9 +49,9 @@ struct TalkStub {
 	FILE *FPTR_PIPE_WRITE,		// Writing file descriptor
 		 *FPTR_PIPE_READ;		// Reading file descriptor
 #endif
-	sem_t *valid_read;			// Only return valid data if we're reading
-	sem_t write_in_progress,	// A write is in progress
-		  read_in_progress;		// A read is in progress
+	int valid_read;				// Only return valid data if we're reading
+	sem_t writelock,			// A write is in progress
+		  readlock;				// A read is in progress
 	int use_barrier;			// Whether or not to use write/read_in_progress
 };
 
@@ -60,39 +60,54 @@ static TalkStub *ts_serial = NULL,
 				*ts_tcp = NULL;
 
 
-static TalkStub *talkStubUse(TalkStub *ts, int use_this) {
+TalkStub *talkStubInit(void) {
+	mark_point();
+	TalkStub *ts = (TalkStub*)malloc(sizeof(TalkStub));
+#ifdef SG_TEST_USE_EEPROM
+	ts->eeprom_address = 0x0;
+#else
+	ts->FPTR_PIPE_READ = NULL;
+	ts->FPTR_PIPE_WRITE = NULL;
+#endif
+	ts->valid_read = 0;
 
 	mark_point();
-	if (ts)
-		free(ts);
-	if (!use_this) {
-		ts = NULL;
-	} else {
-		ts = (TalkStub*)malloc(sizeof(TalkStub));
-#ifdef SG_TEST_USE_EEPROM
-		ts->eeprom_address = 0x0;
-#else
-		ts->FPTR_PIPE_READ = NULL;
-		ts->FPTR_PIPE_WRITE = NULL;
-#endif
-		ts->valid_read = NULL;
-		ts->use_barrier = 0;
-	}
-	mark_point();
+	sem_init(&ts->writelock, 0, 0);
+	sem_init(&ts->readlock, 0, 0);
+
 	return ts;
 }
 
 /*
  * Enable/Disable functions
  */
-TalkStub *talkStubUseSerial(int use_serial) {
+void talkStubUseAsSPI(TalkStub *ts) {
 	mark_point();
-	return (ts_serial = talkStubUse(ts_serial, use_serial));
+	ts_serial = ts;
+	return;
 }
 
-TalkStub *talkStubUseTCP(int use_tcp) {
+void talkStubUseAsTCP(TalkStub *ts) {
 	mark_point();
-	return (ts_tcp = talkStubUse(ts_tcp, use_tcp));
+	ts_tcp = ts;
+	return;
+}
+
+TalkStub *talkStubGetSPI(void) {
+	return ts_serial;
+}
+
+TalkStub *talkStubGetTCP(void) {
+	return ts_tcp;
+}
+
+
+void talkStubAssertValid(TalkStub *ts) {
+	ts->valid_read = 1;
+}
+
+void talkStubAssertInvalid(TalkStub *ts) {
+	ts->valid_read = 0;
 }
 
 
@@ -114,35 +129,21 @@ void talkStubSetWriter(TalkStub *ts, FILE *FPTR) {
 	mark_point();
 	ts->FPTR_PIPE_WRITE = FPTR;
 }
+
+
+void talkStubCloseReader(TalkStub *ts) {
+	fclose(ts->FPTR_PIPE_READ);
+	ts->FPTR_PIPE_READ = NULL;
+}
+
+
+void talkStubCloseWriter(TalkStub *ts) {
+	fclose(ts->FPTR_PIPE_WRITE);
+	ts->FPTR_PIPE_WRITE = NULL;
+}
+
+
 #endif
-
-/*
- * Lock Setup
- */
-void talkStubSetReadlock(TalkStub *ts, sem_t *readlock) {
-	// Set up an optional lock that drops data if
-	// the semaphore value == 0
-	mark_point();
-	ts->valid_read = readlock;
-}
-
-void talkStubUseBarrier(TalkStub *ts, int value) {
-	// Read/Write synchronization locks
-	// This makes sure that one piece of data is read,
-	// and one piece of data is written at a time
-	mark_point();
-	if (value && !ts->use_barrier) {
-		// initialize
-		sem_init(&ts->write_in_progress, 0, 0);
-		sem_init(&ts->read_in_progress, 0, 0);
-	} else if (!value && ts->use_barrier) {
-		// destroy
-		sem_destroy(&ts->write_in_progress);
-		sem_destroy(&ts->read_in_progress);
-	}
-	ts->use_barrier = value;
-	mark_point();
-}
 
 
 #ifdef SG_TEST_USE_EEPROM
@@ -171,6 +172,7 @@ static int eepromSend(uint8_t *buffer, uint16_t address, int size) {
 	// prepend the command and address to the data
 	uint8_t newbuffer[bounded_size+3];
 	struct timespec required, remaining;
+	int excode;
 
 	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
 		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
@@ -189,12 +191,21 @@ static int eepromSend(uint8_t *buffer, uint16_t address, int size) {
 	newbuffer[1] = address >> 8;
 	newbuffer[2] = address & 0xff;
 
+	printf("Writing to %x\n", address);
 	write(fd, newbuffer, bounded_size+3);
+	close(fd);
 	// Wait for the write to cycle
 	required.tv_sec = 0;
 	required.tv_nsec = 1000L*WRITE_CYCLE;
-	nanosleep(&required, &remaining);
-	close(fd);
+	do {
+		if ((excode = nanosleep(&required, &remaining)) == -1) {
+			if (errno == EINTR)
+				required.tv_nsec = remaining.tv_nsec;
+			else
+				return -1;
+		}
+	} while (excode);
+
 	if (size > 32) {
 		// Only one page (of 32 bytes) can be written
 		// at a time. If more than 32 bytes are being written,
@@ -215,9 +226,6 @@ static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) 
 		pthread_mutex_init(&eeprom_lock, NULL);
 		eeprom_lock_initd = 1;
 	}
-	if (!ts->use_barrier) {
-		talkStubUseBarrier(ts, 1);
-	}
 
 
 	sg_serial_union.formdata = sg_serial;
@@ -228,8 +236,8 @@ static int talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) 
 
 	pthread_mutex_unlock(&eeprom_lock);
 
-	sem_post(&ts->write_in_progress);
-	sem_wait(&ts->read_in_progress);
+	sem_post(&ts->writelock);
+	sem_wait(&ts->readlock);
 
 	return 0;
 }
@@ -243,11 +251,8 @@ static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub 
 	int i;
 
 	mark_point();
-	if (ts->valid_read) {
-		if (sem_trywait(ts->valid_read) == -1) {
-			return 1;
-		}
-	}
+	if (!ts->valid_read)
+		return 1;
 
 	mark_point();
 	if (!eeprom_lock_initd) {
@@ -256,16 +261,13 @@ static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub 
 	}
 
 	mark_point();
-	if (!ts->use_barrier) {
-		talkStubUseBarrier(ts, 1);
-	}
 
 
 	mark_point();
 	*size = sizeof(SansgridSerial);
 	mark_point();
 
-	sem_wait(&ts->write_in_progress);
+	sem_wait(&ts->writelock);
 
 	mark_point();
 	pthread_mutex_lock(&eeprom_lock);
@@ -281,7 +283,7 @@ static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub 
 	newbuffer[2] = ts->eeprom_address & 0xff;
 
 	// Send command/address, read data
-	wiringPiSPIDataRW(0, newbuffer, *size+3);
+	wiringPiSPIDataRW(0, newbuffer, (*size)+3);
 
 	// shift the command and address out of buffer
 	for (i=0; i<*size; i++)
@@ -292,7 +294,7 @@ static int talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub 
 	close(fd);
 
 	pthread_mutex_unlock(&eeprom_lock);
-	sem_post(&ts->read_in_progress);
+	sem_post(&ts->readlock);
 
 	return 0;
 }
@@ -308,17 +310,15 @@ static int8_t talkStubSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *t
 	int i;
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
 
+	fail_if((ts == NULL), "TalkStub is NULL!");
 
-	if (ts->FPTR_PIPE_WRITE == NULL)
-		return -1;
+	fail_if((ts->FPTR_PIPE_WRITE == NULL), "Write descriptor is NULL!");
 	fail_if((sg_serial == NULL), "sg_serial is NULL!");
 
 	sg_serial_union.formdata = sg_serial;
 	
-	if (ts->use_barrier) {
-		sem_post(&ts->write_in_progress);
-		sem_wait(&ts->read_in_progress);
-	}
+	sem_post(&ts->writelock);
+	sem_wait(&ts->readlock);
 	for (i=0; i<sizeof(SansgridSerial) && ts->FPTR_PIPE_WRITE; i++) {
 		putc(sg_serial_union.serialdata[i], ts->FPTR_PIPE_WRITE);
 	}
@@ -333,6 +333,9 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 	int i;
 	char lptr[sizeof(SansgridSerial)+1];
 
+	if (!ts->valid_read) {
+		return 1;
+	}
 	fail_if((ts == NULL), "TalkStub is NULL!");
 	mark_point();
 	if (ts->FPTR_PIPE_READ == NULL) {
@@ -344,10 +347,8 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 	mark_point();
 
 	// Read from the pipe 
-	if (ts->use_barrier) {
-		sem_post(&ts->read_in_progress);
-		sem_wait(&ts->write_in_progress);
-	}
+	sem_post(&ts->readlock);
+	sem_wait(&ts->writelock);
 	
 	mark_point();
 	for (i=0; i<(sizeof(SansgridSerial)) && ts->FPTR_PIPE_READ; i++) {
@@ -355,13 +356,7 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 	}
 
 	mark_point();
-	if (ts->valid_read) {
-		if (sem_trywait(ts->valid_read) == -1) {
-			return 1;
-		}
-	}
 
-	mark_point();
 	if (i < sizeof(SansgridSerial)) {
 #if TESTS_DEBUG_LEVEL > 0
 		printf("Dropping Packet at %i of %i\n", i, 
@@ -380,6 +375,16 @@ static int8_t talkStubReceive(SansgridSerial **sg_serial, uint32_t *size, TalkSt
 }
 
 #endif
+
+
+void talkStubDestroy(TalkStub *ts) {
+	if (ts_serial == ts)
+		ts_serial = NULL;
+	if (ts_tcp == ts)
+		ts_tcp = NULL;
+	free(ts);
+}
+
 
 /* Serial/TCP API Definitions
  * These hook directly into the send/receive stubs

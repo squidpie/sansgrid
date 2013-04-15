@@ -97,8 +97,6 @@ typedef struct PayloadTestStruct {
 
 Queue *dispatch;
 RoutingTable *routing_table;
-sem_t tcp_readlock,
-	  spi_readlock;
 
 // Payload Test Structure functions
 void testStructInit(PayloadTestStruct *test_struct);
@@ -127,7 +125,7 @@ int32_t payloadRoutingDestroy(void);
 int32_t payloadRoutingAddReference(void);
 int32_t payloadRoutingRemoveReference(void);
 int32_t payloadStateInit(void);
-int32_t payloadStateCommit(SansgridSerial **);
+int32_t payloadStateCommit(SansgridSerial **, int packets);
 
 // TestSuites
 Suite *payloadSizeTesting (void);
