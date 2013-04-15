@@ -8,6 +8,8 @@ AM_SILENT_RULES([yes])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_AR
+AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_CHECK_LIB([check], [srunner_create])

@@ -40,9 +40,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../../../sg_serial.h"
+#include "../../../../lib/sgSerial.h"
 #include "../../communication/sg_tcp.h"
-#include "../../../../payloads.h"
+#include "../../../../lib/payloads.h"
 #include "../../routing_table/routing_table.h"
 #include "../../payload_handlers/payload_handlers.h"
 #include "../communication/sg_communication_stubs.h"

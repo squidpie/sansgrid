@@ -28,7 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "../../../../sg_serial.h"
+#include "../../../../lib/sgSerial.h"
 #include "../tests.h"
 #include "sg_communication_stubs.h"
 #ifdef SG_TEST_USE_EEPROM

@@ -22,9 +22,9 @@
 #define __SG_ROUTER_HANDLERS_H__
 
 #include <stdint.h>
-#include "../../../payloads.h"
 #include "../routing_table/routing_table.h"
-#include "../../../sg_serial.h"
+#include "../../../lib/sgSerial.h"
+#include "../../../lib/payloads.h"
 
 
 

@@ -25,7 +25,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <check.h>
-#include "../../../../sg_serial.h"
+#include "../../../../lib/sgSerial.h"
 #include "../tests.h"
 #include "../../communication/sg_tcp.h"
 #include "sg_communication_stubs.h"

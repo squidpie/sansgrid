@@ -22,7 +22,6 @@
  */
 
 #include <stdio.h>
-//#include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -33,8 +32,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "../../../../sg_serial.h"
-#include "../../../../payloads.h"
+#include "../../../../lib/sgSerial.h"
+#include "../../../../lib/payloads.h"
 #include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
