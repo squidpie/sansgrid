@@ -35,7 +35,7 @@ void setup() {
 		SerialDebugger.debug(NOTIFICATION,__FUNC__,"Notify test\n");
 		delay(50);
 	#endif
-	sgDebugInit(SerialDebugger);
+	sgDebugInit(&SerialDebugger);
 	SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
