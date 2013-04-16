@@ -1,5 +1,5 @@
 SGPATH = ..
-SGLIBS = $(SGPATH)/lib/
+SGLIBS = $(SGPATH)/include/
 SOURCES = SansgridRadio.cpp
 LIBRARIES = SerialDebugger
 BOARD = uno
