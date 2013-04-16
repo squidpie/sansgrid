@@ -31,9 +31,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <payloads.h>
+#include <sgSerial.h>
 
-#include "../../../../lib/sgSerial.h"
-#include "../../../../lib/payloads.h"
 #include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"

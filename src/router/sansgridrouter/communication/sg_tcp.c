@@ -26,8 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sg_tcp.h"
-#include "../../../lib/sgSerial.h"
-#include "../../../lib/payloads.h"
 #include "../payload_handlers/payload_handlers.h"
 
 

@@ -37,7 +37,6 @@
 #include <semaphore.h>
 #include <string.h>
 #include <sys/types.h>
-#include "../../../../lib/sgSerial.h"
 #include "../tests.h"
 
 typedef struct TalkStub TalkStub;

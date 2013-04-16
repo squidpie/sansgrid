@@ -1,6 +1,6 @@
 bin_PROGRAMS = sansgridrouter
 check_PROGRAMS = sgtest
-AM_CFLAGS = -Wall -std=c99
+AM_CFLAGS = -Wall -std=c99 -I../../../include/
 
 SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
@@ -46,4 +46,4 @@ sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/tests.c
 
-AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\"
+AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\" 

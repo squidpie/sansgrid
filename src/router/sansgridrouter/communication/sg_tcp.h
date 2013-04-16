@@ -22,7 +22,7 @@
 #define __SG_ROUTER_TCP_H__
 
 #include <stdint.h>
-#include "../../../lib/sgSerial.h"
+#include <sgSerial.h>
 
 // Delimiters
 // Note: These are wide chars. They take up 2 bytes

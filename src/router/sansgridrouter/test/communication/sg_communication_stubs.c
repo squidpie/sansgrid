@@ -28,8 +28,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "../../../../lib/sgSerial.h"
 #include "../tests.h"
+#include <sgSerial.h>
 #include "sg_communication_stubs.h"
 #ifdef SG_TEST_USE_EEPROM
 #include <wiringPi.h>
