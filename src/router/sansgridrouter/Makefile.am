@@ -25,7 +25,11 @@ SANSGRID_TEST = test/communication/sg_communication_stubs.c \
 		test/payloads/payload_dt_chirp_tests.c \
 		test/communication/sg_tcp_test.c
 
-			
+#noinst_LIBRARIES = libSgPayloads.a libSgSerial.a
+
+#libSgSerial_a_SOURCES = ../../sg_serial.h
+#libSgPayloads_a_SOURCES = ../../lib/payloads.h
+
 sansgridrouter_SOURCES = $(SANSGRID_BASE) \
 			  $(SANSGRID_COMM) \
 			  daemon/sansgrid_daemon.c \
@@ -33,8 +37,11 @@ sansgridrouter_SOURCES = $(SANSGRID_BASE) \
 			  main.c
 EXTRA_sansgridrouter_SOURCES = 	communication/sg_serial_rpi.c \
 				communication/sg_serial_generic.c
-sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM)
-sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM)
+#sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM) libSgPayloads.a libSgSerial.a
+#sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM) libSgPayloads.a libSgSerial.a
+sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM) 
+sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM) 
+#sgtest_LDADD = libSgPayloads.a libSgSerial.a
 sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/tests.c

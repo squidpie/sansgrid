@@ -22,7 +22,6 @@
  */
 
 #include <stdio.h>
-//#include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -33,8 +32,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "../../../../sg_serial.h"
-#include "../../../../payloads.h"
+#include "../../../../lib/sgSerial.h"
+#include "../../../../lib/payloads.h"
 #include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
@@ -130,6 +129,9 @@ static void *spiReader(void *arg) {
 	pthread_exit(arg);
 }
 
+
+
+
 static void *spiWriter(void *arg) {
 	// Writes to a serial connection
 
@@ -188,24 +190,24 @@ START_TEST (testAdvancedDispatch) {
 	pthread_t spi_read_thread,
 			  spi_write_thread,
 			  routing_table_thread;
-	sem_t readlock, writelock;
 	void *arg;
 	struct ThreadArgs thr_args  = {
-		.ts_serial = talkStubUseSerial(1),
+		.ts_serial = talkStubInit(),
 		.queue = queueInit(200)
 	};
+	fail_unless((thr_args.queue != NULL), "Error: Queue not allocated!");
 
 
+#ifndef SG_TEST_USE_EEPROM
 	struct stat buffer;
 	// parent
 
-	fail_unless((thr_args.queue != NULL), "Error: Queue not allocated!");
 
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);
-	sem_init(&readlock, 0, 0);
-	sem_init(&writelock, 0, 0);
-	talkStubUseBarrier(thr_args.ts_serial, 1);
+#endif
+	talkStubUseAsSPI(thr_args.ts_serial);
+	talkStubAssertValid(thr_args.ts_serial);
 
 	pthread_create(&spi_read_thread, NULL, &spiReader, &thr_args);
 	pthread_create(&spi_write_thread, NULL, &spiWriter, &thr_args);
@@ -221,14 +223,13 @@ START_TEST (testAdvancedDispatch) {
 	pthread_cancel(routing_table_thread);
 	pthread_join(routing_table_thread, &arg);
 	queueDestroy(thr_args.queue);
-	sem_destroy(&readlock);
-	sem_destroy(&writelock);
 
-	talkStubUseBarrier(thr_args.ts_serial, 0);
-	talkStubUseSerial(0);
+	talkStubDestroy(thr_args.ts_serial);
 
 
+#ifndef SG_TEST_USE_EEPROM
 	unlink("rstubin.fifo");
+#endif
 }
 END_TEST
 

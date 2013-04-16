@@ -26,30 +26,39 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
 	mark_point();
+	int packets = 0;
 
-	//TalkStub *ts_serial = talkStubUseSerial(1),
-			 //*ts_tcp = talkStubUseTCP(1);
+	TalkStub *ts_serial = talkStubInit(),
+			 *ts_tcp = talkStubInit();
+	talkStubUseAsSPI(ts_serial);
+	talkStubUseAsTCP(ts_tcp);
 	int exit_code;
 	SansgridSerial *sg_serial_read;
-	//talkStubSetReadlock(ts_serial, &spi_readlock);
-	//talkStubSetReadlock(ts_tcp, &tcp_readlock);
 
 	mark_point();
 
 	// Set which fifos we're writing to
 	// (This is so we don't read back bad data)
 	switch (test_node->read_dir) {
+		case SG_TEST_COMM_WRITE_NONE:
+			talkStubAssertInvalid(ts_serial);
+			talkStubAssertInvalid(ts_tcp);
+			packets = 0;
+			break;
 		case SG_TEST_COMM_WRITE_SPI:
-			sem_post(&spi_readlock);
-			sem_trywait(&tcp_readlock);
+			talkStubAssertValid(ts_serial);
+			talkStubAssertInvalid(ts_tcp);
+			packets = 1;
 			break;
 		case SG_TEST_COMM_WRITE_TCP:
-			sem_trywait(&spi_readlock);
-			sem_post(&tcp_readlock);
+			talkStubAssertInvalid(ts_serial);
+			talkStubAssertValid(ts_tcp);
+			packets = 1;
 			break;
 		case SG_TEST_COMM_WRITE_BOTH:
-			sem_post(&spi_readlock);
-			sem_post(&tcp_readlock);
+			talkStubAssertValid(ts_serial);
+			talkStubAssertValid(ts_tcp);
+			packets = 2;
 			break;
 		default:
 			break;
@@ -65,7 +74,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	exit_code = fn(routing_table, sg_serial);
 	mark_point();
 	// Commit handler
-	payloadStateCommit(&sg_serial_read);
+	payloadStateCommit(&sg_serial_read, packets);
 	mark_point();
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Handled with status: %i\n", exit_code);
@@ -102,10 +111,11 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	}
 
 	mark_point();
-	free(sg_serial_read);
+	if (packets > 1)
+		free(sg_serial_read);
 	mark_point();
-	//talkStubUseSerial(0);
-	//talkStubUseTCP(0);
+	talkStubDestroy(ts_serial);
+	talkStubDestroy(ts_tcp);
 	return exit_code;
 }
 

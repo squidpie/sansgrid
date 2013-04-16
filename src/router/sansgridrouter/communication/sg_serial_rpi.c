@@ -23,7 +23,7 @@
 //#ifdef SG_ARCH_PI
 
 #include <stdint.h>
-#include "../../../sg_serial.h"
+#include "../../../lib/sgSerial.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>

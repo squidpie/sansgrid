@@ -46,7 +46,9 @@ void spiSlaveInit( void )
 {
   // Turn on SPI in Slave Mode
   SPCR |= _BV(SPE);
-
+  SPCR |= _BV(SPR1);
+  SPCR |= _BV(SPR0);
+  
   // Set SPI to Mode 0
   SPI.setDataMode (SPI_MODE0);
   

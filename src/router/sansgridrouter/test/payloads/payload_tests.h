@@ -40,9 +40,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../../../sg_serial.h"
+#include "../../../../lib/sgSerial.h"
 #include "../../communication/sg_tcp.h"
-#include "../../../../payloads.h"
+#include "../../../../lib/payloads.h"
 #include "../../routing_table/routing_table.h"
 #include "../../payload_handlers/payload_handlers.h"
 #include "../communication/sg_communication_stubs.h"
@@ -97,8 +97,6 @@ typedef struct PayloadTestStruct {
 
 Queue *dispatch;
 RoutingTable *routing_table;
-sem_t tcp_readlock,
-	  spi_readlock;
 
 // Payload Test Structure functions
 void testStructInit(PayloadTestStruct *test_struct);
@@ -127,7 +125,7 @@ int32_t payloadRoutingDestroy(void);
 int32_t payloadRoutingAddReference(void);
 int32_t payloadRoutingRemoveReference(void);
 int32_t payloadStateInit(void);
-int32_t payloadStateCommit(SansgridSerial **);
+int32_t payloadStateCommit(SansgridSerial **, int packets);
 
 // TestSuites
 Suite *payloadSizeTesting (void);

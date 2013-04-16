@@ -8,11 +8,13 @@ AM_SILENT_RULES([yes])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_AR
+AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_CHECK_LIB([check], [srunner_create])
 AC_CHECK_LIB([pthread], [pthread_create])
-#AC_CHECK_LIB([wiringPi], [wiringPiSPISetup])
+AC_CHECK_LIB([wiringPi], [wiringPiSPISetup])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h stdint.h stdlib.h string.h syslog.h unistd.h])

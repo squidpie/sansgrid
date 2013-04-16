@@ -28,11 +28,12 @@
 #include <stdint.h>
 #include <string.h>
 #include "sansgrid_router.h"
-#include "../../payloads.h"
 #include "payload_handlers/payload_handlers.h"
-#include "../../sg_serial.h"
+#include "../../lib/payloads.h"
+#include "../../lib/sgSerial.h"
 #include <sys/stat.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
 
 
 #ifndef DATADIR

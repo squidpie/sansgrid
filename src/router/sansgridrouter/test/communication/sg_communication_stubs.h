@@ -37,21 +37,30 @@
 #include <semaphore.h>
 #include <string.h>
 #include <sys/types.h>
-#include "../../../../sg_serial.h"
+#include "../../../../lib/sgSerial.h"
 #include "../tests.h"
 
 typedef struct TalkStub TalkStub;
 
-TalkStub *talkStubUseSerial(int use_serial);
-TalkStub *talkStubUseTCP(int use_tcp);
+TalkStub *talkStubInit(void);
+void talkStubUseAsSPI(TalkStub *ts);
+void talkStubUseAsTCP(TalkStub *ts);
+TalkStub *talkStubGetSPI(void);
+TalkStub *talkStubGetTCP(void);
+void talkStubAssertValid(TalkStub *ts);
+void talkStubAssertInvalid(TalkStub *ts);
 #ifdef SG_TEST_USE_EEPROM
 void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
 #else
 void talkStubSetReader(TalkStub *ts, FILE *FPTR);
 void talkStubSetWriter(TalkStub *ts, FILE *FPTR);
+void talkStubCloseReader(TalkStub *ts);
+void talkStubCloseWriter(TalkStub *ts);
 #endif
-void talkStubSetReadlock(TalkStub *ts, sem_t *readlock);
-void talkStubUseBarrier(TalkStub *ts, int value);
+void talkStubDestroy(TalkStub *ts);
+
+
+
 
 
 #endif
