@@ -10,40 +10,69 @@ void setup()
 
 void loop() 
 {
-  char message[3] = "Hi";
   
-  // send test string
-  for ( int i = 0; i < 3; i++)
-  {
-    spiMasterSend(message[i]);
-    spiMasterReceive();
-  }
 }
 
 // Initialize SPI Master
 void spiMasterInit( void )
 {
-  // Set the slaveSelectPin High
-  digitalWrite(slaveSelectPin, HIGH);  
-  // Start SPI:
-  SPI.begin(); 
-  // Set SPI to Mode 0
-  SPI.setDataMode (SPI_MODE0);
+  // Set SPI to Master 
+  // default is zero which is Slave
+  SPCR |= _BV(MSTR);
+  
   // Set SPI Baud Rate to 1MHz
-  SPI.setClockDivider(SPI_CLOCK_DIV64);
+  SPI.setClockDivider(SPI_CLOCK_DIV16);
 }
 
-void spiMasterSend(byte ab) 
+void spiMasterOpen( int ss )
 {
+  SPI.begin(ss);
+}
+
+void spiMasterClose( int ss )
+{
+  SPI.end(ss);
+}
+
+void spiMasterSend( char * ab ) 
+{
+  // Enable SPI bus
+  spiMasterOpen();
   // take the SS pin low to select the chip:
   digitalWrite(slaveSelectPin,LOW);
-  //  send in the address and value via SPI:
-  SPI.transfer(ab);
+  //  send in the char arra via SPI:
+  for( int i = 0; i < sizeof(ab) - 1; i++)
+  {
+    if( i == (sizeof(ab)- 2) )
+      SPI.transfer( slaveSelectPin, ab[i] , SPI_LAST );
+    else
+      SPI.transfer( slaveSelectPin, ab[i] , SPI_CONTINUE );
+  }
   // take the SS pin high to de-select the chip:
-  digitalWrite(slaveSelectPin,HIGH); 
+  digitalWrite(slaveSelectPin,HIGH);
+  // Close SPI bus
+  spiMasterClose();
 }
 
-void spiMasterReceive( void )
+void spiMasterReceive( char * ab )
 {
-  byte c = SPDR;
+  // Enable SPI bus
+  spiMasterOpen(slaveSelectPi);
+  // take the SS pin low to select the chip:
+  digitalWrite(slaveSelectPin,LOW);
+  control = SPI.transfer(slaveSelectPin, 0xFD);
+  if( control == 0xFD);
+  {
+    for( int i = 0; i < 81 ; i++)
+    {
+      cd[i] = SPI.transfer(0xFD);
+      if( cd == '\0' )
+      break;
+    }
+    processPacket(cd); 
+  } 
+  // take the SS pin high to de-select the chip:
+  digitalWrite(slaveSelectPin,HIGH);
+  // Close SPI bus
+  spiMasterClose(slaveSelectPin);
 }
