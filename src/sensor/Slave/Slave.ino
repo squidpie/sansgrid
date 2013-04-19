@@ -1,5 +1,5 @@
 /* Definitions for communication functions
- * Specific to the Raspberry Pi Platform
+ * 
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -22,28 +22,27 @@
  
 #include <SPI.h> 
 
-#define SLAVE_SELECT  10        // SS pin 10
-#define SLAVE_READY  9          // Hand shake pin identifying Slave has data to send
-//#define LED 13                // LED for indicating Master recieved data from Slave
+//#define SLAVE_SELECT  10        // SS pin 10
+//#define SLAVE_READY  9          // Hand shake pin identifying Slave has data to send
+//#define LED 13                  // LED for indicating Master recieved data from Slave
 
-char buf [40];
+char buf [98];
 volatile byte pos;
 volatile boolean process_it;
-volatile int led = 0;
 
 void setup (void){
     // Initialize SPI Slave
     spiSlaveInit();
     // Initialize Hand Shake Pin  
-    pinMode( SLAVE_READY , OUTPUT );
-    digitalWrite( SLAVE_READY, HIGH );
+    //pinMode( SLAVE_READY , OUTPUT );
+    //digitalWrite( SLAVE_READY, HIGH );
 }
 
 void loop (void){
     // Assert Slave Ready to send data to Master
-    digitalWrite( SLAVE_READY , LOW);
-    delayMicroseconds(20);
-    digitalWrite( SLAVE_READY , HIGH);
+    //digitalWrite( SLAVE_READY , LOW);
+    //delayMicroseconds(20);
+    //digitalWrite( SLAVE_READY , HIGH);
     // Process buffer with data received from Master
     if (process_it){  
         buf [pos] = 0;
@@ -68,14 +67,7 @@ void spiSlaveInit( void ){
 // SPI interrupt routine
 ISR (SPI_STC_vect){
     byte c = SPDR;
-    if ( digitalRead( SLAVE_READY ) == HIGH ){
-        SPDR = led;
-        led++;
-        if ( led > 1 )
-            led = 0;
-    }
-    // add to buffer if room
-    else if ( pos < sizeof buf ){
+    if ( pos < sizeof buf ){
         SPDR = 0xFD;
         buf [pos++] = c;  
         if (c == '\n')
