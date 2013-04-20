@@ -170,18 +170,23 @@ void fnExit(void) {
 
 
 int sgSocketListen(void) {
-	int s, s2;
-	struct sockaddr_un local, remote;
-	socklen_t len;
-	char str[100];
-	char socket_path[150];
+	// Wait for a command from a client
+	int s, s2;								// socket info
+	struct sockaddr_un local, remote;		// socket addresses
+	socklen_t len;							// socket lengths
+	char str[100];							// socket transmissions
+	char socket_path[150];					// socket locations
+
 	getSansgridDir(socket_path);
 
+	// Create a socket endpoint
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
+	// Create the socket path
+	// FIXME: Check for permissions errors here
 	local.sun_family = AF_UNIX;
 	mkdir(socket_path, 0755);
 	strcat(socket_path, "/command_socket");
@@ -189,50 +194,61 @@ int sgSocketListen(void) {
 
 	unlink(local.sun_path);
 
+	// bind the name to the socket
 	len = strlen(local.sun_path) + sizeof(local.sun_family);
 	if (bind(s, (struct sockaddr *)&local, len) == -1) {
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
 
+	// listen for socket connections
 	if (listen(s, 5) == -1) {
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
 	int shutdown_server = 0;
+
 	do {
 		int done, n;
-		//printf("Waiting for a connection...\n");
+		// Block until a connection appears
+		// Then Accept the connection
 		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
 			perror("accept");
 			exit(EXIT_FAILURE);
 		}
 		
-		//printf("Connected.\n");
+		// Receive and interpret the data
 		done = 0;
 		do {
 			n = recv(s2, str, 100, 0);
+			// make sure we got something
 			if (n <= 0) {
 				if (n < 0) perror("recv");
 				done = 1;
 			}
 			if (!done) {
+				// Strip newlines
 				if (str[n-1] == '\n')
 					str[n-1] = '\0';
 				else
 					str[n] = '\0';
-				//printf("Received %s\n", str);
+
+				// Interpret command
 				if (!strcmp(str, "kill")) {
+					// Kill the server
 					shutdown_server = 1;
 					done = 1;
 				}
 
+				// Send commnad back to client as ACK
 				if (send(s2, str, n, 0) < 0) {
 					perror("send");
 					done = 1;
 				}
 			}
 		} while (!done);
+
+		// cleanup
 		close(s2);
 	} while (!shutdown_server);
 
@@ -255,17 +271,19 @@ int sgSocketSend(const char *data, const int size) {
 	// 	But then it would break if there was a file with the same name in the current dir
 	// 	but wasn't for the same purpose. And it still might cause stale scripts...
 	printf("%s\n", DATADIR);
+	// Make sure the server is running 
+	// before we try to send a command
 	if (!isRunning()) {
 		printf("sansgridrouter isn't running\n");
 		exit(EXIT_SUCCESS);
 	}
+	// Create a socket
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	//printf("Trying to connect...\n");
-
+	// Get the Socket Path
 	remote.sun_family = AF_UNIX;
 
 	strcat(socket_path, "/command_socket");
@@ -276,32 +294,32 @@ int sgSocketSend(const char *data, const int size) {
 		exit(EXIT_FAILURE);
 	}
 
-	//printf("Connected.\n");
-
-	//while (printf("> "), fgets(str, 100, stdin), !feof(stdin)) {
+	// Send the command
 	if (send(s, data, size, 0) == -1) {
 		perror("send");
 		exit(EXIT_FAILURE);
 	}
 
+	// Get the ACK back from the server
 	if ((t = recv(s, str, 100, 0)) > 0) {
+		// strip newline
 		if (str[t-1] == '\n') {
 			str[t-1] = '\0';
 		} else {
 			str[t] = '\0';
 		}
+		// check to see if the server got the kill message
+		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
 			printf("Shutting down daemon...\n");
 		}
-		//printf("echo> %s\n", str);
-		//if (!strcmp(str, "stop")) {
-		//	break;
-		//}
 	} else {
+		// problems
 		if (t < 0) perror ("recv");
 		else printf("Server closed connection\n");
 		exit(EXIT_FAILURE);
 	}
+	// cleanup
 	close(s);
 
 	return 0;
@@ -309,23 +327,21 @@ int sgSocketSend(const char *data, const int size) {
 
 
 
-
-
-
-
 int main(int argc, char *argv[]) {
-	pthread_t 	serial_read_thread,
-				dispatch_thread,
-				server_read_thread,
-				heartbeat_thread;
-	int c;
-	int32_t no_daemonize = 0;
-	char *option = NULL;
-	char config_path[150];
-	pid_t sgpid;
+	pthread_t 	serial_read_thread,		// thread for reading over SPI
+				dispatch_thread,		// thread for reading from dispatch
+				server_read_thread,		// thread for reading from server
+				heartbeat_thread;		// thread for pinging sensors
+
+	int c;								// getopt var
+	char *option = NULL;				// getopt var
+	int32_t no_daemonize = 0;			// bool: should we run in foreground?
+	char config_path[150];				// Sansgrid Dir
+	pid_t sgpid;						// Sansgrid PID
 
 	getSansgridDir(config_path);
 
+	// Parse arguments with getopt
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
@@ -377,6 +393,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Parse remaining commands
 	while (optind < argc) {
 		// deal with non-option argv elements
 		option = argv[optind++];
@@ -412,17 +429,22 @@ int main(int argc, char *argv[]) {
 	}
 	
 
+	// Should we run in the foreground, or the background?
 	if (!no_daemonize) {
+		// Run in the background
 		int excode = daemon_init();
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
 	}
 
 	atexit(fnExit);
+
+	// Initialize routing subsystem
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_base);
 	void *arg;
 
+	// Spin off readers/writers
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
 	pthread_create(&server_read_thread, NULL, serverReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
@@ -431,6 +453,7 @@ int main(int argc, char *argv[]) {
 	// Listen for commands or data from the server
 	sgSocketListen();
 
+	// Finished. Shut system down
 	pthread_cancel(serial_read_thread);
 	pthread_cancel(server_read_thread);
 	pthread_cancel(dispatch_thread);
@@ -441,8 +464,10 @@ int main(int argc, char *argv[]) {
 	pthread_join(dispatch_thread, &arg);
 	pthread_join(heartbeat_thread, &arg);
 
+	// Cleanup
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
+
 	return 0;
 }
 
