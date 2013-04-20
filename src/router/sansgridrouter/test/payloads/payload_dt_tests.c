@@ -36,6 +36,15 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	SansgridSerial *sg_serial_read;
 	SansgridSerial sg_serial_orig;
 
+#ifdef SG_TEST_USE_EEPROM
+	talkStubRegisterReadWriteFuncs(ts_serial, COMM_TYPE_EEPROM);
+	talkStubRegisterReadWriteFuncs(ts_tcp, COMM_TYPE_EEPROM);
+#else
+	talkStubRegisterReadWriteFuncs(ts_serial, COMM_TYPE_UNIX_PIPE);
+	talkStubRegisterReadWriteFuncs(ts_tcp, COMM_TYPE_UNIX_PIPE);
+#endif
+
+
 	mark_point();
 
 	// Set which fifos we're writing to

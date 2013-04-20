@@ -7,7 +7,10 @@ SANSGRID_BASE = dispatch/dispatch.c \
 		communication/sg_tcp_handler.c \
 		routing_table/routing_table.c \
 		routing_table/heartbeat.c
-SANSGRID_TEST = test/communication/sg_communication_stubs.c \
+SANSGRID_TEST = \
+		test/communication/sg_communication_stubs.c \
+		test/communication/sg_communication_stubs_eeprom.c \
+		test/communication/sg_communication_talkstub.c \
 		test/dispatch/dispatch_basic.c \
 		test/dispatch/dispatch_advanced.c \
 		test/routing/routing_basic_test.c \

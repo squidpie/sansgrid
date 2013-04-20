@@ -203,8 +203,11 @@ START_TEST (testAdvancedDispatch) {
 	// parent
 
 
+	talkStubRegisterReadWriteFuncs(thr_args.ts_serial, COMM_TYPE_UNIX_PIPE);
 	if (stat("rstubin.fifo", &buffer) < 0)
 		mkfifo("rstubin.fifo", 0644);
+#else
+	talkStubRegisterReadWriteFuncs(thr_args.ts_serial, COMM_TYPE_EEPROM);
 #endif
 	talkStubUseAsSPI(thr_args.ts_serial);
 	talkStubAssertValid(thr_args.ts_serial);
