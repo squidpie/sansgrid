@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
 
@@ -39,6 +41,13 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
+	sem_t blocker;
+
+	sem_init(&blocker, 0, 0);
+	sem_wait(&blocker);
+
+	sem_destroy(&blocker);
+
 	return -1;
 }
 

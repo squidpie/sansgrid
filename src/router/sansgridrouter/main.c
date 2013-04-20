@@ -29,6 +29,7 @@
 #include <string.h>
 #include "sansgrid_router.h"
 #include "payload_handlers/payload_handlers.h"
+#include "communication/sg_tcp.h"
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
@@ -118,6 +119,19 @@ void *spiReaderRuntime(void *arg) {
 	pthread_exit(arg);
 }
 
+void *serverReaderRuntime(void *arg) {
+	// Read from the Server and queue data onto dispatch
+	uint32_t size;
+	SansgridSerial *sg_serial;
+	while (1) {
+		while (sgTCPReceive(&sg_serial, &size) == -1) {
+			sched_yield();
+		}
+		queueEnqueue(dispatch, sg_serial);
+	}
+	pthread_exit(arg);
+}
+
 
 void *heartbeatRuntime(void *arg) {
 	// handle pings
@@ -127,11 +141,15 @@ void *heartbeatRuntime(void *arg) {
 	SansgridSerial sg_serial;
 	SansgridHeartbeat sg_hb;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
+
 	for (int i=0; i<80; i++)
 		sg_hb.padding[i] = 0x0;
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
+		if (count == 0) {
+			count = 1;
+		}
 		sleepMicro(HEARTBEAT_UINTERVAL / count);
 		routingTableFindNextDevice(routing_table, ip_addr);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
@@ -295,7 +313,9 @@ int sgSocketSend(const char *data, const int size) {
 
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,
-				dispatch_thread;
+				dispatch_thread,
+				server_read_thread,
+				heartbeat_thread;
 	int c;
 	int32_t no_daemonize = 0;
 	char *option = NULL;
@@ -402,16 +422,22 @@ int main(int argc, char *argv[]) {
 	void *arg;
 
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
+	pthread_create(&server_read_thread, NULL, serverReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
+	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 
 	// Listen for commands or data from the server
 	sgSocketListen();
 
 	pthread_cancel(serial_read_thread);
+	pthread_cancel(server_read_thread);
 	pthread_cancel(dispatch_thread);
+	pthread_cancel(heartbeat_thread);
 
 	pthread_join(serial_read_thread, &arg);
+	pthread_join(server_read_thread, &arg);
 	pthread_join(dispatch_thread, &arg);
+	pthread_join(heartbeat_thread, &arg);
 
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
