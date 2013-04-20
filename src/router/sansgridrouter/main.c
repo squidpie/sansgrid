@@ -148,6 +148,8 @@ void *heartbeatRuntime(void *arg) {
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
 		if (count == 0) {
+			// check for possible floating point exceptions
+			// if count is 0, you'll get a divide-by-zero error below
 			count = 1;
 		}
 		sleepMicro(HEARTBEAT_UINTERVAL / count);

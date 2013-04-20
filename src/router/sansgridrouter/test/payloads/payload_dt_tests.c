@@ -34,6 +34,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	talkStubUseAsTCP(ts_tcp);
 	int exit_code;
 	SansgridSerial *sg_serial_read;
+	SansgridSerial sg_serial_orig;
 
 	mark_point();
 
@@ -71,6 +72,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 #endif
 	payloadStateInit();
 	mark_point();
+	memcpy(&sg_serial_orig, sg_serial, sizeof(SansgridSerial));
 	exit_code = fn(routing_table, sg_serial);
 	mark_point();
 	// Commit handler
@@ -92,21 +94,21 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 #endif
 	mark_point();
 	if (test_node->expected_exit_code != exit_code) {
-		fail("Exit code Mismatch \
+		fail("Exit code Mismatch with %s\
 				\n\tExpected: %i \
-				\n\tGot: 	  %i", test_node->expected_exit_code, exit_code);
+				\n\tGot: 	  %i", message, test_node->expected_exit_code, exit_code);
 	}
 	if (!exit_code) {
-		if (memcmp(sg_serial_read->payload, &sg_serial->payload, sizeof(SansgridMock)))
-			fail("Packet Mismatch");
+		if (memcmp(sg_serial_read->payload, &sg_serial_orig.payload, sizeof(SansgridMock)))
+			fail("Packet Mismatch with %s", message);
 		int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->ip_addr);
 		if (test_node->next_packet != orig)
-			fail("Control Flow Mismatch \
+			fail("Control Flow Mismatch with %s\
 					\n\tExpected: %i \
-					\n\tGot:  	  %i", test_node->next_packet, 
+					\n\tGot:  	  %i", message, test_node->next_packet, 
 					orig);
 		if (!routingTableLookup(routing_table, sg_serial_read->ip_addr))
-			fail("No IP assigned");
+			fail("No IP assigned with %s", message);
 		memcpy(sg_serial, sg_serial_read, sizeof(SansgridSerial));
 	}
 
