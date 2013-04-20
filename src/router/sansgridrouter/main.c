@@ -152,7 +152,9 @@ void *heartbeatRuntime(void *arg) {
 			// if count is 0, you'll get a divide-by-zero error below
 			count = 1;
 		}
-		sleepMicro(HEARTBEAT_UINTERVAL / count);
+		// FIXME: check to see if interval is below 1 second
+		sleep(HEARTBEAT_INTERVAL/count);
+		//sleepMicro(HEARTBEAT_UINTERVAL / count);
 		routingTableFindNextDevice(routing_table, ip_addr);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
