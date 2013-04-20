@@ -56,13 +56,14 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitti
 
 
 // Table: pipeline
-$query = "CREATE TABLE pipeline (rid_for_sensor varchar(50), latest_tx varchar(10), last_update timestamp)";
+$query = "CREATE TABLE pipeline (id_sensor int; rdid varchar(50), latest_tx varchar(10), last_update timestamp)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
 
 
 // Generate and save server_id and set other system defaults
-$server_key = generateRandomHash(16);
-$query = "INSERT INTO server (server_key, verify_mating) VALUES ('$server_key', 0)";
+$server_key = generateRandomHash(128);	// 128 characters = 64 bytes
+$server_id  = generateRandomHash(32);	// 32 characters = 16 bytes
+$query = "INSERT INTO server (server_id, server_key, verify_mating) VALUES ('$server_id', '$server_key', 0)";
 $result = mysqli_query($db, $query) or die ("Couldn't initialize new server.");
 
 

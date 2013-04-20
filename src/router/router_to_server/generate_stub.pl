@@ -8,7 +8,7 @@ my @a;
 my $user_request;
 
 my $nf_del = "α";		# Name-Field delimiter (intra-parameter)
-my $pp_del = "β";		# Parameter-Parameter delimiter (inter-parameter)
+my $ff_del = "β";		# Parameter-Parameter delimiter (inter-parameter)
 
 # ############################################################################## 
 # START OF MAIN CODE
@@ -40,30 +40,30 @@ switch ($user_request) {
 sub generate_eyeball{
 
 	my $input;
-	my $payload = "dt" . $nf_del . "01" . $pp_del;
+	my $payload = $ff_del . "dt" . $nf_del . "01" . $ff_del;
+
+	#rdid
+	$payload .= "rdid" . $nf_del . int(rand(64000)) . $ff_del;
+
 
 	# Data type
 	print "Data type: 0x01\n";
 
 	# manid
-	$payload .= "manid" . $nf_del . &getField("Manufactuer's ID # (4 bytes)") . $pp_del;
+	$payload .= "manid" . $nf_del . &getField("Manufactuer's ID # (4 bytes)") . $ff_del;
 
 	# modnum
-	$payload .= "modnum" . $nf_del . &getField("Model # (4 bytes)") . $pp_del;
+	$payload .= "modnum" . $nf_del . &getField("Model # (4 bytes)") . $ff_del;
 
 	# sn
-	$payload .= "sn" . $nf_del . &getField("Serial Number (8 bytes)") . $pp_del;
+	$payload .= "sn" . $nf_del . &getField("Serial Number (8 bytes)") . $ff_del;
 
 	# profile
 	print "'profile' left blank\n";
-	$payload .= "profile" . $nf_del . "" . $pp_del;
+	$payload .= "profile" . $nf_del . "" . $ff_del;
 
 	# mode
-	$payload .= "mode" . $nf_del . &getField("Mode (4 bits)") . $pp_del;
-
-
-	# Now we just need to remove that last $pp_del
-	$payload =~ s/$pp_dell$//;
+	$payload .= "mode" . $nf_del . &getField("Mode (4 bits)") . $ff_del;
 
 	&savePayload($payload);
 

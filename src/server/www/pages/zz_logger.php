@@ -5,6 +5,7 @@ function addToLog ($logdata) {
 	$db = returnDatabaseConnection();
 
 	if ($logdata != "") {
+		$logdata = mysqli_real_escape_string($db, $logdata);
 		$query = "INSERT INTO log (log) VALUES ('$logdata')";
 		$result = mysqli_query($db, $query) or die ("Error: Failed writing to log.");
 		return TRUE;

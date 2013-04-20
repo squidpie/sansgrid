@@ -34,7 +34,7 @@ function returnDatabaseConnection() {
 //
 function appendToPayload ($current_payload, $key, $value) {
 	global $SG;
-	$current_payload .= $key . $SG['kv_del'] . $value . $SG['pp_del'];
+	$current_payload .= $key . $SG['kv_del'] . $value . $SG['ff_del'];
 
 	return $current_payload;
 }
