@@ -7,15 +7,14 @@ AM_INIT_AUTOMAKE([-Wall silent-rules foreign])
 AM_SILENT_RULES([yes])
 
 # Checks for programs.
-#AC_PROG_CXX
 AC_PROG_CC
-#AC_PROG_MAKE_SET
+AM_PROG_AR
+AC_PROG_RANLIB
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lcheck':
 AC_CHECK_LIB([check], [srunner_create])
-# FIXME: Replace `main' with a function in `-lpthread':
 AC_CHECK_LIB([pthread], [pthread_create])
+AC_CHECK_LIB([wiringPi], [wiringPiSPISetup])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h stdint.h stdlib.h string.h syslog.h unistd.h])
@@ -34,8 +33,13 @@ AC_FUNC_FORK
 AC_FUNC_MALLOC
 
 AC_CONFIG_FILES([Makefile \
-		 sansgridrouter_server/Makefile])
+		 sansgridrouter/Makefile])
                  #test/Makefile
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
+case $host in
+	*arm-linux*)	SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
+	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)' ;;
+esac
+AC_SUBST([SANSGRIDROUTER_SYSTEM])
 AC_OUTPUT

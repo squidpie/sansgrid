@@ -23,7 +23,7 @@
 #define __SG_SERIAL_H__
 
 #include <stdint.h>
-#include <arpa/inet.h>
+//#include <arpa/inet.h>
 #include "payloads.h"
 
 typedef struct SansgridSerial {
