@@ -36,11 +36,11 @@ void spiMasterInit(){
     // 84 MHz / 168 = 500 KHz
     SPI.setClockDivider( 168 );
     // Set SPI Mode 0-3
-    SPI.setDataMode( SPI_MODE0 ); 
+    SPI.setDataMode( SPI_MODE0 );
 }
 
 // Receive data to Master from Slave
-void spiMasterReceive( constant char data_out , char * data_in , int size ){
+void spiMasterReceive( int data_out , char * data_in , int size ){
     // Loop through untill all characters received
     for( int i = 0 ; i < size ; i++ ){
         data_in[i] = SPI.transfer( data_out );
@@ -48,7 +48,7 @@ void spiMasterReceive( constant char data_out , char * data_in , int size ){
 }
 
 // Transmit data to Slave from Master
-void spiMasterTransmit( constant char * data_out , char * data_in , int size ){
+void spiMasterTransmit( char * data_out , char * data_in , int size ){
     for( int i = 0; i < size ; i++){
         data_in[i] = SPI.transfer( data_out[i] );
     } 

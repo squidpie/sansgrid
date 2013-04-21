@@ -21,7 +21,8 @@
  */
  
 #include <SPI.h> 
-#include "sg_serial_due.h"
+#include <sgSerial.h>
+#include <sgSerial_due.h>
 
 void setup(){
     // Initialize Sensor SPI communication
