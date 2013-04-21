@@ -35,8 +35,6 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 
-static pthread_mutex_t eeprom_lock;
-static int eeprom_lock_initd = 0;
 int8_t eepromSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts);
 int8_t eepromReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts);
 #endif

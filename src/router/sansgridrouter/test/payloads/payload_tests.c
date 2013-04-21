@@ -44,10 +44,6 @@ void *spiPayloadReader(void *arg) {
 	int excode;
 	mark_point();
 
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_serial, 0x0000);
-#endif
-
 	mark_point();
 	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 		fail("Failed to read packet");
@@ -75,11 +71,6 @@ void *tcpPayloadReader(void *arg) {
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size;
 	int excode;
-
-	mark_point();
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_tcp, 0x0080);
-#endif
 
 	mark_point();
 	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
@@ -153,12 +144,6 @@ int32_t payloadStateInit(void) {
 	pthread_create(&tcp_reader_thr, NULL, &tcpPayloadReader, NULL);
 	mark_point();
 	
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_serial, 0x0000);
-	talkStubSetEEPROMAddress(ts_tcp, 0x0080);
-#endif
-
-	mark_point();
 	return 0;
 }
 

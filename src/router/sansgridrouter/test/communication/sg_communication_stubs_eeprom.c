@@ -16,7 +16,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#ifdef SG_TEST_USE_EEPROM
 #define _POSIX_C_SOURCE 200809L          // Required for nanosleep()
 
 #include <time.h>
@@ -32,9 +31,11 @@
 #include "../tests.h"
 #include <sgSerial.h>
 #include "sg_communication_stubs.h"
+#ifdef SG_TEST_USE_EEPROM
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 
+#define EEPROM_SLOTS 10
 static pthread_mutex_t eeprom_lock;
 static int eeprom_lock_initd = 0;
 
@@ -42,7 +43,8 @@ static int eeprom_lock_initd = 0;
  * Use a 64K SPI EEPROM for read/write
  */
 
-
+static int eeprom_slots_initd = 0;
+static char eeprom_slots[EEPROM_SLOTS][50];
 
 #define KHZ(freq) (1000*freq)
 #define MHZ(freq) (1000*KHZ(freq))
@@ -101,7 +103,7 @@ static int eepromSendData(uint8_t *buffer, uint16_t address, int size) {
 		// Only one page (of 32 bytes) can be written
 		// at a time. If more than 32 bytes are being written,
 		// break the line into multiple pages
-		return eepromSend(&buffer[32], address+0x0020, size-32);
+		return eepromSendData(&buffer[32], address+0x0020, size-32);
 	}
 
 	return 0;
@@ -110,20 +112,54 @@ static int eepromSendData(uint8_t *buffer, uint16_t address, int size) {
 
 
 int eepromSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
+
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
 	uint8_t *buffer;
+	int32_t address_slot = -1;
 
 	if (!eeprom_lock_initd) {
 		pthread_mutex_init(&eeprom_lock, NULL);
 		eeprom_lock_initd = 1;
 	}
 
+	if (!eeprom_slots_initd) {
+		eeprom_slots_initd = 1;
+		for (int i = 0; i<EEPROM_SLOTS; i++)
+			eeprom_slots[i][0] = '\0';
+	}
+
+	for (uint32_t i=0; i<EEPROM_SLOTS; i++) {
+		if (!strcmp(eeprom_slots[i], ts->name)) {
+			address_slot = i;
+			break;
+		}
+	}
+
+	if (address_slot == -1) {
+		for (uint32_t i=0; i<EEPROM_SLOTS; i++) {
+			if (eeprom_slots[i][0] == '\0') {
+				address_slot = i;
+				strcpy(eeprom_slots[i], ts->name);
+				break;
+			}
+		}
+	}
+
+	if (address_slot == -1) {
+		// Couldn't get an address slot
+		printf("eepromSend: Couldn't allocate an address slot\n");
+		sem_post(&ts->writelock);
+		return -1;
+	} else {
+		// allocate address at address slot
+		ts->eeprom_address = address_slot * 0x60;
+	}
 
 	sg_serial_union.formdata = sg_serial;
 	buffer = sg_serial_union.serialdata;
 
 	pthread_mutex_lock(&eeprom_lock);
-	eepromSend(buffer, ts->eeprom_address, size);
+	eepromSendData(buffer, ts->eeprom_address, size);
 
 	pthread_mutex_unlock(&eeprom_lock);
 
@@ -159,6 +195,10 @@ int eepromReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts) {
 	mark_point();
 
 	sem_wait(&ts->writelock);
+
+	if (ts->eeprom_address == -1) {
+		return -1;
+	} 
 
 	mark_point();
 	pthread_mutex_lock(&eeprom_lock);

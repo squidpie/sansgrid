@@ -92,9 +92,6 @@ static void *spiReader(void *arg) {
 		printf("Reading %i\n", i);
 #endif
 
-#ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
-#endif
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -135,9 +132,6 @@ static void *spiWriter(void *arg) {
 		printf("Writing %i\n", i);
 #endif
 
-#ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
-#endif
 		snprintf(sg_fly.network_name, 78, "Ping %i", i);
 		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
