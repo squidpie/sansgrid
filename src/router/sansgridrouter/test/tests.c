@@ -73,6 +73,7 @@ int main(void) {
 	srunner_add_suite(sr, payloadTestChirp());
 	// intrarouter tests
 	srunner_add_suite(sr, intraRouterTestAtox());
+	srunner_add_suite(sr, intraRouterTestConversion());
 
 	num_devices = 0;
 
