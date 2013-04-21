@@ -235,6 +235,93 @@ START_TEST(testPeacockConversion) {
 END_TEST
 
 
+
+START_TEST(testNestConversion) {
+	// Test the nest conversion for the intrarouter communication system
+	SansgridSerial sg_serial,
+				   sg_serial_orig;
+	SansgridNest sg_nest;
+	PayloadTestStruct test_struct;
+	char payload[300] = "";
+	uint32_t rdid = ~0,
+			 rdid_orig = 0;
+
+	mark_point();
+	testStructInit(&test_struct);
+	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
+	test_struct.nest = &nest;
+	test_struct.nest_mode = SG_NEST;
+	payloadMkSerial(&sg_serial);
+	payloadMkNest(&sg_nest, &test_struct);
+
+	memcpy(sg_serial.payload, &sg_nest, sizeof(SansgridNest));
+	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	mark_point();
+	sgRouterToServerConvert(&sg_serial, payload);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Nest: Size of payload is: %i\n", strlen(payload));
+	printf("Nest: Converted to: %s\n", payload);
+#endif
+	mark_point();
+	rdid = sgServerToRouterConvert(payload, &sg_serial);
+
+	mark_point();
+	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
+			"Nest: Converted serial packet doesn't match original!");
+	fail_if((rdid != rdid_orig), 
+			"Nest: returned identifier doesn't match original!\
+\n\tExpected: %i \
+\n\tGot: %i", rdid_orig, rdid);
+	mark_point();
+}
+END_TEST
+
+
+
+START_TEST(testSquawkConversion) {
+	// Test the squawk conversion for the intrarouter communication system
+	SansgridSerial sg_serial,
+				   sg_serial_orig;
+	SansgridSquawk sg_squawk;
+	PayloadTestStruct test_struct;
+	char payload[300] = "";
+	uint32_t rdid = ~0,
+			 rdid_orig = 0;
+
+	mark_point();
+	testStructInit(&test_struct);
+	PayloadTestNode squawk = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
+	test_struct.squawk_sensor = &squawk;
+	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
+	payloadMkSerial(&sg_serial);
+	payloadMkSquawkServer(&sg_squawk, &test_struct);
+
+	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	mark_point();
+	sgRouterToServerConvert(&sg_serial, payload);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Squawk: Size of payload is: %i\n", strlen(payload));
+	printf("Squawk: Converted to: %s\n", payload);
+#endif
+	mark_point();
+	rdid = sgServerToRouterConvert(payload, &sg_serial);
+
+	mark_point();
+	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
+			"Squawk: Converted serial packet doesn't match original!");
+	fail_if((rdid != rdid_orig), 
+			"Squawk: returned identifier doesn't match original!\
+\n\tExpected: %i \
+\n\tGot: %i", rdid_orig, rdid);
+	mark_point();
+}
+END_TEST
+
+
+
 Suite *intraRouterTestConversion(void) {
 	Suite *s = suite_create("Intrarouter Conversion Tests");
 	TCase *tc_core = tcase_create("Core");
@@ -243,6 +330,8 @@ Suite *intraRouterTestConversion(void) {
 	tcase_add_test(tc_core, testSingConversion);
 	tcase_add_test(tc_core, testMockConversion);
 	tcase_add_test(tc_core, testPeacockConversion);
+	tcase_add_test(tc_core, testNestConversion);
+	tcase_add_test(tc_core, testSquawkConversion);
 
 	suite_add_tcase(s, tc_core);
 
