@@ -253,7 +253,7 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 
 
 
-int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
+int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	// Take a payload, 	return the translated serial packet,
 	// 					return the device identifier (rdid)
 	int i;
@@ -323,7 +323,9 @@ int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
-	sprintf("%s%s%s%s%s", payload, DELIM_KEY, key, DELIM_VAL);
+	const char *delim_key = DELIM_KEY;
+	const char *delim_val = DELIM_VAL;
+	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
 	for (uint32_t i=0; i<size; i++) {
 		sprintf(payload, "%2x", value[i]);
 	}
@@ -331,7 +333,7 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 }
 
 
-int sgRouterToServer(SansgridSerial *sg_serial, char *payload) {
+int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	// translate the SansgridSerial packet into an intrarouter payload
 	SansgridEyeball 	sg_eyeball;
 	SansgridPeck 		sg_peck;

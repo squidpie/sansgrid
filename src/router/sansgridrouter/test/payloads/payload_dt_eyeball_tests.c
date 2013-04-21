@@ -67,7 +67,7 @@ START_TEST (testMultEyeballs) {
 	printf("\n\nTesting Multiple Eyeballs\n");
 #endif
 	PayloadTestStruct test_struct[num_devices];
-	for (int i=0; i<num_devices; i++) {
+	for (uint32_t i=0; i<num_devices; i++) {
 		testStructInit(&test_struct[i]);
 		testEyeballPayload(&test_struct[i]);
 	}

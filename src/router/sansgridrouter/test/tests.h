@@ -48,6 +48,7 @@ Suite *payloadTestNest(void);
 Suite *payloadTestChirp(void);
 // intrarouter tests
 Suite *intraRouterTestAtox(void);
+Suite *intraRouterTestConversion(void);
 
 
 #endif

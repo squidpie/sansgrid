@@ -26,7 +26,8 @@ SANSGRID_TEST = \
 		test/payloads/payload_dt_squawk_tests.c \
 		test/payloads/payload_dt_nest_tests.c \
 		test/payloads/payload_dt_chirp_tests.c \
-		test/communication/sg_tcp_test.c
+		test/communication/sg_intrarouter_test_atox.c \
+		test/communication/sg_intrarouter_test_conversion.c
 
 #noinst_LIBRARIES = libSgPayloads.a libSgSerial.a
 

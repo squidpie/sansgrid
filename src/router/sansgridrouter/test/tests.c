@@ -73,11 +73,12 @@ int main(void) {
 	srunner_add_suite(sr, payloadTestChirp());
 	// intrarouter tests
 	srunner_add_suite(sr, intraRouterTestAtox());
+	srunner_add_suite(sr, intraRouterTestConversion());
 
 	num_devices = 0;
 
 	// Uncomment to better debug segfaults
-	//srunner_set_fork_status(sr, CK_NOFORK);
+	srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);
