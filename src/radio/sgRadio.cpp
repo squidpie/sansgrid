@@ -79,7 +79,8 @@ void SnIpTable::snIpInsert(uint8_t * data, int index, SnTableIndex type) {
 *  SansgridRadio Class *
 ***********************/
 
-SansgridRadio::SansgridRadio(SansgridSerial * serial_link, SnIpTable * table_link){
+SansgridRadio::SansgridRadio(HardwareSerial * xbee_link, SansgridSerial * serial_link, SnIpTable * table_link){
+	Radio = xbee_link;
 	sn_table = table_link;
 	packet = serial_link->payload;
 }
@@ -87,12 +88,15 @@ SansgridRadio::SansgridRadio(SansgridSerial * serial_link, SnIpTable * table_lin
 SansgridRadio::~SansgridRadio(){
 	sn_table = NULL;
 	packet = NULL;
+	Radio = NULL;
 }
 
 void SansgridRadio::read() {
-  for (int i = 0; Radio->available() > 0 && i < PACKET_SZ; i++) {
-    delay(1);
-    packet_buffer[i] = Radio->read();
+	//Radio->println("Radio is reading");
+	int i = PACKET_SZ;
+  while(Radio->available() > 0 && i >= 0) {
+    delay(2);
+    packet_buffer[i--] = Radio->read();
   }
 	processPacket();
 }
@@ -102,13 +106,13 @@ void SansgridRadio::set_mode(RadioMode mode) {
 }
 
 void SansgridRadio::write() {
-	processPacket();
+	//processPacket();
   Radio->write(packet_buffer,sizeof(packet_buffer));
 }
 
 void SansgridRadio::atCmd(char * result,const char * cmd) {
 	int i = 0;
-	Radio->println("+++");
+	Radio->print("+++");
 	delay(300);
 	while(Radio->available() > 0) {
 		Radio->read();
@@ -117,6 +121,9 @@ void SansgridRadio::atCmd(char * result,const char * cmd) {
 	while(Radio->available() > 0 && i < sizeof(result)) {
 		result[i++] = Radio->read();
 	}	
+	char * tmp;
+	sprintf(tmp,"Command return value: %s",result);
+	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
 	Radio->println("ATCN");
 }
 
@@ -137,27 +144,37 @@ uint8_t * SansgridRadio::genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t *
 void SansgridRadio::processPacket() {
   int index;
 	char * tmp;
+	uint8_t * key;
+	//Radio->println("process Packet");
   if (router_mode) {
-			debugger->debug(NOTIFICATION,__FUNC__,"Router Mode");
+			//debugger->debug(NOTIFICATION,__FUNC__,"Router Mode");
       if(packet_buffer[PACKET_ID] == SG_EYEBALL) {
-  			debugger->debug(NOTIFICATION,__FUNC__,"Eyeball Packet");
+				//Radio->println("Eyeball Received");
+  			//debugger->debug(NOTIFICATION,__FUNC__,"Eyeball Packet");
 				sn_table->snIpInsertSn(&packet_buffer[XBSN]);
+				
+				Radio->write(packet_buffer,PACKET_SZ);
+				delay(50);	
       }
       if (packet_buffer[PACKET_ID] == SG_PECK) {
-				debugger->debug(NOTIFICATION,__FUNC__,"Peck Packet");
+				Radio->println("Peck Received");
+				//debugger->debug(NOTIFICATION,__FUNC__,"Peck Packet");
         int sn;
         sn = btoi(&packet_buffer[PECKSN], SN_LENGTH);
 				sprintf(tmp,"%X",packet_buffer[PECKSN]);
-        debugger->debug(NOTIFICATION,__FUNC__,tmp);
-        sn_table->snIpInsertIp(&packet_buffer[PECKIP],genDevKey(&packet_buffer[PECKMANID],&packet_buffer[PECKMODID],&packet_buffer[PECKSN]));
+        //debugger->debug(NOTIFICATION,__FUNC__,tmp);
+				key = genDevKey(&packet_buffer[PECKMANID],&packet_buffer[PECKMODID],&packet_buffer[PECKSN]);
+        sn_table->snIpInsertIp(&packet_buffer[PECKIP],key);
 			//	index = findSn(sn);
 				//assert(index < IP_TABLE_SZ);
         //memcpy(&packet_buffer[PECKIP],&sn_table[index][IP],IP_LENGTH);
       }
   }
   else {
-    debugger->debug(NOTIFICATION,__FUNC__,"Sensor Mode"); 
-  }
+    //debugger->debug(NOTIFICATION,__FUNC__,"Sensor Mode"); 
+  	char tmp[1024];
+		//atCmd(&tmp[0],"ATID");
+	}
  
 }
 
@@ -166,7 +183,9 @@ void SansgridRadio::processPacket() {
 **************************/
 
 void sgDebugInit(SerialDebug * db) {
-		debugger = db;
+		//debugger = db;
+		//debugger->debug(NOTIFICATION,__FUNC__,"Serial Debugger for Radio Setup");
+		delay(50);
 }
 
 int btoi(byte * b,int ln) {
