@@ -321,9 +321,90 @@ int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 	return exit_code;
 }
 
+int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
+	// Add a field to the payload
+	sprintf("%s%s%s%s%s", payload, DELIM_KEY, key, DELIM_VAL);
+	for (uint32_t i=0; i<size; i++) {
+		sprintf(payload, "%2x", value[i]);
+	}
+	return 0;
+}
+
 
 int sgRouterToServer(SansgridSerial *sg_serial, char *payload) {
+	// translate the SansgridSerial packet into an intrarouter payload
+	SansgridEyeball 	sg_eyeball;
+	SansgridPeck 		sg_peck;
+	SansgridSing 		sg_sing;
+	SansgridMock 		sg_mock;
+	SansgridPeacock 	sg_peacock;
+	//SansgridNest 		sg_nest;
+	SansgridSquawk 		sg_squawk;
+	//SansgridHeartbeat 	sg_heartbeat;
+	SansgridChirp 		sg_chirp;
 	
+	if (!sg_serial || !sg_serial->payload) {
+		return -1;
+	}
+	payload[0] = '\0';
+	uint8_t payload_type = sg_serial->payload[0];
+	uint8_t datatype = sgPayloadGetType(payload_type);
+	// TODO: Add rdid field
+	//addHexField("rdid", &datatype, 1, payload);
+	addHexField("dt", &datatype, 1, payload);
+	switch (datatype) {
+		case SG_DEVSTATUS_EYEBALLING:
+			memcpy(&sg_eyeball, sg_serial->payload, sizeof(SansgridEyeball));
+			addHexField("manid",	sg_eyeball.manid,	4,	payload);
+			addHexField("modnum", 	sg_eyeball.modnum, 	4,	payload);
+			addHexField("sn",		sg_eyeball.serial_number, 8, payload);
+			addHexField("profile",	&sg_eyeball.profile,1,	payload);
+			addHexField("mode",		&sg_eyeball.mode,	1,	payload);
+			break;
+		case SG_DEVSTATUS_PECKING:
+			memcpy(&sg_peck, sg_serial->payload, sizeof(SansgridPeck));
+			addHexField("ip",		sg_peck.assigned_ip, IP_SIZE, payload);
+			addHexField("sid",		sg_peck.server_id,	16,	payload);
+			addHexField("recognition",&sg_peck.recognition, 1,payload);
+			addHexField("manid",	sg_peck.manid,		4,	payload);
+			addHexField("modnum",	sg_peck.modnum,		4,	payload);
+			addHexField("sn",		sg_peck.serial_number,8,payload);
+			break;
+		case SG_DEVSTATUS_SINGING:
+			memcpy(&sg_sing, sg_serial->payload, sizeof(SansgridSing));
+			addHexField("servpubkey", sg_sing.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_MOCKING:
+			memcpy(&sg_mock, sg_serial->payload, sizeof(SansgridMock));
+			addHexField("senspubkey", sg_mock.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_PEACOCKING:
+			memcpy(&sg_peacock, sg_serial->payload, sizeof(SansgridPeacock));
+			// TODO: get the field names written down
+			// ??
+			break;
+		case SG_DEVSTATUS_NESTING:
+			// Nothing here
+			break;
+		case SG_DEVSTATUS_SQUAWKING:
+			memcpy(&sg_squawk, sg_serial->payload, sizeof(SansgridSquawk));
+			addHexField("data", sg_mock.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_HEARTBEAT:
+			// Nothing here
+			break;
+		case SG_DEVSTATUS_CHIRPING:
+			memcpy(&sg_chirp, sg_serial->payload, sizeof(SansgridChirp));
+			addHexField("datasize", &sg_chirp.datasize, 1, payload);
+			addHexField("data",		sg_chirp.data, 79, payload);
+			break;
+		default:
+			// error
+			return -1;
+	}
+	strcat(payload, DELIM_KEY);
+
+	return 0;
 }
 
 
