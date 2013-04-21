@@ -23,7 +23,7 @@
 #include <check.h>
 #include <stdint.h>
 
-#define TESTS_DEBUG_LEVEL 0
+#define TESTS_DEBUG_LEVEL 1
 uint32_t num_devices;				// number of devices being tested
 
 

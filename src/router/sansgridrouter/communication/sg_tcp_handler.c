@@ -256,8 +256,8 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	// Take a payload, 	return the translated serial packet,
 	// 					return the device identifier (rdid)
-	int i;
 	uint8_t datatype = ~0x0;
+	enum SansgridDeviceStatusEnum dev_datatype;
 	Dictionary dict[30];
 	int32_t size = 0;
 	int8_t exit_code = 0;
@@ -267,8 +267,8 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
-			dict[size].key = key;
-			dict[size].value = value;
+			dict[size].key = &key[sizeof(DELIM_KEY)-2];
+			dict[size].value = (value == NULL ? NULL : &value[sizeof(DELIM_VAL)-2]);
 			size++;
 		} else
 			break;
@@ -277,18 +277,12 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	dict[size].value = NULL;
 
 	// Find payload type
-	for (i=0; i<size; i++) {
-		key = dict[i].key;
-		if (!strcmp(key, "dt")) {
-			// found the datatype
-			datatype = atoi(key);
-		}
-	}
+	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
 	if (datatype == ~0x0) {
 		return -1;
 	}
-	datatype = sgPayloadGetType(datatype);
-	switch(datatype) {
+	dev_datatype = sgPayloadGetType(datatype);
+	switch(dev_datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
 			exit_code = convertEyeball(dict, size, sg_serial);
 			break;
@@ -327,7 +321,7 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	const char *delim_val = DELIM_VAL;
 	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
 	for (uint32_t i=0; i<size; i++) {
-		sprintf(payload, "%2x", value[i]);
+		sprintf(payload, "%s%.2x", payload, value[i]);
 	}
 	return 0;
 }
@@ -353,7 +347,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	uint8_t datatype = sgPayloadGetType(payload_type);
 	// TODO: Add rdid field
 	//addHexField("rdid", &datatype, 1, payload);
-	addHexField("dt", &datatype, 1, payload);
+	addHexField("dt", &payload_type, 1, payload);
 	switch (datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
 			memcpy(&sg_eyeball, sg_serial->payload, sizeof(SansgridEyeball));

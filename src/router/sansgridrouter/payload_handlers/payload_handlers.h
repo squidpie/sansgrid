@@ -23,8 +23,8 @@
 
 #include <stdint.h>
 #include "../routing_table/routing_table.h"
-//#include "../../../lib/sgSerial.h"
-//#include "../../../lib/payloads.h"
+//#include "../../../include/sgSerial.h"
+//#include "../../../include/payloads.h"
 #include <sgSerial.h>
 #include <payloads.h>
 
