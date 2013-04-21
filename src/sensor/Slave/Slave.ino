@@ -65,10 +65,8 @@ void spiSlaveInit( void ){
 }
 
 // SPI interrupt routine
-ISR (SPI_STC_vect){
-    byte c = SPDR;
+ISR (SPI_STC_vect){ 
     if ( pos < sizeof buf ){
-        SPDR = 0xFD;
         buf [pos++] = c;  
         if (c == '\n')
             process_it = true;
