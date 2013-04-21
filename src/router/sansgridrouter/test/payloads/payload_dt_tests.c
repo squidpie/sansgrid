@@ -28,8 +28,8 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	mark_point();
 	int packets = 0;
 
-	TalkStub *ts_serial = talkStubInit(),
-			 *ts_tcp = talkStubInit();
+	TalkStub *ts_serial = talkStubInit("serial"),
+			 *ts_tcp = talkStubInit("tcp");
 	talkStubUseAsSPI(ts_serial);
 	talkStubUseAsTCP(ts_tcp);
 	int exit_code;
@@ -43,7 +43,6 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 	talkStubRegisterReadWriteFuncs(ts_serial, COMM_TYPE_UNIX_PIPE);
 	talkStubRegisterReadWriteFuncs(ts_tcp, COMM_TYPE_UNIX_PIPE);
 #endif
-
 
 	mark_point();
 

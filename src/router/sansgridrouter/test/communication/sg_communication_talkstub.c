@@ -51,9 +51,10 @@ static TalkStub *ts_serial = NULL,
 				*ts_tcp = NULL;
 
 
-TalkStub *talkStubInit(void) {
+TalkStub *talkStubInit(char *name) {
 	mark_point();
 	TalkStub *ts = (TalkStub*)malloc(sizeof(TalkStub));
+	memcpy(ts->name, name, 50*sizeof(char));
 #ifdef SG_TEST_USE_EEPROM
 	ts->eeprom_address = 0x0;
 #endif
@@ -113,6 +114,8 @@ void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address) {
 	ts->eeprom_address = address;
 }
 #endif
+
+
 void talkStubSetReader(TalkStub *ts, FILE *FPTR) {
 	mark_point();
 	ts->FPTR_PIPE_READ = FPTR;

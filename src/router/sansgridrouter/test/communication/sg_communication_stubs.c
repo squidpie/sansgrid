@@ -31,6 +31,7 @@
 #include "../tests.h"
 #include <sgSerial.h>
 #include "sg_communication_stubs.h"
+#include <sys/stat.h>
 
 /*
  * Generic Send/Receive functions.
@@ -40,20 +41,36 @@ int8_t unixpipeSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
 	// Send size bytes of serialdata
 	uint32_t i;
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
+	char fifo_name[100];
 
 	fail_if((ts == NULL), "TalkStub is NULL!");
-
-	fail_if((ts->FPTR_PIPE_WRITE == NULL), "Write descriptor is NULL!");
 	fail_if((sg_serial == NULL), "sg_serial is NULL!");
 
+	struct stat buffer;
+
+	sprintf(fifo_name, "%s.fifo", ts->name);
+	if (stat(fifo_name, &buffer) < 0)
+		mkfifo(fifo_name, 0644);
+
+	if (!(ts->FPTR_PIPE_WRITE = fopen(fifo_name, "w"))) {
+		fail("Error: Can't open %s pipe for writing!", fifo_name);
+	}
 	sg_serial_union.formdata = sg_serial;
 	
+	// Synchronize
 	sem_post(&ts->writelock);
 	sem_wait(&ts->readlock);
+
+	mark_point();
 	for (i=0; i<size && ts->FPTR_PIPE_WRITE; i++) {
 		putc(sg_serial_union.serialdata[i], ts->FPTR_PIPE_WRITE);
 	}
+	fclose(ts->FPTR_PIPE_WRITE);
+	ts->FPTR_PIPE_WRITE = NULL;
 	
+	// Synchronize
+	sem_post(&ts->writelock);
+	sem_wait(&ts->readlock);
 	return 0;
 }
 
@@ -63,21 +80,25 @@ int8_t unixpipeReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts)
 	// Receive serialdata, size of packet stored in size
 	uint32_t i;
 	char lptr[sizeof(SansgridSerial)+1];
+	char fifo_name[100];
 
 	if (!ts->valid_read) {
 		return 1;
 	}
 	fail_if((ts == NULL), "TalkStub is NULL!");
 	mark_point();
-	if (ts->FPTR_PIPE_READ == NULL) {
-#if TESTS_DEBUG_LEVEL > 0
-		printf("Read file descriptor is null!\n");
-#endif
-		return -1;
-	}
-	mark_point();
 
-	// Read from the pipe 
+	struct stat buffer;
+
+	sprintf(fifo_name, "%s.fifo", ts->name);
+	if (stat(fifo_name, &buffer) < 0)
+		mkfifo(fifo_name, 0644);
+
+	if (!(ts->FPTR_PIPE_READ = fopen(fifo_name, "r"))) {
+		fail("Can't open %s pipe for reading!", fifo_name);
+	}
+
+	// Synchronize
 	sem_post(&ts->readlock);
 	sem_wait(&ts->writelock);
 	
@@ -85,6 +106,8 @@ int8_t unixpipeReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts)
 	for (i=0; i<(sizeof(SansgridSerial)) && ts->FPTR_PIPE_READ; i++) {
 		lptr[i] = fgetc(ts->FPTR_PIPE_READ);
 	}
+	fclose(ts->FPTR_PIPE_READ);
+	ts->FPTR_PIPE_READ = NULL;
 
 	mark_point();
 
@@ -101,7 +124,12 @@ int8_t unixpipeReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts)
 	memcpy(*sg_serial, lptr, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
 
+	unlink(fifo_name);
 	mark_point();
+
+	// Synchronize
+	sem_post(&ts->readlock);
+	sem_wait(&ts->writelock);
 	return 0;
 }
 

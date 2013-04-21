@@ -48,6 +48,7 @@ enum CommTypeEnum {
 };
 
 typedef struct TalkStub {
+	char name[50];
 #ifdef SG_TEST_USE_EEPROM
 	// Only used when using EEPROM
 	uint16_t eeprom_address;
@@ -65,7 +66,7 @@ typedef struct TalkStub {
 } TalkStub;
 
 
-TalkStub *talkStubInit(void);
+TalkStub *talkStubInit(char *name);
 void talkStubUseAsSPI(TalkStub *ts);
 void talkStubUseAsTCP(TalkStub *ts);
 TalkStub *talkStubGetSPI(void);
@@ -73,13 +74,9 @@ TalkStub *talkStubGetTCP(void);
 void talkStubAssertValid(TalkStub *ts);
 void talkStubAssertInvalid(TalkStub *ts);
 #ifdef SG_TEST_USE_EEPROM
-void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
+//void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
 #endif
-void talkStubSetReader(TalkStub *ts, FILE *FPTR);
-void talkStubSetWriter(TalkStub *ts, FILE *FPTR);
-void talkStubCloseReader(TalkStub *ts);
 void talkStubRegisterReadWriteFuncs(TalkStub *ts, enum CommTypeEnum comm_type);
-void talkStubCloseWriter(TalkStub *ts);
 void talkStubDestroy(TalkStub *ts);
 
 
