@@ -41,24 +41,12 @@
 #define RECEIVE 0x00			   // Control byte for receiving data
 #define TRANSMIT 0x01			   // Control byte for transmit data
 
-#else
-#define ARCH_PI
-//#include <stdint.h>
-//#include "sgSerial_pi.h"
-//#include "payloads.h"
-#endif //_ARCH_DUE_
-
 typedef struct SansgridSerial{
 	char control[CONTROL];	   	   // control
 	char ip_addr[IP_ADDRESS];      // Overloaded IP Field
                                    // contains origin or destination IP address
 	char payload[PAYLOAD];	       // payload
 } SansgridSerial;
-
-#ifdef __SAM3X8E__
-#define ARCH_DUE
-
-#include <Arduino.h>
 
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 

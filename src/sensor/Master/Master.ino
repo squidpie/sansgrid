@@ -27,16 +27,21 @@
 void setup(){
     // Initialize Sensor SPI communication
     sgSerialSetAsSensor();
-    
-    SansgridSerial PayloadIn;
-    SansgridSerial PayloadOut;
-    
 }
 
 void loop(){
+    SansgridSerial PayloadIn;
+    PayloadIn.control = { 0x00 };
+    PayloadIn.ip_addr = { 0x01 };
+    PayloadIn.payload = { 0xFF };
+    SansgridSerial PayloadOut;
+    
+    int num_bytes = 98;
+    char value = 0;
+    
     sgSerialOpen();
-    sgSerialSerialSend();
-    sgSerialReceive();
+    sgSerialSend( &PayloadIn , &PayloadIn , num_bytes );
+    sgSerialReceive( &PayloadIn , num_bytes );
     sgSerialClose();
 }
 
