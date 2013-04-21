@@ -31,9 +31,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <payloads.h>
+#include <sgSerial.h>
 
-#include "../../../../lib/sgSerial.h"
-#include "../../../../lib/payloads.h"
 #include "../communication/sg_communication_stubs.h"
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
@@ -83,9 +83,6 @@ static void *spiReader(void *arg) {
 	uint32_t packet_size = 0;
 	struct ThreadArgs *thr_args = (struct ThreadArgs*)arg;
 	//int oldstate;
-#ifndef SG_TEST_USE_EEPROM
-	FILE *FPTR;
-#endif
 	int8_t excode;
 
 
@@ -95,14 +92,6 @@ static void *spiReader(void *arg) {
 		printf("Reading %i\n", i);
 #endif
 
-#ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
-#else
-		if (!(FPTR = fopen("rstubin.fifo", "r"))) {
-			fail("Can't open fifo for reading");
-		}
-		talkStubSetReader(thr_args->ts_serial, FPTR);
-#endif
 		// Read from serial
 		if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
 			fail("Failed to read packet");
@@ -110,17 +99,9 @@ static void *spiReader(void *arg) {
 			fail("No data received!");
 		else if (excode == 0) {
 			// Enqueue
-			//pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 			if (queueEnqueue(thr_args->queue, sg_serial) == -1)
 				fail("Queue Enqueue Failure");
-			//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		}
-#ifdef SG_TEST_USE_EEPROM
-#else
-		if (fclose(FPTR) == EOF)
-			fail("File Descriptor failed to close");
-		talkStubSetReader(thr_args->ts_serial, NULL);
-#endif
 	}
 
 #if TESTS_DEBUG_LEVEL > 1
@@ -138,11 +119,6 @@ static void *spiWriter(void *arg) {
 	int i;
 	SansgridFly sg_fly;
 	SansgridSerial sg_serial;
-	struct ThreadArgs *thr_args = (struct ThreadArgs*)arg;
-#ifdef SG_TEST_USE_EEPROM
-#else
-	FILE *FPTR = NULL;
-#endif
 
 	payloadMkSerial(&sg_serial);
 	sg_fly.datatype = SG_FLY;
@@ -156,24 +132,10 @@ static void *spiWriter(void *arg) {
 		printf("Writing %i\n", i);
 #endif
 
-#ifdef SG_TEST_USE_EEPROM
-		talkStubSetEEPROMAddress(thr_args->ts_serial, 0x0000);
-#else
-		if (!(FPTR = fopen("rstubin.fifo", "w"))) {
-			fail("Can't open fifo for writing");
-		}
-		talkStubSetWriter(thr_args->ts_serial, FPTR);
-#endif
 		snprintf(sg_fly.network_name, 78, "Ping %i", i);
 		memcpy(&sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		if (sgSerialSend(&sg_serial, sizeof(SansgridSerial)) == -1)
 			fail("Failed to send packet");
-#ifdef SG_TEST_USE_EEPROM
-#else
-		talkStubSetWriter(thr_args->ts_serial, NULL);
-		if (fclose(FPTR) == EOF)
-			fail("File Descriptor Failed to close");
-#endif
 	}
 
 
@@ -192,19 +154,16 @@ START_TEST (testAdvancedDispatch) {
 			  routing_table_thread;
 	void *arg;
 	struct ThreadArgs thr_args  = {
-		.ts_serial = talkStubInit(),
+		.ts_serial = talkStubInit("dispatch"),
 		.queue = queueInit(200)
 	};
 	fail_unless((thr_args.queue != NULL), "Error: Queue not allocated!");
 
 
 #ifndef SG_TEST_USE_EEPROM
-	struct stat buffer;
-	// parent
-
-
-	if (stat("rstubin.fifo", &buffer) < 0)
-		mkfifo("rstubin.fifo", 0644);
+	talkStubRegisterReadWriteFuncs(thr_args.ts_serial, COMM_TYPE_UNIX_PIPE);
+#else
+	talkStubRegisterReadWriteFuncs(thr_args.ts_serial, COMM_TYPE_EEPROM);
 #endif
 	talkStubUseAsSPI(thr_args.ts_serial);
 	talkStubAssertValid(thr_args.ts_serial);
@@ -225,11 +184,6 @@ START_TEST (testAdvancedDispatch) {
 	queueDestroy(thr_args.queue);
 
 	talkStubDestroy(thr_args.ts_serial);
-
-
-#ifndef SG_TEST_USE_EEPROM
-	unlink("rstubin.fifo");
-#endif
 }
 END_TEST
 

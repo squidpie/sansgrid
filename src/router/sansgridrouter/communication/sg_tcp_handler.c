@@ -26,8 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sg_tcp.h"
-#include "../../../lib/sgSerial.h"
-#include "../../../lib/payloads.h"
 #include "../payload_handlers/payload_handlers.h"
 
 
@@ -67,7 +65,7 @@ int extract_keyvalue(char *str, char **key, char **value, char **saved) {
 
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	// convert the full string of hex values into an array
-	int i_str, i_hex = 0;
+	uint32_t i_str, i_hex = 0;
 	int increment = 0;
 	char chunk[3];
 	uint32_t length;
@@ -117,8 +115,16 @@ char *match(Dictionary dict[], int size, char *key) {
 }
 
 
+int32_t translateRdid(Dictionary dict[], int size) {
+	uint8_t rdid[4];
+	uint32_t rdid_return;
+	atox(rdid,					match(dict, size, "rdid"),		4*sizeof(uint8_t));
+	memcpy(&rdid_return, rdid, 4*sizeof(uint8_t));
+	return rdid_return;
+}
 
-int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+
+int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get an eyeball datatype from the payload
 	SansgridEyeball sg_eyeball;
 
@@ -133,7 +139,7 @@ int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_eyeball, sizeof(SansgridEyeball));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -153,7 +159,7 @@ int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_peck, sizeof(SansgridPeck));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -165,7 +171,7 @@ int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_sing, sizeof(SansgridSing));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -177,7 +183,7 @@ int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_mock, sizeof(SansgridMock));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -202,8 +208,10 @@ int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
 
-	return 0;
+	return translateRdid(dict, size);
 }
+
+
 
 int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a nest datatype from the payload
@@ -215,7 +223,7 @@ int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_nest, sizeof(SansgridNest));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -227,7 +235,7 @@ int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_squawk, sizeof(SansgridSquawk));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
 int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -240,12 +248,14 @@ int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	
 	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
 
 
 int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
+	// Take a payload, 	return the translated serial packet,
+	// 					return the device identifier (rdid)
 	int i;
 	uint8_t datatype = ~0x0;
 	Dictionary dict[30];

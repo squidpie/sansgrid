@@ -1,13 +1,16 @@
 bin_PROGRAMS = sansgridrouter
 check_PROGRAMS = sgtest
-AM_CFLAGS = -Wall -std=c99
+AM_CFLAGS = -Wall -std=c99 -I../../../include/
 
 SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
 		communication/sg_tcp_handler.c \
 		routing_table/routing_table.c \
 		routing_table/heartbeat.c
-SANSGRID_TEST = test/communication/sg_communication_stubs.c \
+SANSGRID_TEST = \
+		test/communication/sg_communication_stubs.c \
+		test/communication/sg_communication_stubs_eeprom.c \
+		test/communication/sg_communication_talkstub.c \
 		test/dispatch/dispatch_basic.c \
 		test/dispatch/dispatch_advanced.c \
 		test/routing/routing_basic_test.c \
@@ -46,4 +49,4 @@ sgtest_SOURCES = $(SANSGRID_BASE) \
 		 $(SANSGRID_TEST) \
 		 test/tests.c
 
-AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\"
+AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\" 

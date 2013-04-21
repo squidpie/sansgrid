@@ -19,13 +19,26 @@
  *
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include "../../../lib/sgSerial.h"
+#include <sgSerial.h>
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
+	/*
+	printf("sending");
+	printf(" %2x | ", sg_serial->control);
+	for (uint32_t i=0; i<IP_SIZE; i++) {
+		printf("%.2x", sg_serial->ip_addr[i]);
+	}
+	printf(" | ");
+	for (uint32_t i=0; i<PAYLOAD_SIZE; i++) {
+		printf("%.2x", sg_serial->payload[i]);
+	}
+	printf("\n");
+	*/
 
 	return -1;
 }

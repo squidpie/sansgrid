@@ -24,9 +24,11 @@
 #define __SG_ROUTING_HEARTBEAT_H__
 
 #define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
-#define HEARTBEAT_UINTERVAL 4000000	// interval, in usecs, between device heartbeats 
+//#define HEARTBEAT_UINTERVAL 4000000	// interval, in usecs, between device heartbeats 
+#define HEARTBEAT_INTERVAL 240		// interval, in seconds, between device heartbeats
 
-#include "../../../lib/payloads.h"
+//#include "../../../lib/payloads.h"
+#include <payloads.h>
 
 enum SansgridHeartbeatStatusEnum {
 	SG_DEVICE_NOT_PRESENT,

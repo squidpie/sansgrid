@@ -18,6 +18,6 @@ $SG['project_title']	= "SansGrid";			// Displayed in browser window
 
 // Delimiters
 $SG['kv_del'] = "α";							// Key-value delimiter
-$SG['pp_del'] = "β";							// Parameter-to-parameter delimiter
+$SG['ff_del'] = "β";							// Parameter-to-parameter delimiter
 
 ?>
