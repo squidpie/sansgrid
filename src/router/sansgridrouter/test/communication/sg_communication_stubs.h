@@ -25,8 +25,8 @@
  * so serial and TCP are merged into one API.
  */
 
-#ifndef __TALK_STUBS_H__
-#define __TALK_STUBS_H__
+#ifndef __COMMUNICATION_STUBS_H__
+#define __COMMUNICATION_STUBS_H__
 // Use a 64K EEPROM Chip instead of named pipes
 //#define SG_TEST_USE_EEPROM
 
@@ -37,11 +37,36 @@
 #include <semaphore.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include <sgSerial.h>
 #include "../tests.h"
 
-typedef struct TalkStub TalkStub;
+enum CommTypeEnum {
+	COMM_TYPE_NONE,
+	COMM_TYPE_UNIX_PIPE,
+	COMM_TYPE_EEPROM,
+};
 
-TalkStub *talkStubInit(void);
+typedef struct TalkStub {
+	char name[50];
+#ifdef SG_TEST_USE_EEPROM
+	// Only used when using EEPROM
+	uint16_t eeprom_address;
+#endif
+	// Used with named pipes
+	FILE *FPTR_PIPE_WRITE,		// Writing file descriptor
+		 *FPTR_PIPE_READ;		// Reading file descriptor
+	int valid_read;				// Only return valid data if we're reading
+	sem_t writelock,			// A write is in progress
+		  readlock;				// A read is in progress
+	int use_barrier;			// Whether or not to use write/read_in_progress
+	// Callbacks to be registered
+	int8_t (*receive)(SansgridSerial**, uint32_t*, struct TalkStub*);
+	int8_t (*send)(SansgridSerial*, uint32_t, struct TalkStub*);
+} TalkStub;
+
+
+TalkStub *talkStubInit(char *name);
 void talkStubUseAsSPI(TalkStub *ts);
 void talkStubUseAsTCP(TalkStub *ts);
 TalkStub *talkStubGetSPI(void);
@@ -49,16 +74,10 @@ TalkStub *talkStubGetTCP(void);
 void talkStubAssertValid(TalkStub *ts);
 void talkStubAssertInvalid(TalkStub *ts);
 #ifdef SG_TEST_USE_EEPROM
-void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
-#else
-void talkStubSetReader(TalkStub *ts, FILE *FPTR);
-void talkStubSetWriter(TalkStub *ts, FILE *FPTR);
-void talkStubCloseReader(TalkStub *ts);
-void talkStubCloseWriter(TalkStub *ts);
+//void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address);
 #endif
+void talkStubRegisterReadWriteFuncs(TalkStub *ts, enum CommTypeEnum comm_type);
 void talkStubDestroy(TalkStub *ts);
-
-
 
 
 
