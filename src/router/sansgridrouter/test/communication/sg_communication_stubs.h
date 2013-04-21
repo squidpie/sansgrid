@@ -27,7 +27,7 @@
 
 #ifndef __COMMUNICATION_STUBS_H__
 #define __COMMUNICATION_STUBS_H__
-// Use a 64K EEPROM Chip instead of named pipes
+// Allow a 64K EEPROM Chip in addition to named pipes
 //#define SG_TEST_USE_EEPROM
 
 #include <stdio.h>
