@@ -33,6 +33,7 @@ volatile boolean process_it;
 void setup (void){
     // Initialize SPI Slave
     spiSlaveInit();
+    SPDR = 0xFF;
     // Initialize Hand Shake Pin  
     //pinMode( SLAVE_READY , OUTPUT );
     //digitalWrite( SLAVE_READY, HIGH );
@@ -48,6 +49,7 @@ void loop (void){
         buf [pos] = 0;
         pos = 0;
         process_it = false;
+        SPDR = 0xFF;
     } 
 } 
 
@@ -66,6 +68,7 @@ void spiSlaveInit( void ){
 
 // SPI interrupt routine
 ISR (SPI_STC_vect){ 
+    byte c = SPDR;
     if ( pos < sizeof buf ){
         buf [pos++] = c;  
         if (c == '\n')
