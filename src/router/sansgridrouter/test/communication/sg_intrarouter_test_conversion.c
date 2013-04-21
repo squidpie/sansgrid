@@ -23,6 +23,7 @@
 
 
 START_TEST(testEyeballConversion) {
+	// Test the eyeball conversion for the intrarouter communication system
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridEyeball sg_eyeball;
@@ -64,6 +65,7 @@ END_TEST
 
 
 START_TEST(testPeckConversion) {
+	// Test the peck conversion for the intrarouter communication system
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridPeck sg_peck;
@@ -103,6 +105,7 @@ START_TEST(testPeckConversion) {
 END_TEST
 
 START_TEST(testSingConversion) {
+	// Test the sing conversion for the intrarouter communication system
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridSing sg_sing;
@@ -114,7 +117,7 @@ START_TEST(testSingConversion) {
 	mark_point();
 	testStructInit(&test_struct);
 	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
-	test_struct.eyeball = &sing;
+	test_struct.sing = &sing;
 	test_struct.sing_mode = SG_SING_WITH_KEY;
 	payloadMkSerial(&sg_serial);
 	payloadMkSing(&sg_sing, &test_struct);
@@ -142,12 +145,104 @@ START_TEST(testSingConversion) {
 }
 END_TEST
 
+
+START_TEST(testMockConversion) {
+	// Test the mock conversion for the intrarouter communication system
+	SansgridSerial sg_serial,
+				   sg_serial_orig;
+	SansgridMock sg_mock;
+	PayloadTestStruct test_struct;
+	char payload[300] = "";
+	uint32_t rdid = ~0,
+			 rdid_orig = 0;
+
+	mark_point();
+	testStructInit(&test_struct);
+	PayloadTestNode mock = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
+	test_struct.mock = &mock;
+	test_struct.mock_mode = SG_MOCK_WITH_KEY;
+	payloadMkSerial(&sg_serial);
+	payloadMkMock(&sg_mock, &test_struct);
+
+	memcpy(sg_serial.payload, &sg_mock, sizeof(SansgridMock));
+	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	mark_point();
+	sgRouterToServerConvert(&sg_serial, payload);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Mock: Size of payload is: %i\n", strlen(payload));
+	printf("Mock: Converted to: %s\n", payload);
+#endif
+	mark_point();
+	rdid = sgServerToRouterConvert(payload, &sg_serial);
+
+	mark_point();
+	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
+			"Mock: Converted serial packet doesn't match original!");
+	fail_if((rdid != rdid_orig), 
+			"Mock: returned identifier doesn't match original!\
+\n\tExpected: %i \
+\n\tGot: %i", rdid_orig, rdid);
+	mark_point();
+}
+END_TEST
+
+
+
+START_TEST(testPeacockConversion) {
+	// Test the peacock conversion for the intrarouter communication system
+	SansgridSerial sg_serial,
+				   sg_serial_orig;
+	SansgridPeacock sg_peacock;
+	PayloadTestStruct test_struct;
+	char payload[300] = "";
+	uint32_t rdid = ~0,
+			 rdid_orig = 0;
+
+	printf("WARNING: Peacock not implemented yet! Ending Test...\n");
+	return;
+
+
+	mark_point();
+	testStructInit(&test_struct);
+	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING, 0 };
+	test_struct.peacock = &peacock;
+	test_struct.peacock_mode = SG_PEACOCK;
+	payloadMkSerial(&sg_serial);
+	payloadMkPeacock(&sg_peacock, &test_struct);
+
+	memcpy(sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
+	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	mark_point();
+	sgRouterToServerConvert(&sg_serial, payload);
+#if TESTS_DEBUG_LEVEL > 0
+	printf("Peacock: Size of payload is: %i\n", strlen(payload));
+	printf("Peacock: Converted to: %s\n", payload);
+#endif
+	mark_point();
+	rdid = sgServerToRouterConvert(payload, &sg_serial);
+
+	mark_point();
+	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
+			"Peacock: Converted serial packet doesn't match original!");
+	fail_if((rdid != rdid_orig), 
+			"Peacock: returned identifier doesn't match original!\
+\n\tExpected: %i \
+\n\tGot: %i", rdid_orig, rdid);
+	mark_point();
+}
+END_TEST
+
+
 Suite *intraRouterTestConversion(void) {
 	Suite *s = suite_create("Intrarouter Conversion Tests");
 	TCase *tc_core = tcase_create("Core");
 	tcase_add_test(tc_core, testEyeballConversion);
 	tcase_add_test(tc_core, testPeckConversion);
 	tcase_add_test(tc_core, testSingConversion);
+	tcase_add_test(tc_core, testMockConversion);
+	tcase_add_test(tc_core, testPeacockConversion);
 
 	suite_add_tcase(s, tc_core);
 
