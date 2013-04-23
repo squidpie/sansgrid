@@ -22,18 +22,6 @@
 #ifndef __SG_SERIAL_H__
 #define __SG_SERIAL_H__
 
-// Set up a macro depending on architecture
-#ifndef __ARCH_DUE__
-#define ARCH_DUE
-
-#include <Arduino.h>
-#include "sgSerial_due.h"
-
-#define SLAVE_SELECT  10           // SS pin 10
-#define SLAVE_READY  9             // Hand shake pin identifying Slave has 
-                                   // data to send
-#define NUM_BYTES 98			   // Number of bytes sent or received over 
-                                   // SPI per packet
 #define CONTROL 1				   // Number of bytes in control 
 #define IP_ADDRESS 16			   // Number of bytes in source/destination 
                                    // IP address
@@ -41,62 +29,39 @@
 #define RECEIVE 0x00			   // Control byte for receiving data
 #define TRANSMIT 0x01			   // Control byte for transmit data
 
+// Set up a macro depending on architecture
+#ifndef __ARCH_DUE__
+#define ARCH_DUE
+
+#include <Arduino.h>
+#include <spiMaster.h>
+
+#define SLAVE_SELECT  10           // SS pin 10
+#define SLAVE_READY  8             // Hand shake pin identifying Slave has 
+                                   // data to send
+#define DELAY 6				   	   // Delay in microseconds between bytes sent
+
 typedef struct SansgridSerial{
-	char control[CONTROL];	   	   // control
-	char ip_addr[IP_ADDRESS];      // Overloaded IP Field
-                                   // contains origin or destination IP address
-	char payload[PAYLOAD];	       // payload
+	char control[ CONTROL + 1 ];	   	 // control
+	char ip_addr[ IP_ADDRESS + 1 ];      // Overloaded IP Field
+                                         // contains origin or destination IP address
+	char payload[ PAYLOAD + 1 ];	     // payload
 } SansgridSerial;
-
-// Opens serial device for reading/writing, configures ports, sets order data 
-// bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
-// is called prior to sending or receiving any data over the serial line. 
-int8_t sgSerialOpen(void){
-    spiMasterInit();
-	return 0;
-}
-
-// Configure radio as a router radio
-// Radio will be configured as a sensor radio by default.
-int8_t sgSerialSetAsRouter(void){
-    // TBD
-	return -1;
-}
-
-int8_t sgSerialSetAsSensor(void){
-	//TBD
-	return -1;
-}
-
-// Send size bytes of serialdata serially
-int8_t sgSerialSend(SansgridSerial *tx, SansgridSerial *rx, int size){
-	spiMasterOpen( SLAVE_SELECT );
-	spiMasterTransmit( tx->control , rx->control , SLAVE_SELECT );
-	spiMasterTransmit( tx->ip_addr , rx->ip_addr , SLAVE_SELECT );
-	spiMasterTransmit( tx->payload , rx->payload , SLAVE_SELECT );
-	spiMasterClose( SLAVE_SELECT );
-	return 0;
-}
-
-// Get data from serial in. Data size will be in size.
-int8_t sgSerialReceive(SansgridSerial *rx, int size){
-	spiMasterOpen( SLAVE_SELECT );
-	spiMasterReceive( RECEIVE , rx->control , CONTROL );
-	spiMasterReceive( RECEIVE , rx->ip_addr , IP_ADDRESS );
-	spiMasterReceive( RECEIVE , rx->payload , PAYLOAD );
-	spiMasterClose( SLAVE_SELECT );
-	return 0;
-}
-
-// Function is called when all SPI input and output is completed. Stops SPI 
-// from being transmitted and received. 
-int8_t sgSerialClose(void){
-	SPI.end();
-	return 0;
-}
-
 #else
 #define ARCH_PI
+
+#include <stdint.h>
+//#include <arpa/inet.h>
+#include "payloads.h"
+
+typedef struct SansgridSerial {
+	uint8_t control;				// control byte
+	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
+									// contains origin or destination IP address
+	uint8_t payload[81];			// payload
+} SansgridSerial;
+
+#endif // __ARCH_DUE__
 
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
@@ -113,17 +78,16 @@ int8_t sgSerialSetAsSensor(void);
 // integer to receive data from the slave in return. The most significant bit 
 // first in Big Endian byte order. Number of bytes is not to exceed control 
 // byte plus IP address destination/source bytes plus payload bytes. 
-int8_t sgSerialSend(SansgridSerial *tx, SansgridSerial *rx, uint32_t size);
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size);
 // Receive number of bytes "size" and places in SansgridSerial structure. The 
 // most significant bit first in Big Endian byte order. Number of bytes is not 
 // to exceed control byte plus IP address destination/source bytes plus payload
 // bytes. 
-int8_t sgSerialReceive(SansgridSerial *rx, uint32_t size);
+int8_t sgSerialReceive(SansgridSerial *sg_serial, uint32_t size);
 // Function is called when all SPI input and output is completed. Stops SPI 
 // from being transmitted and received. 
 int8_t sgSerialClose(void);
 
-#endif // __SAM3X8E__
 #endif // __SG_SERIAL_H
 
 // vim: ft=c ts=4 noet sw=4:
