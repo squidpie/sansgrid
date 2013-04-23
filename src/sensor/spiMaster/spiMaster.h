@@ -1,4 +1,4 @@
-/* Definitions for communication functions
+/* Definitions for SPI Master
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid

@@ -1,4 +1,4 @@
-/* Definitions for communication functions
+/* SPI Master Test Code
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid

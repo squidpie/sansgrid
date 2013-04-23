@@ -1,3 +1,7 @@
+/* SPI Slave Test Code
+ * Designed to run on the Arduino UNO
+ */
+ 
 #include <SPI.h>
 
 char buf [100];

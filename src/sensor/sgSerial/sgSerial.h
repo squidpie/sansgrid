@@ -42,10 +42,10 @@
 #define DELAY 6				   	   // Delay in microseconds between bytes sent
 
 typedef struct SansgridSerial{
-	char control[ CONTROL + 1 ];	   	 // control
+	char control[ CONTROL + 1 ];	   	 // Control
 	char ip_addr[ IP_ADDRESS + 1 ];      // Overloaded IP Field
                                          // contains origin or destination IP address
-	char payload[ PAYLOAD + 1 ];	     // payload
+	char payload[ PAYLOAD + 1 ];	     // Payload
 } SansgridSerial;
 #else
 #define ARCH_PI
@@ -55,10 +55,10 @@ typedef struct SansgridSerial{
 #include "payloads.h"
 
 typedef struct SansgridSerial {
-	uint8_t control;				// control byte
-	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
-									// contains origin or destination IP address
-	uint8_t payload[81];			// payload
+	uint8_t control[ CONTROL + 1 ];			// Control byte
+	uint8_t ip_addr[ IP_ADDRESS + 1 ];		// Overloaded IP Field
+											// contains origin or destination IP address
+	uint8_t payload[ PAYLOAD + 1 ];			// Payload
 } SansgridSerial;
 
 #endif // __ARCH_DUE__
