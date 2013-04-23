@@ -68,7 +68,7 @@ void spiMasterTransmit( char * data_out , int size , int ss ){
 // Open SPI bus for Slave Select pin
 void spiMasterOpen( int ss ){
     // Open SPI bus ( not needed for Arduino DUE extended )
-	// uncomment for UNO
+	// Uncomment for UNO
     // digitalWrite( ss , LOW );
 	delayMicroseconds( DELAY );
 }

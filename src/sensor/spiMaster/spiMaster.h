@@ -24,7 +24,7 @@
 
 #include <Arduino.h>
 
-#define SLAVE_SELECT  10            // SS pin 10
+#define SLAVE_SELECT  10           // SS pin 10
 #define SLAVE_READY  8             // Hand shake pin identifying Slave has 
                                    // data to send
 #define NUM_BYTES 8			       // Number of bytes sent or received over 
