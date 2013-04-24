@@ -42,7 +42,7 @@ $query = "CREATE TABLE router (id_router int NOT NULL UNIQUE AUTO_INCREMENT, rou
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.");
 
 // Table: sensor
-$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum int, manid int, sn int, status VARCHAR(250), last_pulse TIMESTAMP)";
+$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum varchar(10), manid varchar(10), sn varchar(20), status VARCHAR(250), has_mated CHAR(1) DEFAULT 'n', last_pulse TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
 
 // Table: io

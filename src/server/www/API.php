@@ -111,13 +111,13 @@ function processEyeball ($router_ip, $payload, $db) {
 	// Do we recognize this sensor?
 	$query  = "SELECT COUNT(*) as count FROM sensor ";
 	$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
-	$query .= "AND  sn='$sn'";
+	$query .= "AND sn='$sn' AND has_mated='y'";
 	$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query EB1.");
 
 	$row = mysqli_fetch_assoc($result);
 	$count = $row['count'];
 
-	// Now we generate the appropriate Peck, start by getting the server key.
+	// Now we generate the appropriate Peck, start by getting the server id.
 	$query = "SELECT server_id FROM server";
 	$result = mysqli_query ($db, $query) or die ("Error: Couldn't execute query EB2.");
 	$row = mysqli_fetch_assoc($result);
@@ -142,7 +142,7 @@ function processEyeball ($router_ip, $payload, $db) {
 
 	// .. else sensor is not recognized
 	} else {
-		// If it's a new sensor, we should mate.  Is the sensor ready to mate?
+		// If it's a new sensor, we must mate.  Is the sensor ready to mate?
 
 		//  if sensor not ready to mate...
 		if ($mode == 0) {
@@ -156,18 +156,24 @@ function processEyeball ($router_ip, $payload, $db) {
 			$reply = appendToPayload($reply, "sn", 				$sn);
 
 			// Log it
-			$msg  = "[$router_ip] - Eyeballing - New sensor entered network. ";
+			$msg  = "[$router_ip] - Eyeball: New sensor entered network. ";
 			$msg .= "Sensor not ready to mate. ";
-			$msg .= "Manufacturer's ID = $manid, ";
-			$msg .= "model number = $modnum, ";
-			$msg .= "serial number = $sn";
+			$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
+			$msg .= "model number&nbsp;=&nbsp;$modnum, ";
+			$msg .= "serial number&nbsp;=&nbsp;$sn";
 			addToLog($msg);
 
-			print "New sensor. Sensor not ready to mate.\n";
 			xmitToRouter($reply);
 
 		// ...else sensor is ready to mate
 		} else {
+
+			// OK, so the sensor is ready to mate. Let's get it added into the
+			// database so we can save Eyeball, Mock and Peacock data. 
+			$query  = "INSERT INTO sensor (manid, modnum, sn, status) ";
+			$query .= "VALUES ('$manid', '$modnum', '$sn', 'offline')";
+			$result = mysqli_query($db, $query) or die ("Couldn't execute query EB4.");
+			$id_sensor = mysqli_insert_id($db);
 
 			// Is server set to allow automatic mating?
 			$query = "SELECT verify_mating FROM server";
@@ -191,28 +197,8 @@ function processEyeball ($router_ip, $payload, $db) {
 				// Sleep for 250 ms after Peck before sending Sing. 
 				usleep(250000);		
 
-				// Now we build our Sing payload.
-				// All replies should include the originating rdid
-				$reply = appendToPayload("", "${SG['ff_del']}rdid", $rdid);
-
-				// Do we have a server key?
-				$query = "SELECT server_key FROM server";
-				$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query si1.");
-				$row = mysqli_fetch_assoc($result);
-				$server_key = $row['server_key'];
-
-				//                             ↘No key   ↘Yes key
-				$dt = $server_key == "" ? $dt = 3 : $dt = 2;
-
-				// Finishing Sing payload
-				$reply = appendToPayload($reply, "dt", 			$dt);
-				$reply = appendToPayload($reply, "serverkey", 	$server_key);
-
-				xmitToRouter($reply);
-
-				// Update pipeline
-				updatePipeline ($rdid, "", 2);
-
+				// Now we Sing
+				generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db);
 
 
 			// ...else automatic mating is not allowed
@@ -220,7 +206,7 @@ function processEyeball ($router_ip, $payload, $db) {
 				$reply = appendToPayload($reply, "dt", 			"1");
 				$reply = appendToPayload($reply, "ipaddress", 	"");
 				$reply = appendToPayload($reply, "serverid", 	$server_id);
-				$reply = appendToPayload($reply, "recognition",	"4NEEDAPPROVAL");
+				$reply = appendToPayload($reply, "recognition",	"4");
 				$reply = appendToPayload($reply, "manid", 		$manid);
 				$reply = appendToPayload($reply, "modnum", 		$modnum);
 				$reply = appendToPayload($reply, "sn", 			$sn);
@@ -228,13 +214,61 @@ function processEyeball ($router_ip, $payload, $db) {
 				print "New sensor. Sensor ready to mate. Server requires authentication.\n";
 				print "WARNING!!! We need a new reply for this\n";
 				print "WARNING!!! this still needs to be added to the pipeline\n";
+
+				// Log it
+				$msg  = "[$router_ip] - Eyeball&rarr;Sing: New sensor entered network. ";
+				$msg .= "Peck complete. Awaiting permission to mate. ";
+				$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
+				$msg .= "model number&nbsp;=&nbsp;$modnum, ";
+				$msg .= "serial number&nbsp;=&nbsp;$sn";
+				addToLog($msg);
+
 				xmitToRouter($reply);
 
+				// Update pipeline
 				// NEED TO ADD THIS TO PIPELINE AS A SENSOR WAITING TO MATE
+				updatePipeline ($rdid, $id_sensor, 'Peck');
 			}
 			
 		}
 	}
+}
+
+// ****************************************
+
+function generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db) {
+	global $SG;
+
+	// Now we build our Sing payload.
+	// All replies should include the originating rdid
+	$reply = appendToPayload("", "${SG['ff_del']}rdid", $rdid);
+
+	// Do we have a server key?
+	$query = "SELECT server_key FROM server";
+	$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query si1.");
+	$row = mysqli_fetch_assoc($result);
+	$server_key = $row['server_key'];
+
+	//                             ↘No key   ↘Yes key
+	$dt = $server_key == "" ? $dt = 3 : $dt = 2;
+
+	// Finishing Sing payload
+	$reply = appendToPayload($reply, "dt", 			$dt);
+	$reply = appendToPayload($reply, "serverkey", 	$server_key);
+
+
+	// Log it
+	$msg  = "[$router_ip] - Eyeball&rarr;Sing: New sensor entered network. ";
+	$msg .= "Peck complete. Sing issued. ";
+	$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
+	$msg .= "model number&nbsp;=&nbsp;$modnum, ";
+	$msg .= "serial number&nbsp;=&nbsp;$sn";
+	addToLog($msg);
+
+	xmitToRouter($reply);
+
+	// Update pipeline
+	updatePipeline ($rdid, $id_sensor, 'Sing');
 }
 
 
