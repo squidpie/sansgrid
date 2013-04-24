@@ -36,7 +36,7 @@ void payloadMkSerial(SansgridSerial *sg_serial) {
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs) {
 	int i;
 
-	sg_eyeball->datatype = test_specs->eyeball_mode;
+	sg_eyeball->datatype = SG_EYEBALL;
 	for (i=0; i<4; i++) {
 		sg_eyeball->manid[i] = 0x0;
 		sg_eyeball->modnum[i] = 0x0;

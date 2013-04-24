@@ -65,7 +65,7 @@ int extract_keyvalue(char *str, char **key, char **value, char **saved) {
 
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	// convert the full string of hex values into an array
-	int i_str, i_hex = 0;
+	uint32_t i_str, i_hex = 0;
 	int increment = 0;
 	char chunk[3];
 	uint32_t length;
@@ -115,8 +115,16 @@ char *match(Dictionary dict[], int size, char *key) {
 }
 
 
+static int32_t translateRdid(Dictionary dict[], int size) {
+	uint8_t rdid[4];
+	uint32_t rdid_return;
+	atox(rdid,					match(dict, size, "rdid"),		4*sizeof(uint8_t));
+	memcpy(&rdid_return, rdid, 4*sizeof(uint8_t));
+	return rdid_return;
+}
 
-int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+
+static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get an eyeball datatype from the payload
 	SansgridEyeball sg_eyeball;
 
@@ -131,10 +139,10 @@ int8_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_eyeball, sizeof(SansgridEyeball));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peck datatype from the payload
 	SansgridPeck sg_peck;
 
@@ -151,10 +159,10 @@ int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_peck, sizeof(SansgridPeck));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a sing datatype from the payload
 	SansgridSing sg_sing;
 
@@ -163,10 +171,10 @@ int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_sing, sizeof(SansgridSing));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a mock datatype from the payload
 	SansgridMock sg_mock;
 
@@ -175,10 +183,10 @@ int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_mock, sizeof(SansgridMock));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
 	SansgridPeacock sg_peacock;
 
@@ -200,10 +208,12 @@ int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+
+
+static int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a nest datatype from the payload
 	SansgridNest sg_nest;
 
@@ -213,10 +223,10 @@ int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_nest, sizeof(SansgridNest));
 	
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
 	SansgridSquawk sg_squawk;
 	
@@ -225,10 +235,10 @@ int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 
 	memcpy(sg_serial->payload, &sg_squawk, sizeof(SansgridSquawk));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
-int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
 	SansgridChirp sg_chirp;
 
@@ -238,14 +248,16 @@ int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	
 	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
 
-	return 0;
+	return translateRdid(dict, size);
 }
 
 
 
-int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
-	int i;
+int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
+	// Take a payload, 	return the translated serial packet,
+	// 					return the device identifier (rdid)
 	uint8_t datatype = ~0x0;
+	enum SansgridDeviceStatusEnum dev_datatype;
 	Dictionary dict[30];
 	int32_t size = 0;
 	int8_t exit_code = 0;
@@ -255,8 +267,8 @@ int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
-			dict[size].key = key;
-			dict[size].value = value;
+			dict[size].key = &key[sizeof(DELIM_KEY)-2];
+			dict[size].value = (value == NULL ? NULL : &value[sizeof(DELIM_VAL)-2]);
 			size++;
 		} else
 			break;
@@ -265,18 +277,12 @@ int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 	dict[size].value = NULL;
 
 	// Find payload type
-	for (i=0; i<size; i++) {
-		key = dict[i].key;
-		if (!strcmp(key, "dt")) {
-			// found the datatype
-			datatype = atoi(key);
-		}
-	}
+	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
 	if (datatype == ~0x0) {
 		return -1;
 	}
-	datatype = sgPayloadGetType(datatype);
-	switch(datatype) {
+	dev_datatype = sgPayloadGetType(datatype);
+	switch(dev_datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
 			exit_code = convertEyeball(dict, size, sg_serial);
 			break;
@@ -307,6 +313,94 @@ int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial) {
 	}
 
 	return exit_code;
+}
+
+int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
+	// Add a field to the payload
+	const char *delim_key = DELIM_KEY;
+	const char *delim_val = DELIM_VAL;
+	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
+	for (uint32_t i=0; i<size; i++) {
+		sprintf(payload, "%s%.2x", payload, value[i]);
+	}
+	return 0;
+}
+
+
+int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
+	// translate the SansgridSerial packet into an intrarouter payload
+	SansgridEyeball 	sg_eyeball;
+	SansgridPeck 		sg_peck;
+	SansgridSing 		sg_sing;
+	SansgridMock 		sg_mock;
+	SansgridPeacock 	sg_peacock;
+	//SansgridNest 		sg_nest;
+	SansgridSquawk 		sg_squawk;
+	//SansgridHeartbeat 	sg_heartbeat;
+	SansgridChirp 		sg_chirp;
+	
+	if (!sg_serial || !sg_serial->payload) {
+		return -1;
+	}
+	payload[0] = '\0';
+	uint8_t payload_type = sg_serial->payload[0];
+	uint8_t datatype = sgPayloadGetType(payload_type);
+	// TODO: Add rdid field
+	//addHexField("rdid", &datatype, 1, payload);
+	addHexField("dt", &payload_type, 1, payload);
+	switch (datatype) {
+		case SG_DEVSTATUS_EYEBALLING:
+			memcpy(&sg_eyeball, sg_serial->payload, sizeof(SansgridEyeball));
+			addHexField("manid",	sg_eyeball.manid,	4,	payload);
+			addHexField("modnum", 	sg_eyeball.modnum, 	4,	payload);
+			addHexField("sn",		sg_eyeball.serial_number, 8, payload);
+			addHexField("profile",	&sg_eyeball.profile,1,	payload);
+			addHexField("mode",		&sg_eyeball.mode,	1,	payload);
+			break;
+		case SG_DEVSTATUS_PECKING:
+			memcpy(&sg_peck, sg_serial->payload, sizeof(SansgridPeck));
+			addHexField("ip",		sg_peck.assigned_ip, IP_SIZE, payload);
+			addHexField("sid",		sg_peck.server_id,	16,	payload);
+			addHexField("recognition",&sg_peck.recognition, 1,payload);
+			addHexField("manid",	sg_peck.manid,		4,	payload);
+			addHexField("modnum",	sg_peck.modnum,		4,	payload);
+			addHexField("sn",		sg_peck.serial_number,8,payload);
+			break;
+		case SG_DEVSTATUS_SINGING:
+			memcpy(&sg_sing, sg_serial->payload, sizeof(SansgridSing));
+			addHexField("servpubkey", sg_sing.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_MOCKING:
+			memcpy(&sg_mock, sg_serial->payload, sizeof(SansgridMock));
+			addHexField("senspubkey", sg_mock.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_PEACOCKING:
+			memcpy(&sg_peacock, sg_serial->payload, sizeof(SansgridPeacock));
+			// TODO: get the field names written down
+			// ??
+			break;
+		case SG_DEVSTATUS_NESTING:
+			// Nothing here
+			break;
+		case SG_DEVSTATUS_SQUAWKING:
+			memcpy(&sg_squawk, sg_serial->payload, sizeof(SansgridSquawk));
+			addHexField("data", sg_mock.pubkey, 64, payload);
+			break;
+		case SG_DEVSTATUS_HEARTBEAT:
+			// Nothing here
+			break;
+		case SG_DEVSTATUS_CHIRPING:
+			memcpy(&sg_chirp, sg_serial->payload, sizeof(SansgridChirp));
+			addHexField("datasize", &sg_chirp.datasize, 1, payload);
+			addHexField("data",		sg_chirp.data, 79, payload);
+			break;
+		default:
+			// error
+			return -1;
+	}
+	strcat(payload, DELIM_KEY);
+
+	return 0;
 }
 
 

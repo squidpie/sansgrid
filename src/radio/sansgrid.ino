@@ -6,7 +6,7 @@
 #include "sgRadio.h"
 
 #define __ASSERT_USE_STDERR
-#define DEBUG true
+#define DEBUG false
 #define DEBUG_LEVEL 1
 
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp);
@@ -16,51 +16,53 @@ int length;
 
 SansgridSerial SpiData;
 SnIpTable RouteTable;
-SansgridRadio Radio = SansgridRadio(&SpiData, &RouteTable);
+SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
 
 
 void setup() {
 	#if DEBUG 
-		SerialDebugger.begin(9600);
+		//SerialDebugger.begin(9600);
 		switch(DEBUG_LEVEL) {
 			case 1:
-				SerialDebugger.enable(ERROR);
+				//SerialDebugger.enable(ERROR);
 			case 2:
-				SerialDebugger.enable(WARNING);
+				//SerialDebugger.enable(WARNING);
 			case 3:
-				SerialDebugger.enable(NOTIFICATION);
+				//SerialDebugger.enable(NOTIFICATION);
 		}
-		SerialDebugger.debug(ERROR,__FUNC__,"Error test\n");
-		SerialDebugger.debug(WARNING,__FUNC__,"Warn test\n");
-		SerialDebugger.debug(NOTIFICATION,__FUNC__,"Notify test\n");
+		//SerialDebugger.debug(ERROR,__FUNC__,"Error test\n");
+		//SerialDebugger.debug(WARNING,__FUNC__,"Warn test\n");
+		//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Notify test\n");
 		delay(50);
+		sgDebugInit(&SerialDebugger);
+		//SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
+	#else
+		Serial.begin(115200);
 	#endif
-	sgDebugInit(&SerialDebugger);
-	SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
-  Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
   pinMode(ROUTER_MODE_PIN, INPUT);
   digitalWrite(ROUTER_MODE_PIN, HIGH);
   pinMode(SPI_IRQ_PIN, INPUT);
   digitalWrite(SPI_IRQ_PIN, HIGH);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
-    SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
+    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
   	Radio.set_mode(ROUTER);
 	}
-	SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
+	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
 }
 
 
 void loop() {
   // put your main code here, to run repeatedly: 
   if (Serial.peek() >= 0) {
-    SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
+		//Serial.println("Reading form XBee");
+    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
     Serial.flush();
     Radio.read();
 		write_spi();
   }
   if (digitalRead(SPI_IRQ_PIN) == LOW) {
-    SerialDebugger.debug(NOTIFICATION,__FUNC__,"Writing\n");
+    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Writing\n");
     read_spi();
     Radio.write();
   }

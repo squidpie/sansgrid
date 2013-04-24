@@ -24,12 +24,7 @@
 #include "payload_tests.h"
 pthread_t serial_reader_thr,
   		  tcp_reader_thr;
-#ifndef SG_TEST_USE_EEPROM
-static FILE *FPTR_SPI_WRITER,
-	 		*FPTR_SPI_READER,
-	 		*FPTR_TCP_WRITER,
-	 		*FPTR_TCP_READER;
-#endif
+
 static int payload_ref_count = 0;
 
 
@@ -47,20 +42,7 @@ void *spiPayloadReader(void *arg) {
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size;
 	int excode;
-	TalkStub *ts_serial = talkStubGetSPI();
 	mark_point();
-
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_serial, 0x0000);
-#else
-	mark_point();
-	if (!(FPTR_SPI_READER = fopen("spi.fifo", "r"))) {
-		fail("Can't open serial pipe for reading!");
-	}
-	mark_point();
-	talkStubSetReader(ts_serial, FPTR_SPI_READER);
-	mark_point();
-#endif
 
 	mark_point();
 	if ((excode = sgSerialReceive(&sg_serial, &packet_size)) == -1)
@@ -79,10 +61,6 @@ void *spiPayloadReader(void *arg) {
 	}
 	mark_point();
 
-#ifndef SG_TEST_USE_EEPROM
-	talkStubCloseReader(ts_serial);
-#endif
-	mark_point();
 	pthread_exit(arg);
 
 }
@@ -93,17 +71,6 @@ void *tcpPayloadReader(void *arg) {
 	SansgridSerial *sg_serial = NULL;
 	uint32_t packet_size;
 	int excode;
-	TalkStub *ts_tcp = talkStubGetTCP();
-
-	mark_point();
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_tcp, 0x0080);
-#else
-	if (!(FPTR_TCP_READER = fopen("tcp.fifo", "r"))) {
-		fail("Can't open TCP pipe for reading!");
-	}
-	talkStubSetReader(ts_tcp, FPTR_TCP_READER);
-#endif
 
 	mark_point();
 	if ((excode = sgTCPReceive(&sg_serial, &packet_size)) == -1)
@@ -121,12 +88,9 @@ void *tcpPayloadReader(void *arg) {
 	}
 	mark_point();
 
-#ifndef SG_TEST_USE_EEPROM
-	talkStubCloseReader(ts_tcp);
-#endif
-	mark_point();
 	pthread_exit(arg);
 }
+
 
 
 int32_t payloadRoutingInit(void) {
@@ -174,49 +138,12 @@ int32_t payloadStateInit(void) {
 	// and file descriptors, and threads for
 	// tests
 
-	TalkStub *ts_serial = talkStubGetSPI(),
-			 *ts_tcp = talkStubGetTCP();
-
-#ifdef SG_TEST_USE_EEPROM
-#else
-	struct stat buffer;
-
-	if (stat("spi.fifo", &buffer) < 0)
-		mkfifo("spi.fifo", 0644);
-	if (stat("tcp.fifo", &buffer) < 0)
-		mkfifo("tcp.fifo", 0644);
-#endif
-
-
-
 	mark_point();
 	pthread_create(&serial_reader_thr, NULL, &spiPayloadReader, NULL);
 	mark_point();
 	pthread_create(&tcp_reader_thr, NULL, &tcpPayloadReader, NULL);
 	mark_point();
 	
-#ifdef SG_TEST_USE_EEPROM
-	talkStubSetEEPROMAddress(ts_serial, 0x0000);
-	talkStubSetEEPROMAddress(ts_tcp, 0x0080);
-#else
-	// Initialize Pipes
-	mark_point();
-	if (!(FPTR_SPI_WRITER = fopen("spi.fifo", "w"))) {
-		fail("Error: Can't open serial pipe for writing!");
-	}
-
-	mark_point();
-	if (!(FPTR_TCP_WRITER = fopen("tcp.fifo", "w"))) {
-		fail("Error: Can't open TCP pipe for writing!");
-	}
-
-	mark_point();
-	talkStubSetWriter(ts_serial, FPTR_SPI_WRITER);
-	mark_point();
-	talkStubSetWriter(ts_tcp, FPTR_TCP_WRITER);
-#endif
-
-	mark_point();
 	return 0;
 }
 
@@ -226,15 +153,6 @@ int32_t payloadStateCommit(SansgridSerial **sg_serial_read, int packets) {
 	// Close writing file descriptors, join threads, remove pipes
 	void *arg;
 	mark_point();
-	TalkStub *ts_serial = talkStubGetSPI(),
-			 *ts_tcp = talkStubGetTCP();
-#ifdef SG_TEST_USE_EEPROM
-#else
-	talkStubCloseWriter(ts_serial);
-	talkStubCloseWriter(ts_tcp);
-#endif
-
-	mark_point();
 
 	// Finish reading
 	pthread_join(serial_reader_thr, &arg);
@@ -243,13 +161,6 @@ int32_t payloadStateCommit(SansgridSerial **sg_serial_read, int packets) {
 
 	mark_point();
 	
-#ifdef SG_TEST_USE_EEPROM
-#else
-	unlink("spi.fifo");
-	unlink("tcp.fifo");
-#endif
-
-	mark_point();
 	// Test current state
 	fail_if((queueSize(dispatch) != packets), "Queue Size mismatch: Expected %i, Got %i", packets, queueSize(dispatch));
 	if (packets > 0) {

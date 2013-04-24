@@ -90,7 +90,7 @@ class SansgridRadio {
 		SerialDebug debug;
 		HardwareSerial * Radio;
 	public:
-		SansgridRadio(SansgridSerial *, SnIpTable *);
+		SansgridRadio(HardwareSerial *,SansgridSerial *, SnIpTable *);
 		~SansgridRadio();
 		void read();
 		void write();

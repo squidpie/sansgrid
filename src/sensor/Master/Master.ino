@@ -20,22 +20,30 @@
  *
  */
  
-#include <SPI.h> 
-#include "sg_serial_due.h"
+#include <SPI.h>
+#include <sgSerial.h>
+#include <spiMaster.h>
+#include <string.h>
 
 void setup(){
     // Initialize Sensor SPI communication
-    sgSerialSetAsSensor();
-    
-    SansgridSerial PayloadIn;
-    SansgridSerial PayloadOut;
-    
+    //sgSerialSetAsSensor();
+    sgSerialOpen();
 }
 
 void loop(){
-    sgSerialOpen();
-    sgSerialSerialSend();
-    sgSerialReceive();
-    sgSerialClose();
+    const char control_test[2] = { 0xFF };
+    const char iptest[4] = "HIH";
+    const char payload_test[5] = "HIHI";
+    SansgridSerial PayloadIn;
+    strcpy(PayloadIn.control , control_test);
+    strcpy(PayloadIn.ip_addr, iptest);
+    strcpy(PayloadIn.payload, payload_test);
+    SansgridSerial PayloadOut;
+    
+    uint32_t num_bytes = 8;
+
+    sgSerialSend( &PayloadIn , num_bytes ); 
+    delayMicroseconds(6);   
 }
 

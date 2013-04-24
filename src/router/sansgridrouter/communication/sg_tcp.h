@@ -35,7 +35,8 @@ typedef struct Dictionary {
 } Dictionary;
 
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
-int8_t sgTCPHandle(char *payload, SansgridSerial *sg_serial);
+int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial);
+int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload);
 
 
 // Low-level sending/receiving
