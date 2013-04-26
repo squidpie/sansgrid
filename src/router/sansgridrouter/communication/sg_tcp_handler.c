@@ -188,21 +188,30 @@ static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
+	char *label = NULL;
 	SansgridPeacock sg_peacock;
 
 	atox(&sg_peacock.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
 
-	atox(&sg_peacock.IO_A_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	memcpy(sg_peacock.IO_A_label, 	match(dict, size, "?"), 		30*sizeof(char));
-	atox(sg_peacock.IO_A_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_id,		match(dict, size, "id_a"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_class,	match(dict, size, "class_a"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_direc,	match(dict, size, "dir_a"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "label_a")) == NULL) {
+		sg_peacock.IO_A_label[0] = '\0';
+	} else {
+		memcpy(sg_peacock.IO_A_label, label, 						30*sizeof(char));
+	}
+	atox(sg_peacock.IO_A_units,		match(dict, size, "units_a"),	6*sizeof(uint8_t));
 	
-	atox(&sg_peacock.IO_B_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	memcpy(sg_peacock.IO_B_label, 	match(dict, size, "?"),			30*sizeof(char));
-	atox(sg_peacock.IO_B_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_id,		match(dict, size, "id_b"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_class,	match(dict, size, "class_b"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_direc,	match(dict, size, "dir_b"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "label_b")) == NULL) {
+		sg_peacock.IO_B_label[0] = '\0';
+	} else {
+		memcpy(sg_peacock.IO_B_label, label, 						30*sizeof(char));
+	}
+	atox(sg_peacock.IO_B_units,		match(dict, size, "units_b"),	6*sizeof(uint8_t));
 
 	sg_peacock.padding = 0x0;
 

@@ -199,8 +199,8 @@ START_TEST(testPeacockConversion) {
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
 
-	printf("WARNING: Peacock not implemented yet! Ending Test...\n");
-	return;
+	//printf("WARNING: Peacock not implemented yet! Ending Test...\n");
+	//return;
 
 
 	mark_point();
