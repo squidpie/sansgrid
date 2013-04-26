@@ -15,6 +15,8 @@ function get_header() {
 
 
 	// If we do require mating verification, is anyone waiting to mate?
+	// If so, $style_override will override the css stylesheet to set the logo
+	// to an animated gif indicating the mating request. 
 	$style_override = "";
 	if ($verify_mating == 1) {
 
@@ -70,7 +72,7 @@ function get_header() {
 	$msg .= "\t\t\t\t\t\t<li><a href=\"#\">Users</a></li>\n";
 	$msg .= "\t\t\t\t\t</ul>\n";
 	if ($verify_mating == 1) 
-		$msg .= "\t\t\t\t<li><a href=\"#\">Mate</a></li>\n";
+		$msg .= "\t\t\t\t<li><a href=\"$url/pages/mate.php\">Mate</a></li>\n";
 	$msg .= "\t\t\t</ul>\n";
 	$msg .= "\t\t</li>\n";
 	$msg .= "\t\t<li><a href=\"#\">Help</a>\n";

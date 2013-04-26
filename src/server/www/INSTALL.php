@@ -42,7 +42,7 @@ $query = "CREATE TABLE router (id_router int NOT NULL UNIQUE AUTO_INCREMENT, rou
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.");
 
 // Table: sensor
-$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum varchar(10), manid varchar(10), sn varchar(20), status VARCHAR(250), has_mated CHAR(1) DEFAULT 'n', last_pulse TIMESTAMP)";
+$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum VARCHAR(10), manid VARCHAR(10), sn VARCHAR(20), sensor_key VARCHAR(150), status VARCHAR(250), has_mated CHAR(1) DEFAULT 'n', last_pulse TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
 
 // Table: io
@@ -56,7 +56,7 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitti
 
 
 // Table: pipeline
-$query = "CREATE TABLE pipeline (id_sensor int; rdid varchar(50), latest_tx varchar(10), last_update timestamp)";
+$query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), last_update TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
 
 

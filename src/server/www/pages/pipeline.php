@@ -25,9 +25,10 @@ if ( $row['count'] == 0 ) {
 	# Table header
 	$msg  = "<table class=\"sansgrid\">\n";
 	$msg .= "<tr>\n";
+	$msg .= "<th width=\"100px\">Router IP</th>\n";
 	$msg .= "<th width=\"100px\">rdid</th>\n";
 	$msg .= "<th width=\"100px\">id_sensor</th>\n";
-	$msg .= "<th>Last TX sent by server</th>\n";
+	$msg .= "<th>Last TX</th>\n";
 	$msg .= "<th width=\"200px\">Time</th>\n";
 	$msg .= "</tr>\n";
 
@@ -43,8 +44,9 @@ if ( $row['count'] == 0 ) {
 		$tx_def = $tx_definitions["$idx"];
 
 		$msg .= "<tr>\n";
+		$msg .= "<td class=\"alignc\">" . $row['router_ip'] . "</td>\n";
 		$msg .= "<td class=\"alignc\">" . $row['rdid'] . "</td>\n";
-		$msg .= "<td>" . $row['id_sensor'] . "</td>\n";
+		$msg .= "<td class=\"alignc\">" . $row['id_sensor'] . "</td>\n";
 		$msg .= "<td class=\"alignc\" title=\"$tx_def\"> " . $row['latest_tx'] . "</td>\n";
 		$msg .= "<td class=\"alignc\">" . $row['last_update'] . "</td>\n";
 		$msg .= "</tr>\n";

@@ -43,9 +43,33 @@ function appendToPayload ($current_payload, $key, $value) {
 
 /* ************************************************************************** */
 //
-function xmitToRouter ($outbound_payload) {
+function xmitToRouter ($outbound_payload, $url="") {
 
-	print $outbound_payload;
+	print "This doesn't belong here (zz_tools.php) but: $outbound_payload\n";
+	#return;
+
+	$url="10.42.0.40/API-router.php";
+
+	// Make it safe to transmit via http
+
+	// Package it as HTTP data
+	$data = "payload=$outbound_payload";
+
+	//Instatiate a curl handle
+	$ch = curl_init();
+
+	//Set the router url, number of POST vars, and finally the POST data
+	curl_setopt($ch	,CURLOPT_URL, 			$url);
+	curl_setopt($ch	,CURLOPT_POST, 			1);		// Passing 1 variable
+	curl_setopt($ch	,CURLOPT_POSTFIELDS, 	$data);
+
+	//Do it!
+	$junk = curl_exec($ch);		// Ignoring anything returned
+
+	//Did it...
+	curl_close($ch);
+
+
 }
 /* ************************************************************************** */
 ?>

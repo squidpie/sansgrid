@@ -9,6 +9,7 @@
 include_once($_SERVER["DOCUMENT_ROOT"] . "config.php");
 include_once($_SERVER["DOCUMENT_ROOT"] . "pages/aa_header.php");
 include_once($_SERVER["DOCUMENT_ROOT"] . "pages/zz_logger.php");
+include_once($_SERVER["DOCUMENT_ROOT"] . "pages/zz_api_functions.php");
 include_once($_SERVER["DOCUMENT_ROOT"] . "pages/zz_pipeline.php");
 include_once($_SERVER["DOCUMENT_ROOT"] . "pages/zz_tools.php");
 #include_once($_SERVER["DOCUMENT_ROOT"] . "pages/aa_style.php");

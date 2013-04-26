@@ -13,19 +13,21 @@ my $ff_del = "β";		# Parameter-Parameter delimiter (inter-parameter)
 # ############################################################################## 
 # START OF MAIN CODE
 
-&clear;
+#&clear;
 print "\nSansGrid Project\n";
 print "Test generator for sansrts.pl\n";
 print "-----------------------------\n\n";
 
 print "Choose a process to emulate:\n";
-printf ("%4d  -  %s", 1, "Eyeballing");
+printf ("%4d  -  %s\n", 1, "Eyeball");
+printf ("%4d  -  %s\n", 2, "Mock");
 
-print "\n\n";
-$user_request = &verifyInput( (1) );
+print "\n";
+$user_request = &verifyInput( (1,2) );
 
 switch ($user_request) {
 	case 1 { &generate_eyeball();}
+	case 2 { &generate_mock();}
 }
 
 # END OF MAIN CODE
@@ -64,6 +66,51 @@ sub generate_eyeball{
 
 	# mode
 	$payload .= "mode" . $nf_del . &getField("Mode (4 bits)") . $ff_del;
+
+	&savePayload($payload);
+
+}
+
+
+# ############################################################################## 
+# generate_mock()
+#
+#	Generate Mock payload
+#
+sub generate_mock {
+
+	my $input;
+	my $payload;
+
+	#rdid
+	$payload .= $ff_del . "rdid" . $nf_del . &getField("rdid") . $ff_del;
+
+
+	print "Would you like to include a sensor authentication key?";
+	print "\n\n";
+	$user_request = &verifyInput( ("y","n") );
+
+	if ($user_request eq "y") {
+
+		# Data type
+		$payload .= "dt" . $nf_del . "07" . $ff_del;
+
+		$user_request = &getField("Sensor Public Key (64 bytes or type 'R' to generate a random key)\n");
+
+		if ($user_request eq "R") {
+			$user_request =  "";
+			for (my $i = 0; $i < 128; ++$i) {
+				$user_request .= sprintf ("%x", int(rand(15)));
+			}
+		}
+
+		$payload .= "senspubkey" . $nf_del . $user_request . $ff_del;
+
+	} else {
+		$payload .= $ff_del . "dt" . $nf_del . "08" . $ff_del;
+		$payload .= "senspubkey" . $nf_del . $ff_del;
+	}
+
 
 	&savePayload($payload);
 
@@ -130,7 +177,8 @@ sub savePayload {
 	my $payload = shift;
 	my $input;
 	
-	&clear;
+	#&clear;
+	print "\n\n";
 	print "Would you like to save to a file (f) or print to screen (s)\n";
 	$input = &verifyInput( ("f", "s") );
 

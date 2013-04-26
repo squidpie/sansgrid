@@ -3,7 +3,7 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 // Updates the pipeline...
 // We should get either an rdid (during mating) or an id_sensor (during squawking). 
-function updatePipeline ($rdid, $id_sensor, $tx) {
+function updatePipeline ($rdid, $id_sensor, $router_ip, $tx) {
 	$db = returnDatabaseConnection();
 
 
@@ -13,8 +13,8 @@ function updatePipeline ($rdid, $id_sensor, $tx) {
 		// Delete the current entry before adding a new one for this rdid.
 		deleteFromPipelineByRdid ($rdid, $db);
 
-		$query  = "INSERT INTO pipeline (rdid, id_sensor, latest_tx) ";
-		$query .= "VALUES ('$rdid', '$id_sensor', '$tx');";
+		$query  = "INSERT INTO pipeline (rdid, id_sensor, router_ip, latest_tx) ";
+		$query .= "VALUES ('$rdid', '$id_sensor', '$router_ip', '$tx');";
 		$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query pl1.");
 
 	// Squawking
