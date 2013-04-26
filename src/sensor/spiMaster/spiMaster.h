@@ -1,4 +1,4 @@
-/* Definitions for SPI Master
+/* Definitions for communication functions
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -24,32 +24,32 @@
 
 #include <Arduino.h>
 
-#define SLAVE_SELECT  10           // SS pin 10
+#define SLAVE_SELECT  10           // SS pin
 #define SLAVE_READY  8             // Hand shake pin identifying Slave has 
                                    // data to send
-#define NUM_BYTES 8			       // Number of bytes sent or received over 
+#define NUM_BYTES 98			       // Number of bytes sent or received over 
                                    // SPI per packet
 #define CONTROL 1				   // Number of bytes in control 
-#define IP_ADDRESS 3			   // Number of bytes in source/destination 
+#define IP_ADDRESS 16			   // Number of bytes in source/destination 
                                    // IP address
-#define PAYLOAD 4				   // Number of bytes in payload 
+#define PAYLOAD 81				   // Number of bytes in payload 
 #define RECEIVE 0x00			   // Control byte for receiving data
 #define TRANSMIT 0x01			   // Control byte for transmit data
 #define DELAY 6				   	   // Delay
 
 // Initialize SPI Master
-void spiMasterInit( int ss );
+void spiMasterInit( int8_t ss , int8_t sr );
 
 // Receive data to Master from Slave
-void spiMasterReceive( int data_out , char * data_in , int size , int ss );
+int8_t spiMasterReceive( int8_t data_out , int8_t * data_in , int8_t size , int8_t ss );
 
 // Transmit data to Slave from Master
-void spiMasterTransmit( char * data_out , int size , int ss );
+int8_t spiMasterTransmit( int8_t * data_out , int8_t size , int8_t ss );
 
 // Open SPI bus for Slave Select pin
-void spiMasterOpen( int ss );
+void spiMasterOpen( int8_t ss );
 
 // Close SPI bus for Slave Select pin
-void spiMasterClose( int ss );
+void spiMasterClose( int8_t ss );
 
 #endif // __SPIMASTER_H__

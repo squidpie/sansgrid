@@ -26,8 +26,8 @@
 #define IP_ADDRESS 16			   // Number of bytes in source/destination 
                                    // IP address
 #define PAYLOAD 81				   // Number of bytes in payload 
-#define RECEIVE 0xFD			   // Control byte for receiving data
-#define TRANSMIT 0xAD			   // Control byte for transmit data
+#define RECEIVE 0x00			   // Control byte for receiving data
+#define TRANSMIT 0x01			   // Control byte for transmit data
 
 // Set up a macro depending on architecture
 #ifndef __ARCH_DUE__
@@ -36,12 +36,10 @@
 #include <Arduino.h>
 #include <spiMaster.h>
 
-typedef struct SansgridSerial{
-	char control[ CONTROL + 1 ];	   	 // Control
-	char ip_addr[ IP_ADDRESS + 1 ];      // Overloaded IP Field
-                                         // contains origin or destination IP address
-	char payload[ PAYLOAD + 1 ];	     // Payload
-} SansgridSerial;
+#define SLAVE_SELECT  10           // SS pin 10
+#define SLAVE_READY  8             // Hand shake pin identifying Slave has 
+                                   // data to send
+#define DELAY 6				   	   // Delay in microseconds between bytes sent
 
 #else
 #define ARCH_PI
@@ -50,14 +48,14 @@ typedef struct SansgridSerial{
 //#include <arpa/inet.h>
 #include "payloads.h"
 
-typedef struct SansgridSerial {
-	uint8_t control[ CONTROL + 1 ];			// Control byte
-	uint8_t ip_addr[ IP_ADDRESS + 1 ];		// Overloaded IP Field
-											// contains origin or destination IP address
-	uint8_t payload[ PAYLOAD + 1 ];			// Payload
-} SansgridSerial;
-
 #endif // __ARCH_DUE__
+
+typedef struct SansgridSerial{
+	int8_t control[ CONTROL ];	   	 	// control
+	int8_t ip_addr[ IP_ADDRESS ];      	// Overloaded IP Field
+                                        // contains origin or destination IP address
+	int8_t payload[ PAYLOAD ];	     	// payload
+} SansgridSerial;
 
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 

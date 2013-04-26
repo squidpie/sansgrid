@@ -1,4 +1,4 @@
-/* Definitions for SPI Master
+ /* Definitions for communication functions
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -25,9 +25,9 @@
 #include "spiMaster.h"
 
 // Initialize SPI Master
-void spiMasterInit( int ss ){
+void spiMasterInit( int8_t ss , int8_t sr ){
 	// have to send on master in, *slave out*
-    // pinMode(MISO, INPUT);
+    pinMode( sr , INPUT );
     // Initialize the SPI bus
     SPI.begin( ss );
     // Set order bits are shifted onto the SPI bus
@@ -40,7 +40,7 @@ void spiMasterInit( int ss ){
 }
 
 // Receive data to Master from Slave
-void spiMasterReceive( int data_out , char * data_in , int size , int ss ){
+int8_t spiMasterReceive( int8_t data_out , int8_t * data_in , int8_t size , int8_t ss ){
     // Initiate receive with a single byte transfer
 	SPI.transfer( ss , data_out );
 	// Loop through untill all characters received
@@ -51,10 +51,11 @@ void spiMasterReceive( int data_out , char * data_in , int size , int ss ){
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
     }
+	return 0;
 }
 
 // Transmit data to Slave from Master
-void spiMasterTransmit( char * data_out , int size , int ss ){
+int8_t spiMasterTransmit( int8_t * data_out , int8_t size , int8_t ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
         if( i == ( size - 1 ) )
@@ -63,18 +64,19 @@ void spiMasterTransmit( char * data_out , int size , int ss ){
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
 	}
+	return 0;
 }
 
 // Open SPI bus for Slave Select pin
-void spiMasterOpen( int ss ){
+void spiMasterOpen( int8_t ss ){
     // Open SPI bus ( not needed for Arduino DUE extended )
-	// Uncomment for UNO
+	// uncomment for UNO
     // digitalWrite( ss , LOW );
 	delayMicroseconds( DELAY );
 }
 
 // Close SPI bus for Slave Select pin
-void spiMasterClose( int ss ){
+void spiMasterClose( int8_t ss ){
     // Close SPI bus ( not needed for Arduino DUE extended )
 	// uncomment for UNO
     // digitalWrite( ss , HIGH );

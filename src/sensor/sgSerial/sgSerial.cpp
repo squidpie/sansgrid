@@ -28,7 +28,7 @@
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
 int8_t sgSerialOpen(void){
-    spiMasterInit( SLAVE_SELECT );
+    spiMasterInit( SLAVE_SELECT , SLAVE_READY );
 	return 0;
 }
 
