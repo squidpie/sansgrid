@@ -25,25 +25,30 @@
 #include <spiMaster.h>
 #include <string.h>
 
+int8_t control_test[ 1 ] = { 0xAD };
+int8_t iptest[ 16 ] = {};
+int8_t payload_test[ 81 ] = { 0x00 };
+
 void setup(){
     // Initialize Sensor SPI communication
     //sgSerialSetAsSensor();
     sgSerialOpen();
+    attachInterrupt( SLAVE_READY , receive , LOW );
 }
 
 void loop(){
-    const char control_test[2] = { 0xFF };
-    const char iptest[4] = "HIH";
-    const char payload_test[5] = "HIHI";
-    SansgridSerial PayloadIn;
-    strcpy(PayloadIn.control , control_test);
-    strcpy(PayloadIn.ip_addr, iptest);
-    strcpy(PayloadIn.payload, payload_test);
     SansgridSerial PayloadOut;
-    
-    uint32_t num_bytes = 8;
-
-    sgSerialSend( &PayloadIn , num_bytes ); 
+    memcpy(PayloadOut.control, control_test , sizeof control_test );
+    memcpy(PayloadOut.ip_addr, iptest , sizeof iptest );
+    memcpy(PayloadOut.payload, payload_test , sizeof payload_test );
+    sgSerialSend( &PayloadIn , NUM_BYTES ); 
     delayMicroseconds(6);   
 }
 
+void receive(){
+    // Create empty Payload Struct to receive payload 
+    SansgridSerial PayloadIn;
+    // Read payload
+    sgSerialReceive( &PayloadIn , NUM_BYTES );
+    // Process Payload
+}
