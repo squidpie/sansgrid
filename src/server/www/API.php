@@ -45,7 +45,7 @@ if ( $row['count'] < 1)  {
 
 // Duplicate key...
 if ( $row['count'] > 1) {
-	$msg = "[$router_ip] - Duplicate key error! Terminated connection.";
+	$msg = "[$router_ip] - Duplicate router key error! Terminated connection.";
 	addToLog($msg);
 	die ("Duplicate key error. Contact system administrator"); 
 }
@@ -82,6 +82,12 @@ switch ( $data["dt"] ) {
 	case 0:
 		processEyeball($router_ip, $data, $db);
 		break;
+	case 7:
+		processMock($router_ip, $data, $db);
+		break;
+	case 8:
+		processMock($router_ip, $data, $db);
+		break;
 	default: 
 		die ("Error: Unknown data type: '${data["dt"]}'\n");
 		break; 	# Technically not needed since we just died.
@@ -89,153 +95,3 @@ switch ( $data["dt"] ) {
 
 /* END OF MAIN ************************************************************** */
 /* ************************************************************************** */
-
-
-/* ************************************************************************** */
-function processEyeball ($router_ip, $payload, $db) {
-	global $SG;
-
-	// Data from API
-	$rdid 		= $payload["rdid"];
-	$modnum 	= $payload["modnum"];
-	$manid 		= $payload["manid"];
-	$sn 		= $payload["sn"];
-	$mode 		= $payload["mode"];
-
-	// First thing to do is ensure that this rdid isn't currently in the pipeline
-	deleteFromPipelineByRdid ($rdid, $db);
-
-	// All replies should include the originating rdid
-	$reply = appendToPayload("", "${SG['ff_del']}rdid", $rdid);
-	
-	// Do we recognize this sensor?
-	$query  = "SELECT COUNT(*) as count FROM sensor ";
-	$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
-	$query .= "AND  sn='$sn'";
-	$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query EB1.");
-
-	$row = mysqli_fetch_assoc($result);
-	$count = $row['count'];
-
-	// Now we generate the appropriate Peck, start by getting the server key.
-	$query = "SELECT server_id FROM server";
-	$result = mysqli_query ($db, $query) or die ("Error: Couldn't execute query EB2.");
-	$row = mysqli_fetch_assoc($result);
-	$server_id = $row['server_id'];
-
-	// If sensor is recognized
-	if ($count == 1)  {
-		
-		$reply = appendToPayload($reply, "dt", 			 "1");
-		$reply = appendToPayload($reply, "ipaddress", 	 "");
-		$reply = appendToPayload($reply, "serverid", 	 $row['server_id']);
-		$reply = appendToPayload($reply, "recognition",	 "0");
-		$reply = appendToPayload($reply, "manid", 		 $manid);
-		$reply = appendToPayload($reply, "modnum", 		 $modnum);
-		$reply = appendToPayload($reply, "sn", 			 $sn);
-		
-		xmitToRouter ($reply);
-
-
-		// SQUAWKING BELONGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	
-
-	// .. else sensor is not recognized
-	} else {
-		// If it's a new sensor, we should mate.  Is the sensor ready to mate?
-
-		//  if sensor not ready to mate...
-		if ($mode == 0) {
-
-			$reply = appendToPayload($reply, "dt", 				"1");
-			$reply = appendToPayload($reply, "ipaddress", 		"");
-			$reply = appendToPayload($reply, "serverid", 		$server_id);
-			$reply = appendToPayload($reply, "recognition", 	"3");
-			$reply = appendToPayload($reply, "manid", 			$manid);
-			$reply = appendToPayload($reply, "modnum", 			$modnum);
-			$reply = appendToPayload($reply, "sn", 				$sn);
-
-			// Log it
-			$msg  = "[$router_ip] - Eyeballing - New sensor entered network. ";
-			$msg .= "Sensor not ready to mate. ";
-			$msg .= "Manufacturer's ID = $manid, ";
-			$msg .= "model number = $modnum, ";
-			$msg .= "serial number = $sn";
-			addToLog($msg);
-
-			print "New sensor. Sensor not ready to mate.\n";
-			xmitToRouter($reply);
-
-		// ...else sensor is ready to mate
-		} else {
-
-			// Is server set to allow automatic mating?
-			$query = "SELECT verify_mating FROM server";
-			$result = mysqli_query($db, $query) or die ("Couldn't execute query EB3.");
-			$row = mysqli_fetch_assoc($result);
-			$verify_mating = $row['verify_mating'];
-
-			// If automatic mating is allowed...
-			if ($verify_mating == 0) {
-
-				$reply = appendToPayload($reply, "dt", 				"1");
-				$reply = appendToPayload($reply, "ipaddress", 		"");
-				$reply = appendToPayload($reply, "serverid", 		$server_id);
-				$reply = appendToPayload($reply, "recognition", 	"1");
-				$reply = appendToPayload($reply, "manid", 			$manid);
-				$reply = appendToPayload($reply, "modnum", 			$modnum);
-				$reply = appendToPayload($reply, "sn", 				$sn);
-
-				xmitToRouter($reply);
-
-				// Sleep for 250 ms after Peck before sending Sing. 
-				usleep(250000);		
-
-				// Now we build our Sing payload.
-				// All replies should include the originating rdid
-				$reply = appendToPayload("", "${SG['ff_del']}rdid", $rdid);
-
-				// Do we have a server key?
-				$query = "SELECT server_key FROM server";
-				$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query si1.");
-				$row = mysqli_fetch_assoc($result);
-				$server_key = $row['server_key'];
-
-				//                             ↘No key   ↘Yes key
-				$dt = $server_key == "" ? $dt = 3 : $dt = 2;
-
-				// Finishing Sing payload
-				$reply = appendToPayload($reply, "dt", 			$dt);
-				$reply = appendToPayload($reply, "serverkey", 	$server_key);
-
-				xmitToRouter($reply);
-
-				// Update pipeline
-				updatePipeline ($rdid, "", 2);
-
-
-
-			// ...else automatic mating is not allowed
-			} else {
-				$reply = appendToPayload($reply, "dt", 			"1");
-				$reply = appendToPayload($reply, "ipaddress", 	"");
-				$reply = appendToPayload($reply, "serverid", 	$server_id);
-				$reply = appendToPayload($reply, "recognition",	"4NEEDAPPROVAL");
-				$reply = appendToPayload($reply, "manid", 		$manid);
-				$reply = appendToPayload($reply, "modnum", 		$modnum);
-				$reply = appendToPayload($reply, "sn", 			$sn);
-
-				print "New sensor. Sensor ready to mate. Server requires authentication.\n";
-				print "WARNING!!! We need a new reply for this\n";
-				print "WARNING!!! this still needs to be added to the pipeline\n";
-				xmitToRouter($reply);
-
-				// NEED TO ADD THIS TO PIPELINE AS A SENSOR WAITING TO MATE
-			}
-			
-		}
-	}
-}
-
-
-?>

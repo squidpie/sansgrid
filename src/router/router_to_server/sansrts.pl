@@ -1,8 +1,11 @@
 #!/usr/bin/perl
 use strict;
 
+my $config_path = '/home/kane/rpi_mount/sansgrid/src/router/router_to_server';
+
 # Read in configuration file
-my %config 	= do 'config.pl';
+my %config 	= do "$config_path/config.pl";
+
 my $key 	= $config{'key'} or die ("Error in config.pl, can't read key. Quitting\n");
 my $server 	= $config{'url'} or die ("Error in config.pl, can't read server URL. Quitting\n");
 

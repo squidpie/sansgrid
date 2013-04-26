@@ -34,7 +34,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 	$router_list .= "</td>\n\t<td>";
 	$router_list .= "<button type=\"submit\" "; 
 	$router_list .= 	 "value=\"" . $row["id_router"] . "\" ";
-	$router_list .= 	"name=\"delete\">Delete?</button>";
+	$router_list .= 	"name=\"delete\">Delete</button>";
 	$router_list .= "</td>\n</tr>\n";
 }
 
