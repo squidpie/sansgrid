@@ -86,7 +86,7 @@ typedef struct SansgridMock{
 } SansgridMock;
 
 typedef struct SansgridSensor{
-	int8_t id[ SENSOR_ID + 1 ];
+	int8_t id[ SENSOR_ID ];
 	int8_t classification[ CLASSIFICATION ];
 	int8_t direction[ DIRECTION ];
 	int8_t label[ LABEL ];
