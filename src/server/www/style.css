@@ -19,6 +19,7 @@ div#page {
 
 div#page hr { margin: 1em 0 1em 0; }
 div#page h2 { margin: .5em 0 1em 0; }
+div#page h3.cos { margin: 1.5em 0 .2em 0; }
 
 div#navbar {
 	width: 100%;
@@ -48,7 +49,7 @@ div#navbar {
 	}
 
 div#main {
-	padding: .5em 1em .2em 1em;
+	padding: .5em 1em 2.5em 1em;
 	margin: 0;
 	width: 80%;
 	position: relative;
@@ -213,6 +214,16 @@ table.sansgrid th {
 table.sansgrid th.left {
 	text-align: left;
 }
+
+input.sgtext {
+	border-top: 	1px solid #27272C;
+	border-right: 	1px solid lightgrey;
+	border-bottom: 	1px solid lightgrey;
+	border-left: 	1px solid #27272C;
+	padding: .2em;
+	margin-right: .2em;
+	background-color: #d3c892;
+	}
 
 
 /* ************************************************************************** */

@@ -47,7 +47,7 @@ function processEyeball ($router_ip, $payload, $db) {
 		$reply = appendToPayload($reply, "modnum", 		$modnum);
 		$reply = appendToPayload($reply, "sn", 			$sn);
 		
-		xmitToRouter ($reply);
+		xmitToRouter($reply, $router_ip);
 
 
 		// SQUAWKING BELONGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -77,7 +77,7 @@ function processEyeball ($router_ip, $payload, $db) {
 			$msg .= "(Sensor: $id_sensor) ";
 			addToLog($msg);
 
-			xmitToRouter($reply);
+			xmitToRouter($reply, $router_ip);
 
 		// ...else sensor is ready to mate
 		} else {
@@ -108,7 +108,7 @@ function processEyeball ($router_ip, $payload, $db) {
 				$reply = appendToPayload($reply, "modnum", 			$modnum);
 				$reply = appendToPayload($reply, "sn", 				$sn);
 
-				xmitToRouter($reply);
+				xmitToRouter($reply, $router_ip);
 
 				// Sleep for 250 ms after Peck before sending Sing. 
 				usleep(250000);		
@@ -136,7 +136,7 @@ function processEyeball ($router_ip, $payload, $db) {
 				$msg .= "(Sensor: $id_sensor) ";
 				addToLog($msg);
 
-				xmitToRouter($reply);
+				xmitToRouter($reply, $router_ip);
 
 				// Update pipeline
 				updatePipeline ($rdid, $id_sensor, $router_ip, 'Peck');
@@ -178,7 +178,7 @@ function generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db)
 	$msg .= "(Sensor: $id_sensor) ";
 	addToLog($msg);
 
-	xmitToRouter($reply);
+	xmitToRouter($reply, $router_ip);
 
 	// Update pipeline
 	updatePipeline ($rdid, $id_sensor, $router_ip, 'Sing');
@@ -224,7 +224,7 @@ function processMock ($router_ip, $payload, $db) {
 		addToLog($msg);
 
 		// Umm... now you tell the sensor
-		xmitToRouter($reply);
+		xmitToRouter($reply, $router_ip);
 
 		return;
 	}
@@ -303,13 +303,13 @@ function processPeacock ($router_ip, $payload, $db) {
 		addToLog($msg);
 
 		// Umm... now you tell the sensor
-		xmitToRouter($reply);
+		xmitToRouter($reply, $router_ip);
 
 		return;
 	}
 
 	// For sure we have to have I/O 'A', so let's just blindly add that
-	$query  = "INSERT INTO io (id_sensor, sig_id, class, direction, label, units)";
+	$query  = "INSERT INTO io (id_sensor,sig_id, class, direction, label, units)";
 	$query .= " VALUES ('$id_sensor', '$sida', '$classa', '$dira', '$labela', '$unitsa')"; 
 	mysqli_query ($db, $query) or die ("Can't execute query pc2.");
 
@@ -321,7 +321,7 @@ function processPeacock ($router_ip, $payload, $db) {
 
 		print "sidb is $sidb or as a decimal it's " . hexdec($sidb) . " \n\n";
 
-		$query  = "INSERT INTO io (id_sensor, sig_id, class, direction, label, units)";
+		$query  = "INSERT INTO io (id_sensor,sig_id,class,direction,label,units)";
 		$query .= " VALUES ('$sidb', '$classb', '$dirb', '$labelb', '$unitsb')"; 
 		mysqli_query ($db, $query) or die ("Can't execute query pc3.\n$query\n");
 
@@ -331,32 +331,82 @@ function processPeacock ($router_ip, $payload, $db) {
 
 	// Is this the last Peacock? If so, then it's time to Nest!! Woo!!!
 	if ($additional	== 0) {
-
-		// Nest payload 
-		$reply = appendToPayload($SG['ff_del'], "rdid", $rdid);
-		$reply = appendToPayload($reply,	 	"dt", 	"10");
-
-		xmitToRouter($reply);
-
-		// Logging
-		$msg  = "[$router_ip] - Mating complete!  Permission to Nest granted. ";
-		$msg .= "(Sensor: $id_sensor) ";
-		addToLog($msg);
-
-		// Delete the sensor from the pipeline
-		deleteFromPipelineByRdid ($rdid, $db);
-
-		// Update the sensor to indicate that it has mated and that it's now
-		// 'online'
-		$query  = "UPDATE sensor SET has_mated='y', status='online' ";
-		$query .= "WHERE id_sensor='$id_sensor'";
-		$result = mysqli_query($db, $query) 
-			or die ("Error: Couldn't execute query ns1.");
+		generateNest($router_ip, $rdid, $db);
 	}
 
-	
+} // End processPeacock
+
+/* ************************************************************************** */
+
+function generateNest ($router_ip, $rdid, $db) {
+	global $SG;
+
+	// Before we Nest, we want to see if this manid/modnum combination exists
+	// in our compendium.  If it doesn't, we'll go ahead and add it. 
+	$query = "SELECT id_sensor FROM pipeline WHERE rdid='$rdid'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query ne2.");
+	$row = mysqli_fetch_assoc($result);
+	$id_sensor = $row['id_sensor'];
+
+	$query = "SELECT modnum, manid  FROM sensor WHERE id_sensor='$id_sensor'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query ne3.");
+	$row = mysqli_fetch_assoc($result);
+
+	$manid 	= $row['manid'];
+	$modnum = $row['modnum'];
+
+	// First we check for manid in com (Compendium of Manufacturers)
+	$query = "SELECT COUNT(*) AS count FROM com WHERE manid='$manid'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query ne4.");
+	$row = mysqli_fetch_assoc($result);
+
+	if ( $row['count'] == 0 ) {
+		$query = "INSERT INTO com (manid) VALUES ('$manid')";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query ne5.");
+	}
+
+	// Next, we check for modnum and manid in cos (Compendium of Sensors)
+	$query  = "SELECT COUNT(*) AS count FROM cos "; 
+	$query .= "WHERE manid='$manid' AND modnum='$modnum' ";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query ne6.");
+	$row = mysqli_fetch_assoc($result);
+
+	if ( $row['count'] == 0 ) {
+		$query = "INSERT INTO cos (manid, modnum) VALUES ('$manid', '$modnum')";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query ne7.\n\n$query\n\n");
+	}
+
+
+	// Now we can start working on the Nest payload 
+	$reply = appendToPayload($SG['ff_del'], "rdid", $rdid);
+	$reply = appendToPayload($reply,	 	"dt", 	"10");
+
+	xmitToRouter($reply, $router_ip);
+
+	// Logging
+	$msg  = "[$router_ip] - Mating complete!  Permission to Nest granted. ";
+	$msg .= "(Sensor: $id_sensor) ";
+	addToLog($msg);
+
+	// Delete the sensor from the pipeline
+	deleteFromPipelineByRdid ($rdid, $db);
+
+	// Update the sensor to indicate that it has mated and that it's now
+	// 'online'
+	$query  = "UPDATE sensor SET has_mated='y', status='online' ";
+	$query .= "WHERE id_sensor='$id_sensor'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query ne1.");
 
 }
+
+
 
 
 

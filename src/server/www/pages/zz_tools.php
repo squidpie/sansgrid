@@ -2,6 +2,25 @@
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 /* ************************************************************************** */
+//
+function deleteSensorByID ($id_sensor) {
+	
+	$db = returnDatabaseConnection();
+
+	// Delete all I/O associated with sensor
+	$query = "DELETE FROM io WHERE id_sensor='$id_sensor'";
+	mysqli_query($db, $query) 
+		or die ("Can't execute query dsbi1\n\n$query\n\n");
+
+	// Delete the sensor
+	$query = "DELETE FROM sensor WHERE id_sensor='$id_sensor'";
+	mysqli_query($db, $query) 
+		or die ("Can't execute query dsbi2");
+}
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
 // Returns a random hex stringth
 function generateRandomHash ($length) {
 	$tmp = "";

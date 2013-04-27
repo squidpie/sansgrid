@@ -58,13 +58,12 @@ $query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARC
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
 
 // Table: com (Compendium of Manufacturers) 
-$query = "CREATE TABLE com (id_com INT, manid VARCHAR(10), name VARCHAR(250))";
+$query = "CREATE TABLE com (id_com INT NOT NULL UNIQUE AUTO_INCREMENT, manid VARCHAR(10), name VARCHAR(250))";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'com', quitting.");
 
 // Table: cos (Compendium of Sensors) 
-$query = "CREATE TABLE cos (id_cos INT, id_com INT, modnum VARCHAR(10), name VARCHAR(250))";
+$query = "CREATE TABLE cos (id_cos INT NOT NULL UNIQUE AUTO_INCREMENT, manid VARCHAR(10), modnum VARCHAR(10), name VARCHAR(250))";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'cos', quitting.");
-
 
 
 // Generate and save server_id and set other system defaults

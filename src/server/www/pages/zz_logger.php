@@ -18,7 +18,7 @@ function addToLog ($logdata) {
 function returnLogTable () {
 	$db = returnDatabaseConnection();
 
-	$query = "SELECT COUNT(*) AS count FROM log";
+	$query = "SELECT COUNT(*) AS count FROM log ORDER BY id_log";
 	$result = mysqli_query($db, $query) or die ("Error: Can't query log data.");
 	$row = mysqli_fetch_assoc($result);
 
