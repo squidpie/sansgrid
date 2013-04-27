@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <syslog.h>
 
 
 #ifndef DATADIR
@@ -179,6 +180,9 @@ int sgSocketListen(void) {
 	socklen_t len;							// socket lengths
 	char str[100];							// socket transmissions
 	char socket_path[150];					// socket locations
+	SansgridSerial sg_serial;
+	int exit_code;
+	char *packet;
 
 	getSansgridDir(socket_path);
 
@@ -224,9 +228,13 @@ int sgSocketListen(void) {
 		done = 0;
 		do {
 			n = recv(s2, str, 100, 0);
+			syslog(LOG_DEBUG, "received data: %s", str);
 			// make sure we got something
 			if (n <= 0) {
-				if (n < 0) perror("recv");
+				if (n < 0) {
+					perror("recv");
+					syslog(LOG_ERR, "daemon receive error");
+				}
 				done = 1;
 			}
 			if (!done) {
@@ -236,13 +244,36 @@ int sgSocketListen(void) {
 				else
 					str[n] = '\0';
 
+				syslog(LOG_DEBUG, "interpreting command");
 				// Interpret command
 				if (!strcmp(str, "kill")) {
 					// Kill the server
 					shutdown_server = 1;
 					done = 1;
+					syslog(LOG_DEBUG, "daemon shutting down");
+				} 
+				syslog(LOG_DEBUG, "Still alive");
+				if ((packet = strstr(str, DELIM_KEY)) != NULL) {
+					// Got a packet from the server
+					syslog(LOG_DEBUG, "interpreting packet: %s", packet);
+					exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
+							&sg_serial);
+					if (exit_code == -1) {
+						strcpy(str, "bad packet");
+						syslog(LOG_DEBUG, "daemon got bad packet");
+					} else {
+						strcpy(str, "packet accepted");
+						queueEnqueue(dispatch, &sg_serial);
+						syslog(LOG_DEBUG, "daemon got good packet");
+					}
+				} 
+				syslog(LOG_DEBUG, "Still Still alive");
+				if (!strcmp(str, "status")) {	
+					syslog(LOG_DEBUG, "daemon checking status");
+					sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+					n = strlen(str);
 				}
-
+				syslog(LOG_DEBUG, "sending back: %s", str);
 				// Send commnad back to client as ACK
 				if (send(s2, str, n, 0) < 0) {
 					perror("send");
@@ -273,7 +304,7 @@ int sgSocketSend(const char *data, const int size) {
 	// 	then check the PREFIX/share dir?
 	// 	But then it would break if there was a file with the same name in the current dir
 	// 	but wasn't for the same purpose. And it still might cause stale scripts...
-	printf("%s\n", DATADIR);
+	//printf("%s\n", DATADIR);
 	// Make sure the server is running 
 	// before we try to send a command
 	if (!isRunning()) {
@@ -315,6 +346,8 @@ int sgSocketSend(const char *data, const int size) {
 		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
 			printf("Shutting down daemon...\n");
+		} else {
+			printf("%s\n", str);
 		}
 	} else {
 		// problems
@@ -341,6 +374,7 @@ int main(int argc, char *argv[]) {
 	int32_t no_daemonize = 0;			// bool: should we run in foreground?
 	char config_path[150];				// Sansgrid Dir
 	pid_t sgpid;						// Sansgrid PID
+	char payload[400];
 
 	getSansgridDir(config_path);
 
@@ -349,7 +383,7 @@ int main(int argc, char *argv[]) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
 			{"daemon", 		no_argument, 		&no_daemonize, 	0},
-			{"payload",		required_argument, 	0,				'p'},
+			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
 			{0, 0, 0, 0}
@@ -378,8 +412,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'p':
 				// Payload is given
-				//memcpy(payload, optarg, strlen(optarg)+1);
-				// TODO: Process and send this to the daemon
+				sprintf(payload, "packet: %s", optarg);
+				sgSocketSend(payload, strlen(payload));
+				exit(EXIT_SUCCESS);
 				break;
 			case 'v':
 				// version
@@ -414,8 +449,8 @@ int main(int argc, char *argv[]) {
 			no_daemonize = 0;
 		} else if (!strcmp(option, "status")) {
 			// print the status of the router daemon
-			// TODO: Implement
-			exit(EXIT_FAILURE);
+			sgSocketSend("status", 7);
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
