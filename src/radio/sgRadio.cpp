@@ -91,6 +91,13 @@ SansgridRadio::~SansgridRadio(){
 	Radio = NULL;
 }
 
+void SansgridRadio::test() {
+	char xbsn[64];
+	Radio->println("Sansgrid is Alive!");
+	atCmd(xbsn,"ATID");
+	Radio->println(xbsn);
+}
+
 void SansgridRadio::read() {
 	//Radio->println("Radio is reading");
 	int i = PACKET_SZ;
@@ -112,21 +119,28 @@ void SansgridRadio::write() {
 
 void SansgridRadio::atCmd(char * result,const char * cmd) {
 	int i = 0;
+	Radio->println("Entering Command Mode");
 	Radio->print("+++");
 	delay(300);
 	while(Radio->available() > 0 && i < sizeof(result)) {
 		result[i++] = Radio->read();
 	}
-	if (strcmpn(result, "OK", 2)) {
+	if (strncmp(result, "OK", sizeof("OK"))) {
 		Radio->println(cmd);
 		while(Radio->available() > 0 && i < sizeof(result)) {
 			result[i++] = Radio->read();
 		}	
 		char * tmp;
 		sprintf(tmp,"Command return value: %s",result);
+		
+	Radio->println("ATCN");
+	Radio->println("Exiting Command Mode");
 	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
 	}
+	else {
 	Radio->println("ATCN");
+	Radio->println("Exiting Command Mode");
+	}
 }
 
 

@@ -21,7 +21,7 @@ SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
 
 void setup() {
 	#if DEBUG 
-		//SerialDebugger.begin(9600);
+		//SerialDebugger.begin(115200);
 		switch(DEBUG_LEVEL) {
 			case 1:
 				//SerialDebugger.enable(ERROR);
@@ -49,6 +49,7 @@ void setup() {
   	Radio.set_mode(ROUTER);
 	}
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
+	Radio.test();
 }
 
 

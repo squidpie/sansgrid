@@ -95,6 +95,7 @@ class SansgridRadio {
 		void read();
 		void write();
 		void set_mode(RadioMode mode);
+		void test();
 };
 
 

@@ -217,6 +217,7 @@ BOARD_BOOTLOADER_EFUSES := $(call readboardsparam,bootloader.extended_fuses)
 BOARD_BOOTLOADER_PATH := $(call readboardsparam,bootloader.path)
 BOARD_BOOTLOADER_FILE := $(call readboardsparam,bootloader.file)
 
+
 # obtain preferences from the IDE's preferences.txt
 PREFERENCESFILE := $(firstword $(wildcard \
 	$(HOME)/.arduino/preferences.txt $(HOME)/Library/Arduino/preferences.txt))
