@@ -1,55 +1,76 @@
+/* SPI Slave Test Code
+ * Designed to run on the Arduino UNO
+ */
+ 
 #include <SPI.h>
 
-char buf [100];
+#define SLAVE_READY 7
+#define NUM_BYTES 8
+
+char rx [ NUM_BYTES + 1 ];
+char tx [ NUM_BYTES + 1 ];
 volatile byte pos;
+volatile byte pos2;
 volatile boolean process_it;
 
-void setup (void)
-{
-  Serial.begin (115200);   // debugging
+void setup (void){
+    // Initialize Serial bps
+    Serial.begin (115200);
 
-  // have to send on master in, *slave out*
-  pinMode(MISO, OUTPUT);
+    // Initialize Master In Slave Out Port
+    pinMode(MISO, OUTPUT);
   
-  // turn on SPI in slave mode
-  SPCR |= _BV(SPE);
+    // Initialize Slave Ready port
+    pinMode(SLAVE_READY, OUTPUT);
+    digitalWrite(SLAVE_READY, HIGH);
   
-  // get ready for an interrupt 
-  pos = 0;   // buffer empty
-  process_it = false;
+    // Initialize SPI in slave mode
+    SPCR |= _BV(SPE);
+  
+    // Set counters to zero SPI interrupt 
+    pos = 0;   // rxfer empty
+    pos2 = 0;  // txfer empty
+    process_it = false;
 
-  // now turn on interrupts
-  SPI.attachInterrupt();
+    // Initialize SPI interrupt
+    SPI.attachInterrupt();
+}
 
-}  // end of setup
-
+ISR (/*XBEE Interrupt pin (2 or 3?)*/){
+    // Interrupt Code
+)
 
 // SPI interrupt routine
-ISR (SPI_STC_vect)
-{
-byte c = SPDR;  // grab byte from SPI Data Register
-  
-  // add to buffer if room
-  if (pos < sizeof buf)
-    {
-    buf [pos++] = c;
+ISR (SPI_STC_vect){
+    // Read byte sent from Master SPI  
+    byte c = SPDR;  
     
-    // example: newline means time to process buffer
-    if (c == '\n')
-      process_it = true;
-      
-    }  // end of room available
-}  // end of interrupt routine SPI_STC_vect
+    // Send byte
+    if ( digitalRead( SLAVE_READY ) == LOW ){
+        if ( pos2 < ( NUM_BYTES + 1 ){
+            tx[ pos2++ ] = SPDR;
+            // example: newline means time to process rxfer
+            if ( pos2 == NUM_BYTES )               
+                process_it = true;  
+        }
+    }
+    // Store byte sent from Master SPI into buffer
+    else if ( pos < ( NUM_BYTES + 1 )){
+        rx[ pos++ ] = c;
+        // example: newline means time to process rxfer
+        if ( pos == NUM_BYTES )
+            process_it = true;
+    }  
+}  
 
-// main loop - wait for flag set in interrupt routine
-void loop (void)
-{
-  if (process_it)
-    {
-    buf [pos] = 0;  
-    Serial.println (buf);
-    pos = 0;
-    process_it = false;
-    }  // end of flag set
-    
-}  // end of loop
+void loop (void){
+    if ( process_it ){
+        tx [pos] = 0;  
+        rx [pos] = 0;  
+        Serial.println (rx);
+        pos = 0;
+        pos2 = 0;
+        process_it = false;
+    }
+}
+

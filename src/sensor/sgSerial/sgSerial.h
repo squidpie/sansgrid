@@ -41,12 +41,6 @@
                                    // data to send
 #define DELAY 6				   	   // Delay in microseconds between bytes sent
 
-typedef struct SansgridSerial{
-	char control[ CONTROL + 1 ];	   	 // control
-	char ip_addr[ IP_ADDRESS + 1 ];      // Overloaded IP Field
-                                         // contains origin or destination IP address
-	char payload[ PAYLOAD + 1 ];	     // payload
-} SansgridSerial;
 #else
 #define ARCH_PI
 
@@ -54,14 +48,14 @@ typedef struct SansgridSerial{
 //#include <arpa/inet.h>
 #include "payloads.h"
 
-typedef struct SansgridSerial {
-	uint8_t control;				// control byte
-	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
-									// contains origin or destination IP address
-	uint8_t payload[81];			// payload
-} SansgridSerial;
-
 #endif // __ARCH_DUE__
+
+typedef struct SansgridSerial{
+	int8_t control[ CONTROL ];	   	 	// control
+	int8_t ip_addr[ IP_ADDRESS ];      	// Overloaded IP Field
+                                        // contains origin or destination IP address
+	int8_t payload[ PAYLOAD ];	     	// payload
+} SansgridSerial;
 
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
