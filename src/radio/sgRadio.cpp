@@ -114,16 +114,18 @@ void SansgridRadio::atCmd(char * result,const char * cmd) {
 	int i = 0;
 	Radio->print("+++");
 	delay(300);
-	while(Radio->available() > 0) {
-		Radio->read();
-	}
-	Radio->println(cmd);
 	while(Radio->available() > 0 && i < sizeof(result)) {
 		result[i++] = Radio->read();
-	}	
-	char * tmp;
-	sprintf(tmp,"Command return value: %s",result);
+	}
+	if (strcmpn(result, "OK", 2)) {
+		Radio->println(cmd);
+		while(Radio->available() > 0 && i < sizeof(result)) {
+			result[i++] = Radio->read();
+		}	
+		char * tmp;
+		sprintf(tmp,"Command return value: %s",result);
 	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
+	}
 	Radio->println("ATCN");
 }
 
