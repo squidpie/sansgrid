@@ -120,11 +120,14 @@ void SansgridRadio::write() {
 void SansgridRadio::atCmd(char * result,const char * cmd) {
 	int i = 0;
 	Radio->println("Entering Command Mode");
-	Radio->print("+++");
-	delay(300);
+	
+	Radio->print('+++');
+	while(Radio->available() == 0) {}
+	
 	while(Radio->available() > 0 && i < sizeof(result)) {
 		result[i++] = Radio->read();
 	}
+	
 	if (strncmp(result, "OK", sizeof("OK"))) {
 		Radio->println(cmd);
 		while(Radio->available() > 0 && i < sizeof(result)) {
@@ -133,14 +136,14 @@ void SansgridRadio::atCmd(char * result,const char * cmd) {
 		char * tmp;
 		sprintf(tmp,"Command return value: %s",result);
 		
-	Radio->println("ATCN");
-	Radio->println("Exiting Command Mode");
+		Radio->println('ATCN');
 	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
 	}
 	else {
-	Radio->println("ATCN");
-	Radio->println("Exiting Command Mode");
+		Radio->println('ATCN');
 	}
+	
+	Radio->println("Exiting Command Mode");
 }
 
 
