@@ -70,8 +70,7 @@ void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 	memcpy(&sg_peck->manid, &sg_eyeball.manid, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->modnum, &sg_eyeball.modnum, 4*sizeof(uint8_t));
 	memcpy(&sg_peck->serial_number, &sg_eyeball.serial_number, 8*sizeof(uint8_t));
-	for (i=0; i<31; i++)
-		sg_peck->padding[i] = 0x0;
+	memset(sg_peck->padding, 0x0, 15*sizeof(uint8_t));
 
 	return;
 }
@@ -126,10 +125,8 @@ void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs
 
 
 void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
-	int i;
 	sg_nest->datatype = test_specs->nest_mode;
-	for (i=0; i<80; i++)
-		sg_nest->padding[i] = 0x0;
+	memset(sg_nest->padding, 0x0, 80*sizeof(uint8_t));
 
 	return;
 }

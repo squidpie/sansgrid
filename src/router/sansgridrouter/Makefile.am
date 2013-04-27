@@ -1,6 +1,6 @@
 bin_PROGRAMS = sansgridrouter
 check_PROGRAMS = sgtest
-AM_CFLAGS = -Wall -std=c99 -I../../../include/
+AM_CFLAGS = -Wall -fstack-protector-all -std=c99 -I../../../include/
 
 SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \

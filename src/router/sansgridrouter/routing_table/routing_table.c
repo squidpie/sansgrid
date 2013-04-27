@@ -49,25 +49,11 @@ struct RoutingTable {
 	uint32_t tableptr;			// index, used for alloc
 	uint32_t table_alloc;
 	uint8_t base[IP_SIZE];
+	uint8_t broadcast[IP_SIZE];
 	uint32_t hbptr;				// index, used for heartbeat
 	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 };
 
-
-/*
-static void createBase(uint8_t base[IP_SIZE]) {
-	// Return a base IP based on some attributes
-	
-	int i;
-	uint32_t arrsize = ROUTING_ARRAYSIZE;
-
-	for (i=0; i<IP_SIZE; i++)
-		base[i] = 0;
-	memcpy(base, &arrsize, sizeof(uint32_t));
-
-	return;
-}
-*/
 
 
 static int tableAssertValid(RoutingTable *table) {
@@ -187,6 +173,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
 	table->table_alloc = 0;
 	table->hbptr = 0;
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
+	memset(table->broadcast, 0xff, IP_SIZE*sizeof(uint8_t));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
 	
 
@@ -324,6 +311,31 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Lookup an IP address in the table
+	// return a unique identifier if found,
+	// return 0 if false
+	
+	if (routingTableLookup(table, ip_addr) == 0) {
+		// device not found
+		return 0;
+	}
+	// For now, just use the index as a unique identifier
+	return locationToTablePtr(ip_addr, table->base);
+}
+
+int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]) {
+	// convert an rdid to an IP address
+	maskip(ip_addr, table->base, rdid);
+	return 0;
+}
+
+void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]) {
+	// get the broadcast address
+	memcpy(broadcast, table->broadcast, IP_SIZE);
+	return;
+}
+
 void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Get the router's IP address
 	maskip(ip_addr, table->base, 1);
@@ -364,6 +376,7 @@ int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
+	// Check to see what packet we're expecting next from this IP address
 
 	tableAssertValid(table);
 
@@ -381,6 +394,7 @@ int32_t routingTableSetNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE],
 		enum SansgridDeviceStatusEnum nextstatus) {
+	// Set what packet we're expecting next from this IP address
 
 	tableAssertValid(table);
 
@@ -451,6 +465,7 @@ int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_S
 
 enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
+	// Get the current state (active, stale, lost) of this IP address
 
 	tableAssertValid(table);
 
@@ -466,6 +481,7 @@ enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *ta
 	
 
 int32_t routingTableGetDeviceCount(RoutingTable *table) {
+	// Return the number of devices that are authenticated
 	tableAssertValid(table);
 	return table->table_alloc;
 }

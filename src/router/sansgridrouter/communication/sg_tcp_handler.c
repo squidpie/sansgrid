@@ -27,6 +27,7 @@
 #include <string.h>
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
+#include "../sansgrid_router.h"
 
 
 
@@ -288,6 +289,8 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	Dictionary dict[30];
 	int32_t size = 0;
 	int8_t exit_code = 0;
+	uint8_t rdid[4];
+	uint32_t rdid_32;
 	char *saved 	= NULL,
 		 *key 		= NULL,
 		 *value 	= NULL;
@@ -305,8 +308,16 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 	// Find payload type
 	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
+	atox(rdid, 		match(dict, size, "rdid"), 4*sizeof(uint8_t));
 	if (datatype == ~0x0) {
 		return -1;
+	}
+	memcpy(&rdid_32, rdid, 4*sizeof(uint8_t));
+	if (!rdid_32) {
+		// broadcast
+		routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
+	} else {
+		routingTableRDIDToIP(routing_table, rdid_32, sg_serial->ip_addr);
 	}
 	dev_datatype = sgPayloadGetType(datatype);
 	switch(dev_datatype) {
@@ -338,8 +349,6 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 			exit_code = -1;
 			break;
 	}
-
-	memset(payload, 0xff, 300*sizeof(char));
 
 	return exit_code;
 }
@@ -374,19 +383,37 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	SansgridSing 		sg_sing;
 	SansgridMock 		sg_mock;
 	SansgridPeacock 	sg_peacock;
-	//SansgridNest 		sg_nest;
+	SansgridNest 		sg_nest;
 	SansgridSquawk 		sg_squawk;
 	//SansgridHeartbeat 	sg_heartbeat;
 	SansgridChirp 		sg_chirp;
+	uint32_t 			rdid_32 = 0;
+	uint8_t 			rdid[4];
+	uint8_t 			broadcast[IP_SIZE];
 	
+
 	if (!sg_serial || !sg_serial->payload) {
 		return -1;
 	}
 	payload[0] = '\0';
 	uint8_t payload_type = sg_serial->payload[0];
 	uint8_t datatype = sgPayloadGetType(payload_type);
-	// TODO: Add rdid field
-	//addHexField("rdid", &datatype, 1, payload);
+
+	memset(rdid, 0x0, 4*sizeof(uint8_t));
+	routingTableGetBroadcast(routing_table, broadcast);
+	if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
+		// broadcast address
+		addHexField("rdid", rdid, 4, payload);
+	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
+		// no match found: this really shouldn't happen
+		return -1;
+	} else {
+		// match found; continue
+		memcpy(rdid, &rdid_32, 4*sizeof(uint8_t));
+		addHexField("rdid", rdid, 4, payload);
+	}
+
+
 	addHexField("dt", &payload_type, 1, payload);
 	switch (datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
@@ -431,7 +458,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			addHexField("more_io",	&sg_peacock.additional_IO_needed, 1, payload);
 			break;
 		case SG_DEVSTATUS_NESTING:
-			// Nothing here
+			memcpy(&sg_nest, sg_serial->payload, sizeof(SansgridNest));
 			break;
 		case SG_DEVSTATUS_SQUAWKING:
 			memcpy(&sg_squawk, sg_serial->payload, sizeof(SansgridSquawk));

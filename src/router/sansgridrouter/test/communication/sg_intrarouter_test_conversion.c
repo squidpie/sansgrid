@@ -20,10 +20,12 @@
 #include "sg_tcp_test.h"
 #include "../payloads/payload_tests.h"
 #include "../../communication/sg_tcp.h"
+#include "../../routing_table/routing_table.h"
 
 
 START_TEST(testEyeballConversion) {
 	// Test the eyeball conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridEyeball sg_eyeball;
@@ -31,6 +33,9 @@ START_TEST(testEyeballConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -38,19 +43,22 @@ START_TEST(testEyeballConversion) {
 	test_struct.eyeball = &eyeball;
 	test_struct.eyeball_mode = SG_EYEBALL_MATE;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkEyeball(&sg_eyeball, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Eyeball: Size of payload is: %i\n", strlen(payload));
 	printf("Eyeball: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -66,6 +74,7 @@ END_TEST
 
 START_TEST(testPeckConversion) {
 	// Test the peck conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridPeck sg_peck;
@@ -73,24 +82,31 @@ START_TEST(testPeckConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
 	test_struct.peck_mode = SG_PECK_MATE;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkPeck(&sg_peck, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
+	mark_point();
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Peck: Size of payload is: %i\n", strlen(payload));
 	printf("Peck: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -106,6 +122,7 @@ END_TEST
 
 START_TEST(testSingConversion) {
 	// Test the sing conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridSing sg_sing;
@@ -113,6 +130,9 @@ START_TEST(testSingConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -120,19 +140,22 @@ START_TEST(testSingConversion) {
 	test_struct.sing = &sing;
 	test_struct.sing_mode = SG_SING_WITH_KEY;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkSing(&sg_sing, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_sing, sizeof(SansgridSing));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Sing: Size of payload is: %i\n", strlen(payload));
 	printf("Sing: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -148,6 +171,7 @@ END_TEST
 
 START_TEST(testMockConversion) {
 	// Test the mock conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridMock sg_mock;
@@ -155,6 +179,9 @@ START_TEST(testMockConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -162,19 +189,22 @@ START_TEST(testMockConversion) {
 	test_struct.mock = &mock;
 	test_struct.mock_mode = SG_MOCK_WITH_KEY;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkMock(&sg_mock, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_mock, sizeof(SansgridMock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Mock: Size of payload is: %i\n", strlen(payload));
 	printf("Mock: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -191,6 +221,7 @@ END_TEST
 
 START_TEST(testPeacockConversion) {
 	// Test the peacock conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridPeacock sg_peacock;
@@ -198,9 +229,9 @@ START_TEST(testPeacockConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
-
-	//printf("WARNING: Peacock not implemented yet! Ending Test...\n");
-	//return;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 
 	mark_point();
@@ -209,20 +240,23 @@ START_TEST(testPeacockConversion) {
 	test_struct.peacock = &peacock;
 	test_struct.peacock_mode = SG_PEACOCK;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkPeacock(&sg_peacock, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Peacock: Size of payload is: %i\n", strlen(payload));
 	printf("Peacock: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -239,6 +273,7 @@ END_TEST
 
 START_TEST(testNestConversion) {
 	// Test the nest conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridNest sg_nest;
@@ -246,6 +281,9 @@ START_TEST(testNestConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -253,19 +291,22 @@ START_TEST(testNestConversion) {
 	test_struct.nest = &nest;
 	test_struct.nest_mode = SG_NEST;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkNest(&sg_nest, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_nest, sizeof(SansgridNest));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Nest: Size of payload is: %i\n", strlen(payload));
 	printf("Nest: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
@@ -282,6 +323,7 @@ END_TEST
 
 START_TEST(testSquawkConversion) {
 	// Test the squawk conversion for the intrarouter communication system
+	int exit_code;
 	SansgridSerial sg_serial,
 				   sg_serial_orig;
 	SansgridSquawk sg_squawk;
@@ -289,6 +331,9 @@ START_TEST(testSquawkConversion) {
 	char payload[300] = "";
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
+	uint8_t base[IP_SIZE];
+	memset(base, 0x0, IP_SIZE);
+	routing_table = routingTableInit(base);
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -296,19 +341,22 @@ START_TEST(testSquawkConversion) {
 	test_struct.squawk_sensor = &squawk;
 	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
 	payloadMkSerial(&sg_serial);
+	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkSquawkSensor(&sg_squawk, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	sgRouterToServerConvert(&sg_serial, payload);
+	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Squawk: Size of payload is: %i\n", strlen(payload));
 	printf("Squawk: Converted to: %s\n", payload);
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	routingTableDestroy(routing_table);
 
 	mark_point();
 	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
