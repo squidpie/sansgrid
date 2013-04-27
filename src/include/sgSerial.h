@@ -34,6 +34,13 @@ typedef struct SansgridSerial {
 } SansgridSerial;
 
 
+enum SGSerialCtrlByte {
+	SG_SERIAL_CTRL_NO_DATA 			= 0xFD,
+	SG_SERIAL_CTRL_VALID_DATA 		= 0xAD,
+	SG_SERIAL_CTRL_SETAS_SENSOR 	= 0x10,
+	SG_SERIAL_CTRL_SETAS_ROUTER 	= 0x11,
+	SG_SERIAL_CTRL_DEV_NOT_READY	= 0xDD,
+};
 
 // initialize serial connection
 int8_t sgSerialOpen(void);
