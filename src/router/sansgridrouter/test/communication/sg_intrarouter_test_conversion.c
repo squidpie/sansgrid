@@ -216,6 +216,7 @@ START_TEST(testPeacockConversion) {
 
 	mark_point();
 	sgRouterToServerConvert(&sg_serial, payload);
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Peacock: Size of payload is: %i\n", strlen(payload));
 	printf("Peacock: Converted to: %s\n", payload);
