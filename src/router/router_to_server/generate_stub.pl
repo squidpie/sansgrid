@@ -21,13 +21,15 @@ print "-----------------------------\n\n";
 print "Choose a process to emulate:\n";
 printf ("%4d  -  %s\n", 1, "Eyeball");
 printf ("%4d  -  %s\n", 2, "Mock");
+printf ("%4d  -  %s\n", 3, "Peacock");
 
 print "\n";
-$user_request = &verifyInput( (1,2) );
+$user_request = &verifyInput( (1,2,3) );
 
 switch ($user_request) {
 	case 1 { &generate_eyeball();}
 	case 2 { &generate_mock();}
+	case 3 { &generate_peacock();}
 }
 
 # END OF MAIN CODE
@@ -39,7 +41,7 @@ switch ($user_request) {
 #
 #	Generate eyeball payload
 #
-sub generate_eyeball{
+sub generate_eyeball {
 
 	my $input;
 	my $payload = $ff_del . "dt" . $nf_del . "01" . $ff_del;
@@ -69,7 +71,7 @@ sub generate_eyeball{
 
 	&savePayload($payload);
 
-}
+} # End generate_eyeball
 
 
 # ############################################################################## 
@@ -114,7 +116,92 @@ sub generate_mock {
 
 	&savePayload($payload);
 
-}
+} # End generate_mock 
+
+
+# ############################################################################## 
+# generate_peacock()
+#
+#	Generate peacock payload
+#
+sub generate_peacock {
+
+	my $input;
+	my $payload;
+
+	#dt
+	$payload .= $ff_del . "dt" . $nf_del . "0c" . $ff_del;
+
+	#rdid
+	$payload .= "rdid" . $nf_del . &getField("rdid") . $ff_del;
+
+
+	print "SENSOR A\n";
+	$payload .= "sida" . $nf_del . &getField("ID #") . $ff_del;
+
+	print "Classification ( 0 = digital, 1 = analog, 2 = text )";
+	$user_request = &verifyInput( (0, 1, 2) );
+	$payload .= "classa" . $nf_del . $user_request . $ff_del;
+
+	print "Direction ( 0 = output from sensor, 1 = input )";
+	$user_request = &verifyInput( (0, 1) );
+	$payload .= "dira" . $nf_del . $user_request . $ff_del;
+
+	$payload .= "labela" . $nf_del . &getField("Label") . $ff_del;
+
+	$payload .= "unitsa" . $nf_del . &getField("Units") . $ff_del;
+
+	print "Would you like to include another I/O ('B')?";
+	$user_request = &verifyInput( ("y", "n") );
+
+	# If there's a 'B' I/O
+	if ($user_request eq "y") {
+
+		print "\nSENSOR B\n";
+		$payload .= "sidb" . $nf_del . &getField("ID #") . $ff_del;
+
+		print "Classification ( 0 = digital, 1 = analog, 2 = text )";
+		$user_request = &verifyInput( (0, 1, 2) );
+		$payload .= "classb" . $nf_del . $user_request . $ff_del;
+
+		print "Direction ( 0 = output from sensor, 1 = input )";
+		$user_request = &verifyInput( (0, 1) );
+		$payload .= "dirb" . $nf_del . $user_request . $ff_del;
+
+		$payload .= "labelb" . $nf_del . &getField("Label") . $ff_del;
+
+		$payload .= "unitsb" . $nf_del . &getField("Units") . $ff_del;
+
+		print "Are there any more Peacocks coming?";
+		$user_request = &verifyInput( ("y", "n") );
+
+		if ($user_request eq "y") {
+			$payload .= "additional" . $nf_del . "1" . $ff_del;
+		} else {
+			$payload .= "additional" . $nf_del . "0" . $ff_del;
+		}
+
+	# If there isn't a 'B' I/O
+	} else {
+
+		$payload .= "sidb" . $nf_del . "rd" . $ff_del;
+
+		$payload .= "classb" . $nf_del . $ff_del;
+
+		$payload .= "dirb" . $nf_del . $ff_del;
+
+		$payload .= "labelb" . $nf_del . $ff_del;
+
+		$payload .= "unitsb" . $nf_del . $ff_del;
+
+		$payload .= "additional" . $nf_del . "0" . $ff_del;
+
+	}
+
+
+	&savePayload($payload);
+
+} # End generate_mock 
 
 
 # ############################################################################## 

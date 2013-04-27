@@ -4,6 +4,7 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 // Last_tx code to english descriptions
 $tx_definitions['Sing'] = "Sing has been sent (with or without key), awaiting Mock.";
 $tx_definitions['Peck'] = "Awaiting permission to mate with sensor.";
+$tx_definitions['Mock'] = "Waiting for sensor to Peacock.";
 
 $db = returnDatabaseConnection();
 

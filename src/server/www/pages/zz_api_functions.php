@@ -8,9 +8,9 @@ function processEyeball ($router_ip, $payload, $db) {
 
 	// Data from API
 	$rdid 		= $payload["rdid"];
-	$modnum 	= $payload["modnum"];
-	$manid 		= $payload["manid"];
-	$sn 		= $payload["sn"];
+	$modnum 	= strtolower($payload["modnum"]);
+	$manid 		= strtolower($payload["manid"]);
+	$sn 		= strtolower($payload["sn"]);
 	$mode 		= $payload["mode"];
 
 	// First thing to do is ensure that this rdid isn't currently in the pipeline
@@ -23,14 +23,16 @@ function processEyeball ($router_ip, $payload, $db) {
 	$query  = "SELECT COUNT(*) as count FROM sensor ";
 	$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
 	$query .= "AND sn='$sn' AND has_mated='y'";
-	$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query EB1.");
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query eb1.");
 
 	$row = mysqli_fetch_assoc($result);
 	$count = $row['count'];
 
 	// Now we generate the appropriate Peck, start by getting the server id.
 	$query = "SELECT server_id FROM server";
-	$result = mysqli_query ($db, $query) or die ("Error: Couldn't execute query EB2.");
+	$result = mysqli_query ($db, $query) 
+		or die ("Error: Couldn't execute query eb2.");
 	$row = mysqli_fetch_assoc($result);
 	$server_id = $row['server_id'];
 
@@ -71,7 +73,8 @@ function processEyeball ($router_ip, $payload, $db) {
 			$msg .= "Sensor not ready to mate. ";
 			$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
 			$msg .= "model number&nbsp;=&nbsp;$modnum, ";
-			$msg .= "serial number&nbsp;=&nbsp;$sn";
+			$msg .= "serial number&nbsp;=&nbsp;$sn. ";
+			$msg .= "(Sensor: $id_sensor) ";
 			addToLog($msg);
 
 			xmitToRouter($reply);
@@ -83,12 +86,14 @@ function processEyeball ($router_ip, $payload, $db) {
 			// database so we can save Eyeball, Mock and Peacock data. 
 			$query  = "INSERT INTO sensor (manid, modnum, sn, status) ";
 			$query .= "VALUES ('$manid', '$modnum', '$sn', 'offline')";
-			$result = mysqli_query($db, $query) or die ("Couldn't execute query EB4.");
+			$result = mysqli_query($db, $query) 
+				or die ("Couldn't execute query eb4.");
 			$id_sensor = mysqli_insert_id($db);
 
 			// Is server set to allow automatic mating?
 			$query = "SELECT verify_mating FROM server";
-			$result = mysqli_query($db, $query) or die ("Couldn't execute query EB3.");
+			$result = mysqli_query($db, $query) 
+				or die ("Couldn't execute query eb3.");
 			$row = mysqli_fetch_assoc($result);
 			$verify_mating = $row['verify_mating'];
 
@@ -123,17 +128,17 @@ function processEyeball ($router_ip, $payload, $db) {
 				$reply = appendToPayload($reply, "sn", 			$sn);
 
 				// Log it
-				$msg  = "[$router_ip] - Eyeball&rarr;Sing: New sensor entered network. ";
+				$msg  = "[$router_ip] - Eyeball: New sensor entered network. ";
 				$msg .= "Peck complete. Awaiting permission to mate. ";
 				$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
 				$msg .= "model number&nbsp;=&nbsp;$modnum, ";
-				$msg .= "serial number&nbsp;=&nbsp;$sn";
+				$msg .= "serial number&nbsp;=&nbsp;$sn. ";
+				$msg .= "(Sensor: $id_sensor) ";
 				addToLog($msg);
 
 				xmitToRouter($reply);
 
 				// Update pipeline
-				// NEED TO ADD THIS TO PIPELINE AS A SENSOR WAITING TO MATE
 				updatePipeline ($rdid, $id_sensor, $router_ip, 'Peck');
 			}
 			
@@ -165,11 +170,12 @@ function generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db)
 
 
 	// Log it
-	$msg  = "[$router_ip] - Eyeball&rarr;Sing: New sensor entered network. ";
+	$msg  = "[$router_ip] - Eyeball: New sensor entered network. ";
 	$msg .= "Peck complete. Sing issued. ";
 	$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
 	$msg .= "model number&nbsp;=&nbsp;$modnum, ";
-	$msg .= "serial number&nbsp;=&nbsp;$sn";
+	$msg .= "serial number&nbsp;=&nbsp;$sn. ";
+	$msg .= "(Sensor: $id_sensor) ";
 	addToLog($msg);
 
 	xmitToRouter($reply);
@@ -209,15 +215,18 @@ function processMock ($router_ip, $payload, $db) {
 		// !!!!!!!!! THE DATA TYPE OF 'EE' IS NOT VALID!!!!!! NEED AN ERROR DT
 		// FIX THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		$reply = appendToPayload($SG['ff_del'], "rdid",	 $rdid);
-		$reply = appendToPayload($reply, 		"dt", 	 "EE");
+		$reply = appendToPayload($reply, 		"dt", 	 "NEED_A_DATA_TYPE");
 
 		// You tell em!
 		$msg  = "[$router_ip] - Error: Received erroneous Mock. ";
-		$msg .= "Sensor kicked off network";
+		$msg .= "Sensor kicked off network. ";
+		$msg .= "(Sensor: $id_sensor) ";
 		addToLog($msg);
 
 		// Umm... now you tell the sensor
 		xmitToRouter($reply);
+
+		return;
 	}
 
 	// Do we expect a key, and if so did we get one? If yes then let's save it. 
@@ -225,7 +234,127 @@ function processMock ($router_ip, $payload, $db) {
 		$query  = "UPDATE sensor SET sensor_key='$senspubkey' ";
 		$query .= "WHERE id_sensor='$id_sensor'";
 		mysqli_query($db, $query) or die ("Can't execute query mo2.");
+
+		$msg  = "[$router_ip] - Received Mock. Sensor key saved. ";
+		$msg .= "(Sensor: $id_sensor) ";
+		addToLog($msg);
+
+		updatePipeline ($rdid, $id_sensor, $router_ip, 'Mock');
+
+	// Or was this a Mock with no expected key?
+	} else if ($dt == 8) {
+		$msg  = "[$router_ip] - Received Mock, no sensor key. ";
+		$msg .= "(Sensor: $id_sensor) ";
+		addToLog($msg);
+
+		updatePipeline ($rdid, $id_sensor, $router_ip, 'Mock');
 	}
+	
+
+}
+
+
+/* ************************************************************************** */
+function processPeacock ($router_ip, $payload, $db) {
+	global $SG;
+
+	// Data from API
+	$rdid 		= $payload["rdid"];
+	$dt 		= $payload["dt"];
+	$sida		= $payload["sida"];
+	$classa		= $payload["classa"];
+	$dira		= $payload["dira"];
+	$labela		= $payload["labela"];
+	$unitsa		= $payload["unitsa"];
+	$sidb		= $payload["sidb"];
+	$classb		= $payload["classb"];
+	$dirb		= $payload["dirb"];
+	$labelb		= $payload["labelb"];
+	$unitsb		= $payload["unitsb"];
+	$additional	= $payload["additional"];
+
+	// First we gotta find out the sensor's information from the pipeline;
+	$query = "SELECT * FROM pipeline WHERE rdid='$rdid'";
+	$result = mysqli_query ($db, $query) or die ("Can't execute query pc1.\n$query\n");
+	$row = mysqli_fetch_assoc($result);
+
+	// Obviously the router IP in the pipeline should be the same as the one
+	// that sent the Mock
+	if ($router_ip != $row['router_ip']) 
+		die ("Router IP mismatch!");
+	
+	$latest_tx 	= $row['latest_tx'];
+	$id_sensor 	= $row['id_sensor'];
+
+
+	// If we're receiving a Peacock, then the $last_tx should've been a 'Mock' or
+	// a 'Peacock'. If that's not the case then we error out. 
+	if ( ($latest_tx != "Mock") && ($latest_tx != "Peacock") ) {
+
+		// !!!!!!!!! THE DATA TYPE OF 'EE' IS NOT VALID!!!!!! NEED AN ERROR DT
+		// FIX THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		$reply = appendToPayload($SG['ff_del'], "rdid",	 $rdid);
+		$reply = appendToPayload($reply, 		"dt", 	 "NEED_A_DATA_TYPE");
+
+		// You tell em!
+		$msg  = "[$router_ip] - Error: Received erroneous Peacock. ";
+		$msg .= "Sensor kicked off network. ";
+		$msg .= "(Sensor: $id_sensor) ";
+		addToLog($msg);
+
+		// Umm... now you tell the sensor
+		xmitToRouter($reply);
+
+		return;
+	}
+
+	// For sure we have to have I/O 'A', so let's just blindly add that
+	$query  = "INSERT INTO io (id_sensor, sig_id, class, direction, label, units)";
+	$query .= " VALUES ('$id_sensor', '$sida', '$classa', '$dira', '$labela', '$unitsa')"; 
+	mysqli_query ($db, $query) or die ("Can't execute query pc2.");
+
+	$msg  = "[$router_ip] - Peacock: Added '$labela' for sensor $id_sensor. ";
+	addToLog($msg);
+
+	// Now, do we have I/O 'B'?
+	if ( hexdec($sidb) !=  253) {  // 0xFd = 253
+
+		print "sidb is $sidb or as a decimal it's " . hexdec($sidb) . " \n\n";
+
+		$query  = "INSERT INTO io (id_sensor, sig_id, class, direction, label, units)";
+		$query .= " VALUES ('$sidb', '$classb', '$dirb', '$labelb', '$unitsb')"; 
+		mysqli_query ($db, $query) or die ("Can't execute query pc3.\n$query\n");
+
+		$msg  = "[$router_ip] - Peacock: Added '$labelb' for sensor $id_sensor. ";
+		addToLog($msg);
+	}
+
+	// Is this the last Peacock? If so, then it's time to Nest!! Woo!!!
+	if ($additional	== 0) {
+
+		// Nest payload 
+		$reply = appendToPayload($SG['ff_del'], "rdid", $rdid);
+		$reply = appendToPayload($reply,	 	"dt", 	"10");
+
+		xmitToRouter($reply);
+
+		// Logging
+		$msg  = "[$router_ip] - Mating complete!  Permission to Nest granted. ";
+		$msg .= "(Sensor: $id_sensor) ";
+		addToLog($msg);
+
+		// Delete the sensor from the pipeline
+		deleteFromPipelineByRdid ($rdid, $db);
+
+		// Update the sensor to indicate that it has mated and that it's now
+		// 'online'
+		$query  = "UPDATE sensor SET has_mated='y', status='online' ";
+		$query .= "WHERE id_sensor='$id_sensor'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query ns1.");
+	}
+
+	
 
 }
 

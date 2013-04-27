@@ -78,7 +78,7 @@ if (! array_key_exists("dt", $data) ) {
 
 // We're done parsing out the data.  Now we look at our data type and run
 // the appropriate function for that data type. 
-switch ( $data["dt"] ) {
+switch ( hexdec($data["dt"]) ) {
 	case 0:
 		processEyeball($router_ip, $data, $db);
 		break;
@@ -88,8 +88,11 @@ switch ( $data["dt"] ) {
 	case 8:
 		processMock($router_ip, $data, $db);
 		break;
+	case 12: 	// 11 = 0x0C
+		processPeacock($router_ip, $data, $db);
+		break;
 	default: 
-		die ("Error: Unknown data type: '${data["dt"]}'\n");
+		die ("Error: Unknown data type: ' " . hexdec($data["dt"]) . " '\n");
 		break; 	# Technically not needed since we just died.
 }
 

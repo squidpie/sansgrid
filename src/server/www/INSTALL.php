@@ -42,22 +42,29 @@ $query = "CREATE TABLE router (id_router int NOT NULL UNIQUE AUTO_INCREMENT, rou
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'router', quitting.");
 
 // Table: sensor
-$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, modnum VARCHAR(10), manid VARCHAR(10), sn VARCHAR(20), sensor_key VARCHAR(150), status VARCHAR(250), has_mated CHAR(1) DEFAULT 'n', last_pulse TIMESTAMP)";
+$query = "CREATE TABLE sensor (id_sensor int NOT NULL UNIQUE AUTO_INCREMENT, manid VARCHAR(10), modnum VARCHAR(10), sn VARCHAR(20), sensor_key VARCHAR(150), status VARCHAR(250), has_mated CHAR(1) DEFAULT 'n', last_pulse TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'sensor', quitting.");
 
 // Table: io
-$query = "CREATE TABLE io (id_io int NOT NULL UNIQUE AUTO_INCREMENT, id_sensor int, direction VARCHAR(10), value VARCHAR(250), last_edit TIMESTAMP)";
+$query = "CREATE TABLE io (id_io int NOT NULL UNIQUE AUTO_INCREMENT, id_sensor INT, sig_id INT, class VARCHAR(15), direction VARCHAR(5), label VARCHAR(50), units VARCHAR(10), value VARCHAR(250), last_edit TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'io', quitting.");
-
 
 // Table: log
 $query = "CREATE TABLE log (id_log INT NOT NULL UNIQUE AUTO_INCREMENT, log VARCHAR(1024), time timestamp)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitting.");
 
-
 // Table: pipeline
 $query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), last_update TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
+
+// Table: com (Compendium of Manufacturers) 
+$query = "CREATE TABLE com (id_com INT, manid VARCHAR(10), name VARCHAR(250))";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'com', quitting.");
+
+// Table: cos (Compendium of Sensors) 
+$query = "CREATE TABLE cos (id_cos INT, id_com INT, modnum VARCHAR(10), name VARCHAR(250))";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'cos', quitting.");
+
 
 
 // Generate and save server_id and set other system defaults
