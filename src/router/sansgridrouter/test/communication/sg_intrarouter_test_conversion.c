@@ -296,7 +296,7 @@ START_TEST(testSquawkConversion) {
 	test_struct.squawk_sensor = &squawk;
 	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
 	payloadMkSerial(&sg_serial);
-	payloadMkSquawkServer(&sg_squawk, &test_struct);
+	payloadMkSquawkSensor(&sg_squawk, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));

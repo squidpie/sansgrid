@@ -435,7 +435,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		case SG_DEVSTATUS_SQUAWKING:
 			memcpy(&sg_squawk, sg_serial->payload, sizeof(SansgridSquawk));
-			addHexField("data", sg_mock.pubkey, 64, payload);
+			addHexField("data", sg_squawk.data, 64, payload);
 			break;
 		case SG_DEVSTATUS_HEARTBEAT:
 			// Nothing here
