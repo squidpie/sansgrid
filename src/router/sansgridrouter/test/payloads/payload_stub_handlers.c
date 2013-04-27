@@ -100,23 +100,22 @@ void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 
 
 void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs) {
-	int i;
 	sg_peacock->datatype = test_specs->peacock_mode;
 	sg_peacock->IO_A_id = 0x0;
 	sg_peacock->IO_A_class= 0x0;
 	sg_peacock->IO_A_direc= 0x0;
-	for (i=0; i<30; i++)
-		sg_peacock->IO_A_label[i] = 0x0;
-	for (i=0; i<6; i++)
-		sg_peacock->IO_A_units[i] = 0x0;
+	memset(sg_peacock->IO_A_label, 0x0, 30*sizeof(char));
+	memset(sg_peacock->IO_A_units, 0x0, 6*sizeof(char));
+	strcpy(sg_peacock->IO_A_label, "Label A");
+	strcpy(sg_peacock->IO_A_units, "Aunit");
 
 	sg_peacock->IO_B_id = 0x0;
 	sg_peacock->IO_B_class= 0x0;
 	sg_peacock->IO_B_direc= 0x0;
-	for (i=0; i<30; i++)
-		sg_peacock->IO_B_label[i] = 0x0;
-	for (i=0; i<6; i++)
-		sg_peacock->IO_B_units[i] = 0x0;
+	memset(sg_peacock->IO_B_label, 0x0, 30*sizeof(char));
+	memset(sg_peacock->IO_B_units, 0x0, 6*sizeof(char));
+	strcpy(sg_peacock->IO_B_label, "Label B");
+	strcpy(sg_peacock->IO_B_units, "Bunit");
 
 	sg_peacock->additional_IO_needed = 0x0;
 

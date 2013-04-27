@@ -199,8 +199,8 @@ START_TEST(testPeacockConversion) {
 	uint32_t rdid = ~0,
 			 rdid_orig = 0;
 
-	printf("WARNING: Peacock not implemented yet! Ending Test...\n");
-	return;
+	//printf("WARNING: Peacock not implemented yet! Ending Test...\n");
+	//return;
 
 
 	mark_point();
@@ -216,6 +216,7 @@ START_TEST(testPeacockConversion) {
 
 	mark_point();
 	sgRouterToServerConvert(&sg_serial, payload);
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Peacock: Size of payload is: %i\n", strlen(payload));
 	printf("Peacock: Converted to: %s\n", payload);
@@ -295,7 +296,7 @@ START_TEST(testSquawkConversion) {
 	test_struct.squawk_sensor = &squawk;
 	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
 	payloadMkSerial(&sg_serial);
-	payloadMkSquawkServer(&sg_squawk, &test_struct);
+	payloadMkSquawkSensor(&sg_squawk, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));

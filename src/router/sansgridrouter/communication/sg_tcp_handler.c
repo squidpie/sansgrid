@@ -106,8 +106,16 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 char *match(Dictionary dict[], int size, char *key) {
 	// Return the value at key.
 	int i;
+	if (key == NULL) {
+		// Guard against garbage data in key
+		return NULL;
+	}
 	for (i=0; i<size; i++) {
-		if (!strcmp(key, dict[i].key)) {
+		if (dict[i].key == NULL) {
+			// Guard against garbage data in dict
+			return NULL;
+		} else if (!strcmp(key, dict[i].key)) {
+			// matched
 			return dict[i].value;
 		}
 	}
@@ -188,22 +196,41 @@ static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
+	char *label = NULL;
 	SansgridPeacock sg_peacock;
 
 	atox(&sg_peacock.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
 
-	atox(&sg_peacock.IO_A_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	memcpy(sg_peacock.IO_A_label, 	match(dict, size, "?"), 		30*sizeof(char));
-	atox(sg_peacock.IO_A_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_id,		match(dict, size, "id_a"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_class,	match(dict, size, "class_a"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_direc,	match(dict, size, "dir_a"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "label_a")) == NULL) {
+		memset(sg_peacock.IO_A_label, 0x0,							30*sizeof(char));
+	} else {
+		strncpy(sg_peacock.IO_A_label, label, 30);
+	}
+	if ((label = match(dict, size, "units_a")) == NULL) {
+		memset(sg_peacock.IO_A_units, 0x0,							6*sizeof(char));
+	} else {
+		strncpy(sg_peacock.IO_A_units, label, 6);
+	}
 	
-	atox(&sg_peacock.IO_B_id,		match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_class,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_direc,	match(dict, size, "?"),			1*sizeof(uint8_t));
-	memcpy(sg_peacock.IO_B_label, 	match(dict, size, "?"),			30*sizeof(char));
-	atox(sg_peacock.IO_B_units,		match(dict, size, "?"),			6*sizeof(uint8_t));
 
+	atox(&sg_peacock.IO_B_id,		match(dict, size, "id_b"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_class,	match(dict, size, "class_b"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_direc,	match(dict, size, "dir_b"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "label_b")) == NULL) {
+		memset(sg_peacock.IO_B_label, 0x0,							30*sizeof(char));
+	} else {
+		strncpy(sg_peacock.IO_B_label, label, 30);
+	}
+	if ((label = match(dict, size, "units_b")) == NULL) {
+		memset(sg_peacock.IO_B_units, 0x0,							6*sizeof(char));
+	} else {
+		strncpy(sg_peacock.IO_B_units, label, 6);
+	}
+
+	atox(&sg_peacock.additional_IO_needed, match(dict, size, "more_io"), 1*sizeof(uint8_t));
 	sg_peacock.padding = 0x0;
 
 	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
@@ -312,6 +339,8 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 			break;
 	}
 
+	memset(payload, 0xff, 300*sizeof(char));
+
 	return exit_code;
 }
 
@@ -325,6 +354,17 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	}
 	return 0;
 }
+
+
+int addCharField(const char *key, char *value, uint32_t size, char *payload) {
+	// Add a field to the payload
+	const char *delim_key = DELIM_KEY;
+	const char *delim_val = DELIM_VAL;
+	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
+	strncat(payload, value, size*sizeof(char));
+	return 0;
+}
+
 
 
 int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
@@ -376,15 +416,26 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		case SG_DEVSTATUS_PEACOCKING:
 			memcpy(&sg_peacock, sg_serial->payload, sizeof(SansgridPeacock));
-			// TODO: get the field names written down
-			// ??
+			addHexField("id_a",		&sg_peacock.IO_A_id,1, payload);
+			addHexField("class_a",	&sg_peacock.IO_A_class,1, payload);
+			addHexField("dir_a",	&sg_peacock.IO_A_direc,1, payload);
+			addCharField("label_a", sg_peacock.IO_A_label, 30, payload);
+			addCharField("units_a", sg_peacock.IO_A_units, 6, payload);
+
+			addHexField("id_b",		&sg_peacock.IO_B_id,1, payload);
+			addHexField("class_b",	&sg_peacock.IO_B_class,1, payload);
+			addHexField("dir_b",	&sg_peacock.IO_B_direc,1, payload);
+			addCharField("label_b", sg_peacock.IO_B_label, 30, payload);
+			addCharField("units_b", sg_peacock.IO_B_units, 6, payload);
+
+			addHexField("more_io",	&sg_peacock.additional_IO_needed, 1, payload);
 			break;
 		case SG_DEVSTATUS_NESTING:
 			// Nothing here
 			break;
 		case SG_DEVSTATUS_SQUAWKING:
 			memcpy(&sg_squawk, sg_serial->payload, sizeof(SansgridSquawk));
-			addHexField("data", sg_mock.pubkey, 64, payload);
+			addHexField("data", sg_squawk.data, 64, payload);
 			break;
 		case SG_DEVSTATUS_HEARTBEAT:
 			// Nothing here
