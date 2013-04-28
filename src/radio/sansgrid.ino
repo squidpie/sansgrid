@@ -10,7 +10,7 @@
 #define DEBUG_LEVEL 1
 
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp);
-
+void readPacket();
 const int ledPin = 13;
 int length;
 
@@ -18,6 +18,9 @@ SansgridSerial SpiData;
 SnIpTable RouteTable;
 SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
 
+
+
+uint8_t packet_buffer[PACKET_SZ];
 
 void setup() {
 	#if DEBUG 
@@ -49,6 +52,7 @@ void setup() {
   	Radio.set_mode(ROUTER);
 	}
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
+	Serial.println("this is a test of the emergency broadcasting system");
 	Radio.test();
 }
 
@@ -58,8 +62,9 @@ void loop() {
   if (Serial.peek() >= 0) {
 		//Serial.println("Reading form XBee");
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
-    Serial.flush();
-    Radio.read();
+   // Serial.flush();
+    //readPacket();
+	  Radio.read();
 		write_spi();
   }
   if (digitalRead(SPI_IRQ_PIN) == LOW) {
@@ -68,6 +73,17 @@ void loop() {
     Radio.write();
   }
     
+}
+
+
+void readPacket() {
+	int i = 0;
+	while(Serial.available() > 0 && i < PACKET_SZ) {
+		delay(2);
+		packet_buffer[i++] = Serial.read();
+	}
+	Serial.write(packet_buffer, i);
+	//processPacket();
 }
 
 // handle diagnostic informations given by assertion and abort program execution:
