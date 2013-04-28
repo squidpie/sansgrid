@@ -16,7 +16,7 @@ int length;
 
 SansgridSerial SpiData;
 SnIpTable RouteTable;
-//SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
+SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
 
 
 
@@ -49,11 +49,11 @@ void setup() {
   digitalWrite(SPI_IRQ_PIN, HIGH);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
-  	//Radio.set_mode(ROUTER);
+  	Radio.set_mode(ROUTER);
 	}
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
 	Serial.println("this is a test of the emergency broadcasting system");
-	//Radio.test();
+	Radio.test();
 }
 
 
@@ -63,14 +63,14 @@ void loop() {
 		//Serial.println("Reading form XBee");
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
    // Serial.flush();
-    readPacket();
-	//Radio.read();
+    //readPacket();
+	  Radio.read();
 		write_spi();
   }
   if (digitalRead(SPI_IRQ_PIN) == LOW) {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Writing\n");
     read_spi();
-    //Radio.write();
+    Radio.write();
   }
     
 }

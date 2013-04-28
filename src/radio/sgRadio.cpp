@@ -92,18 +92,26 @@ SansgridRadio::~SansgridRadio(){
 }
 
 void SansgridRadio::test() {
-	char xbsn[64];
-	Radio->println("Sansgrid is Alive!");
-	atCmd(xbsn,"ATID");
-	Radio->println(xbsn);
+	uint8_t * xbsn = new uint8_t[16];
+	uint8_t * cmdOut = new uint8_t[8];
+	memset(xbsn,0,16);
+	memset(cmdOut,0,8);
+	Radio->println("\nSansgrid is Alive!\n");
+	atCmd(cmdOut,"ATSH");
+	memcpy((xbsn+2),cmdOut,8);
+	atCmd(cmdOut,"ATSL");
+	memcpy((xbsn+8),cmdOut,8);
+	Radio->write(xbsn,16);
+	while(Radio->available() > 0) { Radio->read(); }
+	delete xbsn;
 }
 
 void SansgridRadio::read() {
 	//Radio->println("Radio is reading");
-	int i = PACKET_SZ;
-  while(Radio->available() > 0 && i >= 0) {
+	int i = 0;
+  while(Radio->available() > 0 && i < PACKET_SZ) {
     delay(2);
-    packet_buffer[i--] = Radio->read();
+    packet_buffer[i++] = Radio->read();
   }
 	processPacket();
 }
@@ -117,33 +125,59 @@ void SansgridRadio::write() {
   Radio->write(packet_buffer,sizeof(packet_buffer));
 }
 
-void SansgridRadio::atCmd(char * result,const char * cmd) {
+void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 	int i = 0;
-	Radio->println("Entering Command Mode");
+	Radio->println("\nEntering Command Mode\n");
+	delay(100);
+	while (Radio->available() > 0) { Radio->read();}
+	while(Radio->available() == 0) {
+		if (i > 3) {
+			Radio->println("ATCN");
+			delay(1200);
+			Radio->println("\nCommand Failed on +++ timeout\n");
+			return;
+		}
+		for (int z = 0; z < 3; z++) {
+			Radio->print("+");
+			delay(50);
+		}
+		delay(3000);
+		i++;
+	}
+	Radio->println();
+	i = 0;
 	
-	Radio->print('+++');
-	while(Radio->available() == 0) {}
-	
-	while(Radio->available() > 0 && i < sizeof(result)) {
-		result[i++] = Radio->read();
+	while(Radio->available() > 0) {
+		Radio->read();
 	}
 	
-	if (strncmp(result, "OK", sizeof("OK"))) {
+	//Radio->println();
+
+//if (strncmp(result, "OK", sizeof("OK"))) {
 		Radio->println(cmd);
-		while(Radio->available() > 0 && i < sizeof(result)) {
-			result[i++] = Radio->read();
+
+		delay(1200);
+		uint8_t buffer[8];
+		i = 0;
+		while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
+//			memset((result+i),Radio->read(),1);
+		  buffer[i] = Radio->read();
+		//	Radio->write();
+			i++;
+			delay(2);
 		}	
-		char * tmp;
-		sprintf(tmp,"Command return value: %s",result);
-		
-		Radio->println('ATCN');
+		Radio->println();
+		delay(100);
+		Radio->println("ATCN");
+		delay(1000);
 	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
-	}
-	else {
-		Radio->println('ATCN');
-	}
+//	}
+//	else {
+	//	Radio->println("ATCN");
+	//}
 	
 	Radio->println("Exiting Command Mode");
+	memcpy(result,&buffer[0],8);
 }
 
 

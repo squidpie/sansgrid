@@ -84,7 +84,7 @@ class SansgridRadio {
 		uint8_t * packet;
 		int findSn(int sn);
 		void processPacket(void);
-		void atCmd(char *,const char *);
+		void atCmd(uint8_t *,const char *);
 		uint8_t * genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn);
 		SnIpTable * sn_table;
 		SerialDebug debug;
