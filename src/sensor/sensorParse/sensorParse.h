@@ -24,14 +24,19 @@
 #define __SENSOR_PARSE_H__
 
 #include <Arduino.h>
-#include <sgSerial.h> 
+#include <SPI.h>
+#include <sgSerial.h>
 #include <sensorPayloads.h>
+#include <sensorConnect.h>
+#include <spiMaster.h>
 
 // Payloads sent from Sensor to Router 
-int8_t parseFly( SansgridSerial *tx , SansgridEyeball *sg_fly );
-int8_t parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );
-int8_t parseSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ); 
-int8_t parseSing( SansgridSerial *rx , SansgridSing *sg_sing );
-int8_t parseNest( SansgridSerial *rx , SansgridNest *sg_nest );
+void parseFly( SansgridSerial *rx , SansgridEyeball *sg_fly );
+void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );
+void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk ); 
+void parseSing( SansgridSerial *rx , SansgridSing *sg_sing );
+void parseNest( SansgridSerial *rx , SansgridNest *sg_nest );
+void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat );
+void parseChirp( SansgridSerial *rx , SansgridHeartbeat *sg_chirp );
 
 #endif // __SENSOR_PARSE_H__

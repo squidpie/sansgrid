@@ -24,6 +24,7 @@
 #define __SENSOR_PAYLOADS_H__
 
 #include <Arduino.h>
+#include <sgSerial.h>
 
 #define DT 1
 #define MANID 4
@@ -45,6 +46,13 @@
 #define PAYLOAD 81
 #define IP_ADDRESS 16
 
+typedef struct SansgridSensor{
+	byte id[ SENSOR_ID ];
+	byte classification[ CLASSIFICATION ];
+	byte direction[ DIRECTION ];
+	char label[ LABEL + 1 ];
+	char units[ UNITS + 1 ];
+} SansgridSensor;
 
 typedef struct SensorConfig{
 	static byte manid[ MANID ];
@@ -54,8 +62,8 @@ typedef struct SensorConfig{
 	static byte router_ip[ IP_ADDRESS ];
 	static byte server_public_key[ SERVER_KEY ];
 	static byte sensor_public_key[ SENSOR_KEY ]; 
-	static SansgridSensor a;
-	static SansgridSensor b;
+	SansgridSensor a;
+	SansgridSensor b;
 } SensorConfig;
 
 typedef struct SansgridFly{
@@ -93,30 +101,6 @@ typedef struct SansgridMock{
 	static byte sensor_public_key[ SENSOR_KEY ];
 } SansgridMock;
 
-typedef struct SansgridSensor{
-	byte id[ SENSOR_ID ];
-	byte classification[ CLASSIFICATION ];
-	byte direction[ DIRECTION ];
-	char label[ LABEL + 1 ];
-	char units[ UNITS + 1 ];
-	SansgridSensor( byte *a , byte *b , byte *c, char *d, char *e ){
-		for( int i = 0 ; i < SENSOR_ID ; i++)
-			id[i] = a[i];
-        for( int i = 0 ; i < CLASSIFICATION ; i++)
-			classification[i] = b[i];
-	    for( int i = 0 ; i < DIRECTION ; i++)	
-            direction[i] = c[i];
-        for( int i = 0 ; i < sizeof d ; i++)
-            label[i] = d[i];
-		for( int i = sizeof d ; i < LABEL + 1 ; i++)
-			label[i] = '\n';
-        for( int i = 0 ; i < sizeof e ; i++)
-			units[i] = e[i];
-		for( int i = sizeof d ; i < UNITS + 1 ; i++)
-			units[i] = '\n';
-    }
-} SansgridSensor;
-
 typedef struct SansgridPeacock{
 	static byte dt[ DT ];
 	SansgridSensor a;
@@ -132,5 +116,15 @@ typedef struct SansgridSquawk{
 	byte dt[ DT ];
 	byte data[ DATA ];
 } SansgridSquawk;
+
+typedef struct SansgridHeartbeat{
+	byte dt[ DT ];
+	byte data[ DATA];
+} SansgridHeartbeat;
+
+typedef struct SansgridChirp{
+	byte dt[ DT ];
+	byte data[ DATA];
+} SansgridChirp;
 
 #endif // __SENSOR_PAYLOADS_H__

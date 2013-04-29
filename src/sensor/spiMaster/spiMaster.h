@@ -42,13 +42,13 @@
 void spiMasterInit( int ss , int sr );
 
 // Receive ASCII char to Master from Slave
-void spiMasterReceive( byte data_out , int * data_in , int size , int ss );
+void spiMasterReceive( byte data_out , char * data_in , int size , int ss );
 
 // Receive BYTE (uint8_t) to Master from Slave
 void spiMasterReceive( byte data_out , byte * data_in , int size , int ss );
 
 // Transmit ASCII character to Slave from Master
-void spiMasterTransmit( int * data_out , int size , int ss );
+void spiMasterTransmit( char * data_out , int size , int ss );
 
 // Transmit BYTE (uint8_t to Slave from Master
 void spiMasterTransmit( byte * data_out , int size , int ss );

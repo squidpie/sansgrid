@@ -19,9 +19,9 @@
  *
  *
  */
-
-#include <SPI.h>
+ 
 #include <Arduino.h>
+#include <SPI.h>
 #include "spiMaster.h"
 
 // Initialize SPI Master

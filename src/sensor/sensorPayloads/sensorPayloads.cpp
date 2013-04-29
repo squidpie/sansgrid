@@ -20,11 +20,8 @@
  *
  */
  
-#ifndef __SENSOR_PAYLOADS_H__
-#define __SENSOR_PAYLOADS_H__
-
 #include <Arduino.h>
-#include "sensorPayloads.cpp"
+#include "sensorPayloads.h"
 
 // Initialize SensorConfig static members
 byte SensorConfig::manid[ MANID ] = { 0x00, 0x00, 0x00, 0x01 };
@@ -68,13 +65,3 @@ byte SansgridMock::sensor_public_key[ SENSOR_KEY ] = { 0x09,0xC4,0x59,0xDC,
 byte SansgridPeacock::dt[ DT ] = { 0x0C };
 byte SansgridPeacock::additional[ ADDITIONAL ] = { 0x00 };
 
-typedef struct SansgridNest{
-	char dt[ DT ];
-} SansgridNest;
-
-typedef struct SansgridSquawk{
-	char dt[ DT ];
-	char data[ DATA ];
-} SansgridSquawk;
-
-#endif // __SENSOR_PAYLOADS_H__

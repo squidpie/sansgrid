@@ -21,9 +21,8 @@
  */
 
 #include <Arduino.h>
-#include <sgSerial.h>
 #include <sensorPayloads.h>
-#include <sensorParse.h>
+#include <spiMaster.h>
 #include "sensorConnect.h"
 
 
@@ -49,5 +48,9 @@ void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_peacock ){
 }
 
 void transmitChirp( SansgridSerial *tx , SansgridPeacock *sg_chirp ){
+	// TBD
+}
+
+void transmitHeartbeat( SansgridSerial *tx , SansgridPeacock *sg_heartbeat){
 	// TBD
 }

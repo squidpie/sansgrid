@@ -26,7 +26,6 @@
 #include <Arduino.h>
 #include <sgSerial.h>
 #include <sensorPayloads.h>
-#include <sensorParse.h>
 
 // Function connects sensor to network
 void sensorConnect( SansgridSerial *tx , SensorConfig *sg_config );
@@ -35,8 +34,8 @@ void sensorConnect( SansgridSerial *tx , SensorConfig *sg_config );
 void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball );
 void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock );
 void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
-void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_peacock );
-void transmitChirp( SansgridSerial *tx , SansgridPeacock *sg_chirp );
-
+void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk );
+void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat);
+void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp );
 
 #endif // __SENSOR_CONNECT_H__

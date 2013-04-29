@@ -20,33 +20,38 @@
  *
  */
 
-#ifndef __SENSOR_PARSE_H__
-#define __SENSOR_PARSE_H__
-
 #include <Arduino.h>
+#include <SPI.h>
 #include <sgSerial.h> 
 #include <sensorPayloads.h>
 #include <sensorConnect.h>
 #include "sensorParse.h"
 
 // Payloads recieved at Sensor from Router
-int8_t parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
+void parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
 	// TBD
 }
 
-int8_t parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck ){
+void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck ){
 	// TBD
 }
 
-int8_t parseSing( SansgridSerial *rx , SansgridSing *sg_sing ){
+void parseSing( SansgridSerial *rx , SansgridSing *sg_sing ){
 	// TBD
 }
 
-int8_t parseSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
+void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk ){
 	// TBD
 }
 
-int8_t parseNest( SansgridSerial *rx , SansgridNest *sg_nest ){
+void parseNest( SansgridSerial *rx , SansgridNest *sg_nest ){
 	// TBD
 }
-_
+
+void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat ){
+    // TBD
+}
+
+void parseChirp( SansgridSerial *rx , SansgridChirp *sg_chirp ){
+    // TBD
+}

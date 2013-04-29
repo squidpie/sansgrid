@@ -46,7 +46,7 @@ int sgSerialSetAsSensor(void){
 }
 
 // Send size bytes of serialdata serially
-int sgSerialSend(SansgridSerial *sg_serial, uint32_t size ){
+int sgSerialSend(SansgridSerial *sg_serial, int size ){
 	byte padding = 0x00;
 	spiMasterTransmit( sg_serial->control ,  CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
@@ -65,7 +65,7 @@ int sgSerialSend(SansgridSerial *sg_serial, uint32_t size ){
 }
 
 // Get data from serial in. Data size will be in size.
-int sgSerialReceive(SansgridSerial *sg_serial, uint32_t size){
+int sgSerialReceive(SansgridSerial *sg_serial, int size){
 	byte padding = 0x00;
 	SPI.transfer( SLAVE_SELECT , RECEIVE , SPI_LAST  );
 	spiMasterReceive( RECEIVE , sg_serial->control , CONTROL , SLAVE_SELECT );
