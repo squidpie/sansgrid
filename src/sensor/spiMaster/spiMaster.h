@@ -1,4 +1,4 @@
-/* Definitions for communication functions
+/* SPI Master interface
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -19,6 +19,7 @@
  *
  *
  */
+ 
 #ifndef __SPIMASTER_H__
 #define __SPIMASTER_H__
 
@@ -38,18 +39,24 @@
 #define DELAY 6				   	   // Delay
 
 // Initialize SPI Master
-void spiMasterInit( int8_t ss , int8_t sr );
+void spiMasterInit( int ss , int sr );
 
-// Receive data to Master from Slave
-int8_t spiMasterReceive( int8_t data_out , int8_t * data_in , int8_t size , int8_t ss );
+// Receive ASCII char to Master from Slave
+void spiMasterReceive( byte data_out , int * data_in , int size , int ss );
 
-// Transmit data to Slave from Master
-int8_t spiMasterTransmit( int8_t * data_out , int8_t size , int8_t ss );
+// Receive BYTE (uint8_t) to Master from Slave
+void spiMasterReceive( byte data_out , byte * data_in , int size , int ss );
+
+// Transmit ASCII character to Slave from Master
+void spiMasterTransmit( int * data_out , int size , int ss );
+
+// Transmit BYTE (uint8_t to Slave from Master
+void spiMasterTransmit( byte * data_out , int size , int ss );
 
 // Open SPI bus for Slave Select pin
-void spiMasterOpen( int8_t ss );
+void spiMasterOpen( int ss );
 
 // Close SPI bus for Slave Select pin
-void spiMasterClose( int8_t ss );
+void spiMasterClose( int ss );
 
 #endif // __SPIMASTER_H__

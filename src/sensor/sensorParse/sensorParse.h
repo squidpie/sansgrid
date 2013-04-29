@@ -1,4 +1,5 @@
-/* Sensor Payload Handler
+/* Sensor Parse Payload interface
+ * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -19,25 +20,18 @@
  *
  */
 
-#ifndef __SENSOR_PAYLOAD_HANDLER_H__
-#define __SENSOR_PAYLOAD_HANDLER_H__
+#ifndef __SENSOR_PARSE_H__
+#define __SENSOR_PARSE_H__
 
 #include <Arduino.h>
 #include <sgSerial.h> 
 #include <sensorPayloads.h>
 
-// Payload Handler
-int8_t payloadHandler( SansgridSerial *rx , SansgridSerial *tx , SensorConfig *sensor_config );
-
 // Payloads sent from Sensor to Router 
-int8_t eyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball );
-int8_t mock( SansgridSerial *tx , SansgridMock *sg_mock );
-int8_t peacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
-int8_t squawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ); 
+int8_t parseFly( SansgridSerial *tx , SansgridEyeball *sg_fly );
+int8_t parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );
+int8_t parseSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ); 
+int8_t parseSing( SansgridSerial *rx , SansgridSing *sg_sing );
+int8_t parseNest( SansgridSerial *rx , SansgridNest *sg_nest );
 
-// Payloads recieved at Sensor from Router
-int8_t peck( SansgridSerial *rx , SansgridPeck *sg_peck );
-int8_t sing( SansgridSerial *rx , SansgridSing *sg_sing );
-int8_t nest( SansgridSerial *rx , SansgridNest *sg_nest );
-
-#endif // __SENSOR_PAYLOAD_HANDLER_H__
+#endif // __SENSOR_PARSE_H__
