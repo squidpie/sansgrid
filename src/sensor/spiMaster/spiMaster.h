@@ -53,6 +53,9 @@ void spiMasterTransmit( char * data_out , int size , int ss );
 // Transmit BYTE (uint8_t to Slave from Master
 void spiMasterTransmit( byte * data_out , int size , int ss );
 
+// Transmit Padding
+void spiMasterPadding( byte data_out , int size , int ss );
+
 // Open SPI bus for Slave Select pin
 void spiMasterOpen( int ss );
 

@@ -45,6 +45,7 @@
 #define DATA 80
 #define PAYLOAD 81
 #define IP_ADDRESS 16
+#define CONTROL 1
 
 typedef struct SansgridSensor{
 	byte id[ SENSOR_ID ];
@@ -62,6 +63,7 @@ typedef struct SensorConfig{
 	static byte router_ip[ IP_ADDRESS ];
 	static byte server_public_key[ SERVER_KEY ];
 	static byte sensor_public_key[ SENSOR_KEY ]; 
+	static byte padding[ CONTROL ];
 	SansgridSensor a;
 	SansgridSensor b;
 } SensorConfig;

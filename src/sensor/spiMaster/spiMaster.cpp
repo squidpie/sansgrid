@@ -87,6 +87,17 @@ void spiMasterTransmit( byte * data_out , int size , int ss ){
 	}
 }
 
+// Transmit Padding as a BYTE
+void spiMasterPadding( byte data_out , int size , int ss ){
+	for( int i = size ; i < NUM_BYTES ; i++){
+		if( i == ( NUM_BYTES - 1 ) )
+		    SPI.transfer( ss , data_out , SPI_LAST );
+		else
+			SPI.transfer( ss , data_out , SPI_CONTINUE );
+		delayMicroseconds( DELAY );
+	}
+}
+
 // Open SPI bus for Slave Select pin, only used on UNO
 // Extended functionality of DUE does this automatically
 void spiMasterOpen( int ss ){
