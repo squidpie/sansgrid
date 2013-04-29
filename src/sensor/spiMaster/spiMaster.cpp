@@ -1,5 +1,5 @@
- /* Definitions for communication functions
- * Specific to the Arduino DUE Platform
+/* SPI Master implementation
+ * specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -19,13 +19,13 @@
  *
  *
  */
-
-#include <SPI.h>
+ 
 #include <Arduino.h>
+#include <SPI.h>
 #include "spiMaster.h"
 
 // Initialize SPI Master
-void spiMasterInit( int8_t ss , int8_t sr ){
+void spiMasterInit( int ss , int sr ){
 	// have to send on master in, *slave out*
     pinMode( sr , INPUT );
     // Initialize the SPI bus
@@ -39,10 +39,8 @@ void spiMasterInit( int8_t ss , int8_t sr ){
     SPI.setDataMode( ss , SPI_MODE0 );
 }
 
-// Receive data to Master from Slave
-int8_t spiMasterReceive( int8_t data_out , int8_t * data_in , int8_t size , int8_t ss ){
-    // Initiate receive with a single byte transfer
-	SPI.transfer( ss , data_out );
+// Receive ASCII char (int8_t) to Master from Slave
+void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
 	// Loop through untill all characters received
     for( int i = 0 ; i < size ; i++ ){
 	    if( i == ( size - 1 ) )
@@ -51,11 +49,22 @@ int8_t spiMasterReceive( int8_t data_out , int8_t * data_in , int8_t size , int8
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
     }
-	return 0;
 }
 
-// Transmit data to Slave from Master
-int8_t spiMasterTransmit( int8_t * data_out , int8_t size , int8_t ss ){
+// Receive BYTE (uint8_t) to Master from Slave
+void spiMasterReceive( byte data_out , byte * data_in , int size , int ss ){
+	// Loop through untill all characters received
+    for( int i = 0 ; i < size ; i++ ){
+	    if( i == ( size - 1 ) )
+		    data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
+		else
+			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
+		delayMicroseconds( DELAY );
+    }
+}
+
+// Transmit ASCII char (int8_t) to Slave from Master
+void spiMasterTransmit( char * data_out , int size , int ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
         if( i == ( size - 1 ) )
@@ -64,21 +73,43 @@ int8_t spiMasterTransmit( int8_t * data_out , int8_t size , int8_t ss ){
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
 	}
-	return 0;
 }
 
-// Open SPI bus for Slave Select pin
-void spiMasterOpen( int8_t ss ){
+// Transmit BYTE (uint8_t) to Slave from Master
+void spiMasterTransmit( byte * data_out , int size , int ss ){
+	// Loop through untill all characters transmitted
+	for( int i = 0; i < size ; i++){
+        if( i == ( size - 1 ) )
+		    SPI.transfer( ss , data_out[i] , SPI_LAST );
+		else
+			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
+		delayMicroseconds( DELAY );
+	}
+}
+
+// Transmit Padding as a BYTE
+void spiMasterPadding( byte data_out , int size , int ss ){
+	for( int i = size ; i < NUM_BYTES ; i++){
+		if( i == ( NUM_BYTES - 1 ) )
+		    SPI.transfer( ss , data_out , SPI_LAST );
+		else
+			SPI.transfer( ss , data_out , SPI_CONTINUE );
+		delayMicroseconds( DELAY );
+	}
+}
+
+// Open SPI bus for Slave Select pin, only used on UNO
+// Extended functionality of DUE does this automatically
+void spiMasterOpen( int ss ){
     // Open SPI bus ( not needed for Arduino DUE extended )
-	// uncomment for UNO
-    // digitalWrite( ss , LOW );
+	digitalWrite( ss , LOW );
 	delayMicroseconds( DELAY );
 }
 
-// Close SPI bus for Slave Select pin
-void spiMasterClose( int8_t ss ){
+// Close SPI bus for Slave Select pin , only used on UNO
+// Extended functionality of DUE does this automatically
+void spiMasterClose( int ss ){
     // Close SPI bus ( not needed for Arduino DUE extended )
-	// uncomment for UNO
-    // digitalWrite( ss , HIGH );
+	digitalWrite( ss , HIGH );
 	delayMicroseconds( DELAY );
 }

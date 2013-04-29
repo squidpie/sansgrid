@@ -1,4 +1,5 @@
-/* Sensor Payload Handler
+/* Sensor Parse Payload interface
+ * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -19,25 +20,23 @@
  *
  */
 
-#ifndef __SENSOR_PAYLOAD_HANDLER_H__
-#define __SENSOR_PAYLOAD_HANDLER_H__
+#ifndef __SENSOR_PARSE_H__
+#define __SENSOR_PARSE_H__
 
 #include <Arduino.h>
-#include <sgSerial.h> 
+#include <SPI.h>
+#include <sgSerial.h>
 #include <sensorPayloads.h>
-
-// Payload Handler
-int8_t payloadHandler( SansgridSerial *rx , SansgridSerial *tx , SensorConfig *sensor_config );
+#include <sensorConnect.h>
+#include <spiMaster.h>
 
 // Payloads sent from Sensor to Router 
-int8_t eyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball );
-int8_t mock( SansgridSerial *tx , SansgridMock *sg_mock );
-int8_t peacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
-int8_t squawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ); 
+void parseFly( SansgridSerial *rx , SansgridEyeball *sg_fly );
+void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );
+void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk ); 
+void parseSing( SansgridSerial *rx , SansgridSing *sg_sing );
+void parseNest( SansgridSerial *rx , SansgridNest *sg_nest );
+void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat );
+void parseChirp( SansgridSerial *rx , SansgridHeartbeat *sg_chirp );
 
-// Payloads recieved at Sensor from Router
-int8_t peck( SansgridSerial *rx , SansgridPeck *sg_peck );
-int8_t sing( SansgridSerial *rx , SansgridSing *sg_sing );
-int8_t nest( SansgridSerial *rx , SansgridNest *sg_nest );
-
-#endif // __SENSOR_PAYLOAD_HANDLER_H__
+#endif // __SENSOR_PARSE_H__
