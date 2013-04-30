@@ -41,7 +41,7 @@ void loop(){
     memcpy(PayloadOut.control, control_test , sizeof control_test );
     memcpy(PayloadOut.ip_addr, iptest , sizeof iptest );
     memcpy(PayloadOut.payload, payload_test , sizeof payload_test );
-    sgSerialSend( &PayloadIn , NUM_BYTES ); 
+    sgSerialSend( &PayloadOut , NUM_BYTES ); 
     delayMicroseconds(6);   
 }
 

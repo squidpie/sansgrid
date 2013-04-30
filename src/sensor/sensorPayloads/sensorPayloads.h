@@ -1,4 +1,5 @@
-/* Payload Handlers
+/* Sensor Payload Structs and Definitions
+ * specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -18,12 +19,12 @@
  *
  *
  */
+ 
 #ifndef __SENSOR_PAYLOADS_H__
 #define __SENSOR_PAYLOADS_H__
 
 #include <Arduino.h>
 #include <sgSerial.h>
-#include <sensorPayloadHandler.h>
 
 #define DT 1
 #define MANID 4
@@ -44,69 +45,89 @@
 #define DATA 80
 #define PAYLOAD 81
 #define IP_ADDRESS 16
+#define CONTROL 1
+
+typedef struct SansgridSensor{
+	byte id[ SENSOR_ID ];
+	byte classification[ CLASSIFICATION ];
+	byte direction[ DIRECTION ];
+	char label[ LABEL + 1 ];
+	char units[ UNITS + 1 ];
+} SansgridSensor;
 
 typedef struct SensorConfig{
-	int8_t manid[ MANID ];
-	int8_t modnum[ MODNUM ];
-	int8_t sn[ SN ];
-	int8_t ip_address[ IP_ADDRESS ];
-	int8_t router_ip[ IP_ADDRESS ];
-	int8_t server_public_key[ SERVER_KEY ];
-	int8_t sensor_public_key[ SENSOR_KEY ];
+	static byte dt[ DT ];
+	static byte manid[ MANID ];
+	static byte modnum[ MODNUM ];
+	static char sn[ SN + 1 ];
+	static byte ip_address[ IP_ADDRESS ];
+	static byte router_ip[ IP_ADDRESS ];
+	static byte server_public_key[ SERVER_KEY ];
+	static byte sensor_public_key[ SENSOR_KEY ]; 
+	static byte control[ CONTROL ];
+	static byte padding[ CONTROL ];
+	SansgridSensor a;
+	SansgridSensor b;
 } SensorConfig;
 
+typedef struct SansgridFly{
+	byte dt[ DT ];
+	char network_name[ DATA + 1 ];
+} SansgridFly;
+	
 typedef struct SansgridEyeball{
-    int8_t dt[ DT ];
-	int8_t manid[ MANID ];
-	int8_t modnum[ MODNUM ];
-	int8_t sn[ SN ];
-	int8_t profile[ PROFILE ];
-	int8_t mode[ MODE ];
+    static byte dt[ DT ];
+	static byte manid[ MANID ];
+	static byte modnum[ MODNUM ];
+	static char sn[ SN + 1 ];
+	static byte profile[ PROFILE ];
+	static byte mode[ MODE ];
 } SansgridEyeball;
 
 typedef struct SansgridPeck{
-    int8_t dt[ DT ];
-	int8_t router_ip[ IP_ADDRESS ];
-	int8_t ip_address[ IP_ADDRESS ];
-	int8_t server_id[ SERVER_ID ];
-	int8_t recognition[ RECOGNITION ];
-	int8_t manid[ MANID ];
-	int8_t modnum[ MODNUM ];
-	int8_t sn[ SN ];
+    byte dt[ DT ];
+	byte router_ip[ IP_ADDRESS ];
+	byte ip_address[ IP_ADDRESS ];
+	byte server_id[ SERVER_ID ];
+	byte recognition[ RECOGNITION ];
+	byte manid[ MANID ];
+	byte modnum[ MODNUM ];
+	char sn[ SN + 1 ];
 } SansgridPeck;
 
 typedef struct SansgridSing{
-	int8_t dt[ DT ];
-	int8_t server_public_key[ SERVER_KEY ];
+	byte dt[ DT ];
+	byte server_public_key[ SERVER_KEY ];
 } SansgridSing;
 
 typedef struct SansgridMock{
-	int8_t dt[ DT ];
-	int8_t sensor_public_key[ SENSOR_KEY ];
+	static byte dt[ DT ];
+	static byte sensor_public_key[ SENSOR_KEY ];
 } SansgridMock;
 
-typedef struct SansgridSensor{
-	int8_t id[ SENSOR_ID ];
-	int8_t classification[ CLASSIFICATION ];
-	int8_t direction[ DIRECTION ];
-	int8_t label[ LABEL ];
-	int8_t units[ UNITS ];
-} SansgridSensor;
-
 typedef struct SansgridPeacock{
-	int8_t dt[ DT ];
+	static byte dt[ DT ];
 	SansgridSensor a;
 	SansgridSensor b;
-	int8_t additional[ ADDITIONAL ];
+	static byte additional[ ADDITIONAL ];
 } SansgridPeacock;
 
 typedef struct SansgridNest{
-	int8_t dt[ DT ];
+	byte dt[ DT ];
 } SansgridNest;
 
 typedef struct SansgridSquawk{
-	int8_t dt[ DT ];
-	int8_t data[ DATA ];
+	byte dt[ DT ];
+	byte data[ DATA ];
 } SansgridSquawk;
+
+typedef struct SansgridHeartbeat{
+	static byte dt[ DT ];
+} SansgridHeartbeat;
+
+typedef struct SansgridChirp{
+	byte dt[ DT ];
+	byte data[ DATA];
+} SansgridChirp;
 
 #endif // __SENSOR_PAYLOADS_H__
