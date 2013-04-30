@@ -29,9 +29,9 @@ void sensorConnect( SansgridSerial *tx , SensorConfig *sg_config ){
 	// TBD
 }
 
-void transmitEyeball( SensorConfig *sg_config , SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
+void transmitEyeball( SensorConfig *sg_config , SansgridEyeball *sg_eyeball ){
 	int value = CONTROL + IP_ADDRESS + DT + MANID + MODNUM + SN + PROFILE + MODE;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_eyeball->dt , DT , SLAVE_SELECT );
 	spiMasterTransmit( sg_eyeball->manid , MANID , SLAVE_SELECT );
@@ -39,45 +39,65 @@ void transmitEyeball( SensorConfig *sg_config , SansgridSerial *tx , SansgridEye
 	spiMasterTransmit( sg_eyeball->sn , SN , SLAVE_SELECT );
 	spiMasterTransmit( sg_eyeball->profile , PROFILE , SLAVE_SELECT );
 	spiMasterTransmit( sg_eyeball->mode , MODE , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
-void transmitMock( SensorConfig *sg_config , SansgridSerial *tx , SansgridMock *sg_mock ){
+void transmitMock( SensorConfig *sg_config , SansgridMock *sg_mock ){
     int value = CONTROL + IP_ADDRESS + DT + SENSOR_KEY;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_mock->dt , DT , SLAVE_SELECT );
 	spiMasterTransmit( sg_mock->sensor_public_key , SENSOR_KEY , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
 
-void transmitPeacock( SensorConfig *sg_config , SansgridSerial *tx , SansgridPeacock *sg_peacock ){
-	int value = CONTROL + IP_ADDRESS + DT;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+void transmitPeacock( SensorConfig *sg_config , SansgridPeacock *sg_peacock ){
+	int value = CONTROL + IP_ADDRESS + DT + SENSOR_ID + CLASSIFICATION + DIRECTION + 
+		LABEL + UNITS + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL + UNITS + ADDITIONAL;
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_peacock->dt , DT , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	transmitSensor( &sg_peacock->a );
+	transmitSensor( &sg_peacock->b );
+	spiMasterTransmit( sg_peacock->additional , ADDITIONAL , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
 
-void transmitSquawk( SensorConfig *sg_config , SansgridSerial *tx , SansgridSquawk *sg_squawk ){
-	int value = CONTROL + IP_ADDRESS + DT;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+void transmitSquawk( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
+	int value = CONTROL + IP_ADDRESS + DT + DATA;
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip, IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_squawk->dt , DT , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	spiMasterTransmit( sg_squawk->data , DATA , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+	    spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
 
-void transmitChirp( SensorConfig *sg_config , SansgridSerial *tx , SansgridPeacock *sg_chirp ){
-	int value = CONTROL + IP_ADDRESS + DT;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+void transmitChirp( SensorConfig *sg_config , SansgridChirp *sg_chirp ){
+	int value = CONTROL + IP_ADDRESS + DT + DATA;
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_chirp->dt , DT , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	spiMasterTransmit( sg_chirp->data , DATA , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
 
-void transmitHeartbeat( SensorConfig *sg_config , SansgridSerial *tx , SansgridPeacock *sg_heartbeat){
+void transmitHeartbeat( SensorConfig *sg_config , SansgridHeartbeat *sg_heartbeat){
 	int value = CONTROL + IP_ADDRESS + DT;
-	spiMasterTransmit( tx->control , CONTROL , SLAVE_SELECT );
+	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_heartbeat->dt , DT , SLAVE_SELECT );
-	spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+	if( value < NUM_BYTES)
+		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
+}
+
+void transmitSensor( SansgridSensor *sg_sensor){
+	spiMasterTransmit( sg_sensor->id , SENSOR_ID , SLAVE_SELECT );
+	spiMasterTransmit( sg_sensor->classification , CLASSIFICATION , SLAVE_SELECT );
+	spiMasterTransmit( sg_sensor->direction , DIRECTION , SLAVE_SELECT );
+	spiMasterTransmit( sg_sensor->label , LABEL , SLAVE_SELECT );
+	spiMasterTransmit( sg_sensor->units , UNITS , SLAVE_SELECT );
 }
