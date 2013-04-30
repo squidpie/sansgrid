@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <SerialDebug.h>
-
+#include <SPI.h>
 #include <sgSerial.h>
 #include "sgRadio.h"
 
@@ -21,6 +21,15 @@ SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
 
 
 uint8_t packet_buffer[PACKET_SZ];
+
+// SPI Setup 
+#define SLAVE_READY 7
+#define NUM_BYTES 98
+
+char rx[NUM_BYTES + 1];
+volatile byte pos;
+volatile boolean process_flag;
+volatile boolean spi_active;
 
 void setup() {
 	#if DEBUG 
@@ -51,30 +60,52 @@ void setup() {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
   	Radio.set_mode(ROUTER);
 	}
+	pinMode(MISO, OUTPUT);
+	SPCR |= _BV(SPE);
+	pos = 0;
+	process_flag = false;
+	pinMode(SLAVE_READY, OUTPUT);
+	digitalWrite(SLAVE_READY, HIGH);
+	SPI.attachInterrupt();
+
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
-	Serial.println("this is a test of the emergency broadcasting system");
-	Radio.test();
+	//Serial.println("this is a test of the emergency broadcasting system");
+	//Radio.test();
 }
 
+ISR(SPI_STC_vect) {
+	byte c = SPDR;
+	if (pos < NUM_BYTES) {
+		rx[pos++] = c;
+		if (pos == NUM_BYTES - 1) process_flag = true;
+	}
+}
 
 void loop() {
-  // put your main code here, to run repeatedly: 
-  if (Serial.peek() >= 0) {
-		//Serial.println("Reading form XBee");
-    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
-   // Serial.flush();
-    //readPacket();
-	  Radio.read();
-		write_spi();
-  }
-  if (digitalRead(SPI_IRQ_PIN) == LOW) {
-    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"Writing\n");
-    read_spi();
-    Radio.write();
-  }
+	if (process_flag) {
+		memcpy(&SpiData, rx, pos);
+		rx[pos] = 0;
+		pos = 0;
+		process_flag = false;
+		spi_active = false;
+		digitalWrite(SLAVE_READY, HIGH);
+		Radio.write();
+	}
+	if (!spi_active) {
+// put your main code here, to run repeatedly: 
+		if (Serial.peek() >= 0) {
+			//Serial.println("Reading form XBee");
+			//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
+		 // Serial.flush();
+			//readPacket();
+			Radio.read();
+			spi_active = true;
+			digitalWrite(SLAVE_READY, LOW);
+		}
+	}
     
 }
-
+// assert slave interrupt pin 7 to initate SPI tansfer
 
 void readPacket() {
 	int i = 0;

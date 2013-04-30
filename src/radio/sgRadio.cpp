@@ -91,19 +91,25 @@ SansgridRadio::~SansgridRadio(){
 	Radio = NULL;
 }
 
-void SansgridRadio::test() {
-	uint8_t * xbsn = new uint8_t[16];
+void SansgridRadio::init() {
+	setXbsn();
+	return;
+}
+
+void SansgridRadio::setXbsn() {
+	uint8_t * xbsn_str = new uint8_t[16];
 	uint8_t * cmdOut = new uint8_t[8];
-	memset(xbsn,0,16);
+	memset(xbsn_str,0,16);
 	memset(cmdOut,0,8);
 	Radio->println("\nSansgrid is Alive!\n");
 	atCmd(cmdOut,"ATSH");
-	memcpy((xbsn+2),cmdOut,8);
+	memcpy((xbsn_str+2),cmdOut,8);
 	atCmd(cmdOut,"ATSL");
-	memcpy((xbsn+8),cmdOut,8);
-	Radio->write(xbsn,16);
+	memcpy((xbsn_str+8),cmdOut,8);
+	Radio->write(xbsn_str,16);
+	atox(&xbsn, (char *)xbsn_str, 8); 
 	while(Radio->available() > 0) { Radio->read(); }
-	delete xbsn;
+	delete xbsn_str;
 }
 
 void SansgridRadio::read() {
@@ -249,6 +255,42 @@ int btoi(byte * b,int ln) {
      s_i += 8;
   }
   return rv;
+}
+
+void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
+	// convert the full string of hex values into an array
+	uint32_t i_str, i_hex = 0;
+	int increment = 0;
+	char chunk[3];
+	uint32_t length;
+	uint32_t uval;
+
+	memset(hexarray,0,hexsize);
+	if (str == NULL)
+		return;
+	length = strlen(str);
+	//offset = hexsize - ((length+1)/2);
+
+	for (i_str=0; i_str<length;) {
+		if (((length ^ i_str) & 0x1) == 0x1) {
+			// make sure we catch case of 0x123
+			// where we should parse as 0x1  0x23
+			chunk[0] = str[i_str];
+			chunk[1] = '\0';
+			//sscanf(&str[i], "%1s", chunk);
+			increment = 1;
+		} else {
+			chunk[0] = str[i_str];
+			chunk[1] = str[i_str+1];
+			chunk[2] = '\0';
+			//sscanf(&str[i], "%2s", chunk);
+			increment = 2;
+		}
+		sscanf(chunk, "%x", &uval);
+		hexarray[i_hex++] = (uval & 0xff);
+		i_str+=increment;
+	}
+	return;
 }
 
 // Stubs

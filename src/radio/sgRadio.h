@@ -50,6 +50,8 @@ static SerialDebug * debugger;
 void sgDebugInit(SerialDebug * db);
 int btoi(byte * b,int ln);
 
+void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
+
 void write_spi();
 void read_spi();
 
@@ -82,6 +84,8 @@ class SansgridRadio {
 		RadioMode router_mode;
 		uint8_t packet_buffer[PACKET_SZ];
 		uint8_t * packet;
+		uint8_t xbsn[8];
+		void setXBsn(void);
 		int findSn(int sn);
 		void processPacket(void);
 		void atCmd(uint8_t *,const char *);
@@ -89,13 +93,14 @@ class SansgridRadio {
 		SnIpTable * sn_table;
 		SerialDebug debug;
 		HardwareSerial * Radio;
+		uint8_t xbsn[8];
 	public:
 		SansgridRadio(HardwareSerial *,SansgridSerial *, SnIpTable *);
 		~SansgridRadio();
 		void read();
 		void write();
 		void set_mode(RadioMode mode);
-		void test();
+		void init();
 };
 
 
