@@ -56,6 +56,7 @@ typedef struct SansgridSensor{
 } SansgridSensor;
 
 typedef struct SensorConfig{
+	static byte dt[ DT ];
 	static byte manid[ MANID ];
 	static byte modnum[ MODNUM ];
 	static char sn[ SN + 1 ];
@@ -63,6 +64,7 @@ typedef struct SensorConfig{
 	static byte router_ip[ IP_ADDRESS ];
 	static byte server_public_key[ SERVER_KEY ];
 	static byte sensor_public_key[ SENSOR_KEY ]; 
+	static byte control[ CONTROL ];
 	static byte padding[ CONTROL ];
 	SansgridSensor a;
 	SansgridSensor b;
@@ -120,8 +122,7 @@ typedef struct SansgridSquawk{
 } SansgridSquawk;
 
 typedef struct SansgridHeartbeat{
-	byte dt[ DT ];
-	byte data[ DATA];
+	static byte dt[ DT ];
 } SansgridHeartbeat;
 
 typedef struct SansgridChirp{

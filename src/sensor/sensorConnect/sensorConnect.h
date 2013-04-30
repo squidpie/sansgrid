@@ -31,11 +31,12 @@
 void sensorConnect( SansgridSerial *tx , SensorConfig *sg_config );
 
 // Functions prepare payloads and transmits payload across network
-void transmitEyeball( SensorConfig *sg_config , SansgridSerial *tx , SansgridEyeball *sg_eyeball );
-void transmitMock( SensorConfig *sg_config , SansgridSerial *tx , SansgridMock *sg_mock );
-void transmitPeacock( SensorConfig *sg_config , SansgridSerial *tx , SansgridPeacock *sg_peacock );
-void transmitSquawk( SensorConfig *sg_config , SansgridSerial *tx , SansgridSquawk *sg_squawk );
-void transmitHeartbeat( SensorConfig *sg_config , SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat);
-void transmitChirp( SensorConfig *sg_config , SansgridSerial *tx , SansgridChirp *sg_chirp );
+void transmitEyeball( SensorConfig *sg_config , SansgridEyeball *sg_eyeball );
+void transmitMock( SensorConfig *sg_config , SansgridMock *sg_mock );
+void transmitPeacock( SensorConfig *sg_config , SansgridPeacock *sg_peacock );
+void transmitSquawk( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
+void transmitHeartbeat( SensorConfig *sg_config , SansgridHeartbeat *sg_heartbeat);
+void transmitChirp( SensorConfig *sg_config , SansgridChirp *sg_chirp );
+void transmitSensor( SansgridSensor *sg_sensor );
 
 #endif // __SENSOR_CONNECT_H__
