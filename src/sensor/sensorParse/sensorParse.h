@@ -30,7 +30,7 @@
 #include <sensorConnect.h>
 #include <spiMaster.h>
 
-// Payloads sent from Sensor to Router 
+// Payloads sent to Sensor from Router 
 void parseFly( SansgridSerial *rx , SansgridEyeball *sg_fly );
 void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );
 void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk ); 

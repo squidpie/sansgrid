@@ -43,8 +43,8 @@ void spiMasterInit( int ss , int sr ){
 void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
 	// Loop through untill all characters received
     for( int i = 0 ; i < size ; i++ ){
-	    if( i == ( size - 1 ) )
-		    data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
+		if( i == ( size - 1 ) )
+			data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
 		else
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
@@ -54,21 +54,21 @@ void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
 // Receive BYTE (uint8_t) to Master from Slave
 void spiMasterReceive( byte data_out , byte * data_in , int size , int ss ){
 	// Loop through untill all characters received
-    for( int i = 0 ; i < size ; i++ ){
-	    if( i == ( size - 1 ) )
-		    data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
+	for( int i = 0 ; i < size ; i++ ){
+		if( i == ( size - 1 ) )
+			data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
 		else
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
-    }
+	}
 }
 
 // Transmit ASCII char (int8_t) to Slave from Master
 void spiMasterTransmit( char * data_out , int size , int ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
-        if( i == ( size - 1 ) )
-		    SPI.transfer( ss , data_out[i] , SPI_LAST );
+		if( i == ( size - 1 ) )
+			SPI.transfer( ss , data_out[i] , SPI_LAST );
 		else
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
@@ -79,8 +79,8 @@ void spiMasterTransmit( char * data_out , int size , int ss ){
 void spiMasterTransmit( byte * data_out , int size , int ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
-        if( i == ( size - 1 ) )
-		    SPI.transfer( ss , data_out[i] , SPI_LAST );
+		if( i == ( size - 1 ) )
+			SPI.transfer( ss , data_out[i] , SPI_LAST );
 		else
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
@@ -91,7 +91,7 @@ void spiMasterTransmit( byte * data_out , int size , int ss ){
 void spiMasterPadding( byte data_out , int size , int ss ){
 	for( int i = size ; i < NUM_BYTES ; i++){
 		if( i == ( NUM_BYTES - 1 ) )
-		    SPI.transfer( ss , data_out , SPI_LAST );
+			SPI.transfer( ss , data_out , SPI_LAST );
 		else
 			SPI.transfer( ss , data_out , SPI_CONTINUE );
 		delayMicroseconds( DELAY );
@@ -101,7 +101,7 @@ void spiMasterPadding( byte data_out , int size , int ss ){
 // Open SPI bus for Slave Select pin, only used on UNO
 // Extended functionality of DUE does this automatically
 void spiMasterOpen( int ss ){
-    // Open SPI bus ( not needed for Arduino DUE extended )
+	// Open SPI bus ( not needed for Arduino DUE extended )
 	digitalWrite( ss , LOW );
 	delayMicroseconds( DELAY );
 }
@@ -109,7 +109,7 @@ void spiMasterOpen( int ss ){
 // Close SPI bus for Slave Select pin , only used on UNO
 // Extended functionality of DUE does this automatically
 void spiMasterClose( int ss ){
-    // Close SPI bus ( not needed for Arduino DUE extended )
+	// Close SPI bus ( not needed for Arduino DUE extended )
 	digitalWrite( ss , HIGH );
 	delayMicroseconds( DELAY );
 }

@@ -50,7 +50,7 @@ void spiMasterReceive( byte data_out , byte * data_in , int size , int ss );
 // Transmit ASCII character to Slave from Master
 void spiMasterTransmit( char * data_out , int size , int ss );
 
-// Transmit BYTE (uint8_t to Slave from Master
+// Transmit BYTE (uint8_t) to Slave from Master
 void spiMasterTransmit( byte * data_out , int size , int ss );
 
 // Transmit Padding
