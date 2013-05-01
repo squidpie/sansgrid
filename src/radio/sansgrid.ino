@@ -26,7 +26,7 @@ uint8_t packet_buffer[PACKET_SZ];
 #define SLAVE_READY 7
 #define NUM_BYTES 98
 
-char rx[NUM_BYTES + 1];
+char rx[sizeof(SpiData)]//NUM_BYTES + 1];
 volatile byte pos;
 volatile boolean process_flag;
 volatile boolean spi_active;
@@ -88,7 +88,11 @@ void loop() {
 		pos = 0;
 		process_flag = false;
 		spi_active = false;
+		Radio.processSpi();
 		digitalWrite(SLAVE_READY, HIGH);
+		Radio.loadFrame(0);
+		Radio.write();
+		Radio.loadFrame(1);
 		Radio.write();
 	}
 	if (!spi_active) {
@@ -99,8 +103,12 @@ void loop() {
 		 // Serial.flush();
 			//readPacket();
 			Radio.read();
-			spi_active = true;
-			digitalWrite(SLAVE_READY, LOW);
+			Radio.processPacket();
+			if(Radio.rxComplete()) {
+				memcpy(rx,&SpiData,sizeof(SpiData)); 
+				spi_active = true;
+				digitalWrite(SLAVE_READY, LOW);
+			}
 		}
 	}
     

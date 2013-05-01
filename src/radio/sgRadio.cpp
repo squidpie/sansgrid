@@ -1,5 +1,6 @@
 #include "sgRadio.h"
 
+
 /******************
 * SnIpTable Class *
 ******************/
@@ -82,17 +83,63 @@ void SnIpTable::snIpInsert(uint8_t * data, int index, SnTableIndex type) {
 SansgridRadio::SansgridRadio(HardwareSerial * xbee_link, SansgridSerial * serial_link, SnIpTable * table_link){
 	Radio = xbee_link;
 	sn_table = table_link;
-	packet = serial_link->payload;
+	payload = serial_link->payload;
+	ip = serial_link->ip_addr;
 }
 
 SansgridRadio::~SansgridRadio(){
 	sn_table = NULL;
-	packet = NULL;
+	payload = NULL;
+	ip = NULL;
 	Radio = NULL;
+}
+
+void processSpi() {
+	uint8_t type = payload[0];
+	switch (payload[0]) {
+		case EYEBALL:
+			
+		case SG_FLY:
+		case PECK:
+			// set broadcast flag
+			break;
+		case SG_HATCH: 
+			// router ip received
+			break;
+		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
+		case SG_CHIRP_SENSOR_DISCONNET
+			// clean up and prepare to leave network
+			break;
+		default:
+			break;
+	}
+	memcpy((packet_out_f0+9),payload,50);
+	memcpy((packet_out_f1+9),(payload+50),31);
+}
+
+void SansgridRadio::loadFrame(int frame) {
+	uint8_t * p = NULL;
+	switch (frame) {
+		case 0:
+			p = packet_out_f0;
+			break;
+		case 1:
+			p = packet_out_f1;
+			break;
+		}
+	
+	if (p != NULL) {
+		memcpy(packet_buffer,p,sizeof(packet_buffer));
+	}
+
 }
 
 void SansgridRadio::init() {
 	setXbsn();
+	memcpy(packet_out_f0,&xbsn,XB_SN_LN);
+	memcpy(packet_out_f1,&xbsn,XB_SN_LN);
+	packet_out_f1[XB_SN_LN] = 0x0;
+	packet_out_f2[XB_SN_LN] = 0x1;
 	return;
 }
 
@@ -115,11 +162,11 @@ void SansgridRadio::setXbsn() {
 void SansgridRadio::read() {
 	//Radio->println("Radio is reading");
 	int i = 0;
-  while(Radio->available() > 0 && i < PACKET_SZ) {
+  while(Radio->available() > 0 && i < MAX_XB_PYLD) {
     delay(2);
     packet_buffer[i++] = Radio->read();
   }
-	processPacket();
+	//processPacket();
 }
 
 void SansgridRadio::set_mode(RadioMode mode) {
@@ -167,8 +214,8 @@ void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 		i = 0;
 		while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
 //			memset((result+i),Radio->read(),1);
-		  buffer[i] = Radio->read();
-		//	Radio->write();
+		  buffer[i] = Radio->read
+		//	Radio->write
 			i++;
 			delay(2);
 		}	
