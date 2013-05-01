@@ -2,7 +2,7 @@
 #define _H_SANSGRID_RADIO
 
 #include <Arduino.h>
-#include <SerialDebug.h>
+//#include <SerialDebug.h>
 #include <sgSerial.h>
 #include <payloads.h>
 
@@ -46,8 +46,8 @@ enum SnTableIndex {
 	SN,
 };
 
-static SerialDebug * debugger;
-void sgDebugInit(SerialDebug * db);
+//static SerialDebug * debugger;
+//void sgDebugInit(SerialDebug * db);
 int btoi(byte * b,int ln);
 
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
@@ -95,7 +95,7 @@ class SansgridRadio {
 		void atCmd(uint8_t *,const char *);
 		uint8_t * genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn);
 		SnIpTable * sn_table;
-		SerialDebug debug;
+		//SerialDebug debug;
 		HardwareSerial * Radio;
 	public:
 		SansgridRadio(HardwareSerial *,SansgridSerial *, SnIpTable *);

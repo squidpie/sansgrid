@@ -26,7 +26,7 @@ uint8_t packet_buffer[PACKET_SZ];
 #define SLAVE_READY 7
 #define NUM_BYTES 98
 
-char rx[sizeof(SpiData)]//NUM_BYTES + 1];
+char rx[sizeof(SpiData)]; //NUM_BYTES + 1];
 volatile byte pos;
 volatile boolean process_flag;
 volatile boolean spi_active;

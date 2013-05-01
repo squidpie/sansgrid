@@ -94,20 +94,21 @@ SansgridRadio::~SansgridRadio(){
 	Radio = NULL;
 }
 
-void processSpi() {
-	uint8_t type = payload[0];
-	switch (payload[0]) {
-		case EYEBALL:
+void SansgridRadio::processSpi() {
+	SansgridDataTypeEnum type;
+	memcpy(&type,payload,1);
+	switch (type) {
+		case SG_EYEBALL:
 			
 		case SG_FLY:
-		case PECK:
+		case SG_PECK:
 			// set broadcast flag
 			break;
 		case SG_HATCH: 
 			// router ip received
 			break;
-		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
-		case SG_CHIRP_SENSOR_DISCONNET
+		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+		case SG_CHIRP_SENSOR_DISCONNECT:
 			// clean up and prepare to leave network
 			break;
 		default:
@@ -135,15 +136,19 @@ void SansgridRadio::loadFrame(int frame) {
 }
 
 void SansgridRadio::init() {
-	setXbsn();
+	setXBsn();
 	memcpy(packet_out_f0,&xbsn,XB_SN_LN);
 	memcpy(packet_out_f1,&xbsn,XB_SN_LN);
-	packet_out_f1[XB_SN_LN] = 0x0;
-	packet_out_f2[XB_SN_LN] = 0x1;
+	packet_out_f0[XB_SN_LN] = 0x0;
+	packet_out_f1[XB_SN_LN] = 0x1;
 	return;
 }
 
-void SansgridRadio::setXbsn() {
+bool SansgridRadio::rxComplete() {
+	return true;
+}
+
+void SansgridRadio::setXBsn() {
 	uint8_t * xbsn_str = new uint8_t[16];
 	uint8_t * cmdOut = new uint8_t[8];
 	memset(xbsn_str,0,16);
@@ -154,7 +159,7 @@ void SansgridRadio::setXbsn() {
 	atCmd(cmdOut,"ATSL");
 	memcpy((xbsn_str+8),cmdOut,8);
 	Radio->write(xbsn_str,16);
-	atox(&xbsn, (char *)xbsn_str, 8); 
+	atox(xbsn, (char *)xbsn_str, 8); 
 	while(Radio->available() > 0) { Radio->read(); }
 	delete xbsn_str;
 }
@@ -214,7 +219,7 @@ void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 		i = 0;
 		while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
 //			memset((result+i),Radio->read(),1);
-		  buffer[i] = Radio->read
+		  buffer[i] = Radio->read();
 		//	Radio->write
 			i++;
 			delay(2);
@@ -237,9 +242,9 @@ void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 uint8_t * SansgridRadio::genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn) {
 	uint8_t * key;
 	key = new uint8_t[SNIPBYTEWIDTH];
-	for (int i = 0; i < SNIPBYTEWIDTH/2; i++) {
+	for (int i = 0; i < SNIPBYTEWIDTH/2; i+=2) {
 		key[i] = man_id[i];
-		key[++i] = mod_id[i];
+		key[i+1] = mod_id[i];
 	}
 	for (int i = 0; i < SNIPBYTEWIDTH; i++) {
 		key[i] ^= dev_sn[i];
@@ -287,13 +292,13 @@ void SansgridRadio::processPacket() {
 /**************************
 * Global Helper Functions * 
 **************************/
-
+/*
 void sgDebugInit(SerialDebug * db) {
 		//debugger = db;
 		//debugger->debug(NOTIFICATION,__FUNC__,"Serial Debugger for Radio Setup");
 		delay(50);
 }
-
+*/
 int btoi(byte * b,int ln) {
   int rv = 0; 
   int s_i = 0;
