@@ -42,11 +42,7 @@ void spiMasterInit( int ss , int sr ){
 // Receive ASCII char (int8_t) to Master from Slave
 void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
 	// Loop through untill all characters received
-<<<<<<< HEAD
 	for( int i = 0 ; i < size ; i++ ){
-=======
-    for( int i = 0 ; i < size ; i++ ){
->>>>>>> 2e49a65002defe8e4d1d285708fef03681dc9901
 		if( i == ( size - 1 ) )
 			data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
 		else
