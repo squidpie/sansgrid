@@ -43,7 +43,7 @@ void transmitEyeball( SensorConfig *sg_config , SansgridEyeball *sg_eyeball ){
 		spiMasterPadding( *sg_config->padding , value , SLAVE_SELECT );
 }
 void transmitMock( SensorConfig *sg_config , SansgridMock *sg_mock ){
-    int value = CONTROL + IP_ADDRESS + DT + SENSOR_KEY;
+	int value = CONTROL + IP_ADDRESS + DT + SENSOR_KEY;
 	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
 	spiMasterTransmit( sg_config->router_ip , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterTransmit( sg_mock->dt , DT , SLAVE_SELECT );
