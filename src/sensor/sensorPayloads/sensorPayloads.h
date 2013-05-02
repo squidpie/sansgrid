@@ -56,10 +56,11 @@ typedef struct SansgridSensor{
 } SansgridSensor;
 
 typedef struct SensorConfig{
-	static byte dt[ DT ];
+	static bool connected;
 	static byte manid[ MANID ];
 	static byte modnum[ MODNUM ];
 	static char sn[ SN + 1 ];
+	static char network_name[ DATA + 1 ];
 	static byte ip_address[ IP_ADDRESS ];
 	static byte router_ip[ IP_ADDRESS ];
 	static byte server_public_key[ SERVER_KEY ];

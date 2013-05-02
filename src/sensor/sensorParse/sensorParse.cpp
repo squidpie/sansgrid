@@ -21,10 +21,6 @@
  */
 
 #include <Arduino.h>
-#include <SPI.h>
-#include <sgSerial.h> 
-#include <sensorPayloads.h>
-#include <sensorConnect.h>
 #include "sensorParse.h"
 
 // Payloads recieved at Sensor from Router

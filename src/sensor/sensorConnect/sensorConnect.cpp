@@ -21,8 +21,6 @@
  */
 
 #include <Arduino.h>
-#include <sensorPayloads.h>
-#include <spiMaster.h>
 #include "sensorConnect.h"
 
 void sensorConnect( SansgridSerial *tx , SensorConfig *sg_config ){
