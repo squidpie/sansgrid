@@ -362,6 +362,24 @@ int sgSocketSend(const char *data, const int size) {
 }
 
 
+int sgStorePID(pid_t pid) {
+	FILE *PIDFILE;
+	char config_path[150];
+	char pidpath[150];
+	getSansgridDir(config_path);
+	snprintf(pidpath, 150, "%s/sansgridrouter.pid", config_path);
+	if ((PIDFILE = fopen(pidpath, "w")) == NULL) {
+		perror("fopen");
+		return -1;
+	}
+	printf("Running as process %i\n", pid);
+	fprintf(PIDFILE, "%i\n", pid);
+	fclose(PIDFILE);
+
+	return 0;
+}
+
+
 
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
@@ -465,6 +483,12 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	if (isRunning()) {
+		printf("sansgridrouter already running\n");
+		return EXIT_FAILURE;
+	}
+
 	
 
 	// Should we run in the foreground, or the background?
@@ -473,6 +497,8 @@ int main(int argc, char *argv[]) {
 		int excode = daemon_init();
 		if (excode == EXIT_FAILURE)
 			exit(EXIT_FAILURE);
+	} else {
+		sgStorePID(getpid());
 	}
 
 	atexit(fnExit);
