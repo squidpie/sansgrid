@@ -41,35 +41,47 @@
 
 // EEPROM-specific defines
 #define SPI_SPEED_KHZ	500
-#define WRITE_CYCLE		1
+//#define WRITE_CYCLE_M	1
+#define WRITE_CYCLE_U	1
 #define WRITE_MAX_BYTES 1
 
+static sem_t wait_on_slave;
+static int sem_initd = 0;
+
+int spiSetup(void) {
+	int fd;
+	// Set up SPI
+	if ((fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_MHZ))) < 0) {
+		syslog(LOG_ERR, "SPI Setup failed: %s\n", strerror (errno));
+		return -1;
+	} else {
+		return fd;
+	}
+}
 
 
-int spiTransfer(char *buffer, int size)
-{
+int spiTransfer(char *buffer, int size) {
 	int i;
 	int fd;
-	// only 32 bytes can be written at a time; see below
+	// only a certain amount of byte can be written at a time. see below
 	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
-	// prepend the command and address to the data
-	//char newbuffer[bounded_size];
-
-
 
 	wiringPiSPIDataRW(0, buffer, bounded_size);
 	// Wait for the write to cycle
-	usleep(WRITE_CYCLE);
+	usleep(WRITE_CYCLE_U);
 	if (size > WRITE_MAX_BYTES) {
-		// Only one page (of 32 bytes) can be written
-		// at a time. If more than 32 bytes are being written,
-		// break the line into multiple pages
+		// Only a certain amount of bytes can be writeen at a time
+		// If we go over that limit, break the write up into multiple
+		// chunks
 		spiTransfer(&buffer[WRITE_MAX_BYTES], size-WRITE_MAX_BYTES);
 	}
 
 	return 0;
 }
 
+int8_t sgSerialOpen(void) {
+	return 0;
+}
 
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
@@ -77,9 +89,9 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	int fd;
 	char buffer[size+1];
 
-	// Set up SPI
-	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
-		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
+	if ((fd = spiSetup()) == -1) {
+		return -1;
+	}
 
 	memcpy(buffer, sg_serial, size);
 	spiTransfer(buffer, size);
@@ -95,7 +107,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
 	char buffer[sizeof(SansgridSerial)+1];
-	sem_t wait_on_slave;
 	if (wiringPiSPISetup() < 0) {
 		syslog(LOG_ERR, "Couldn't setup wiringPi for listening!");
 		return -1;
@@ -104,14 +115,22 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
 		return -1;
 	}
-	sem_init(&wait_on_slave, 0, 0);
+	if (!sem_init) {
+		sem_init(&wait_on_slave, 0, 0);
+		sem_init = 1;
+	}
 	memset(buffer, 0x0, sizeof(buffer));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 
 	// receive data
 	sem_wait(&wait_on_slave);
+
 	// Slave wants to send data
+	if ((fd = spiSetup()) == -1) {
+		return -1;
+	}
 	spiTransfer(buffer, sizeof(SansgridSerial));
+	close(fd);
 
 	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
