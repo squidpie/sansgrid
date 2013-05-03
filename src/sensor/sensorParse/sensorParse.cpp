@@ -21,10 +21,6 @@
  */
 
 #include <Arduino.h>
-#include <SPI.h>
-#include <sgSerial.h> 
-#include <sensorPayloads.h>
-#include <sensorConnect.h>
 #include "sensorParse.h"
 
 // Payloads recieved at Sensor from Router
@@ -59,10 +55,10 @@ void parseNest( SansgridSerial *rx , SansgridNest *sg_nest ){
 }
 
 void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat ){
-    memcpy( sg_heartbeat->dt , rx->payload , DT );
+	memcpy( sg_heartbeat->dt , rx->payload , DT );
 }
 
 void parseChirp( SansgridSerial *rx , SansgridChirp *sg_chirp ){
-    memcpy( sg_chirp->dt , rx->payload , DT );
+	memcpy( sg_chirp->dt , rx->payload , DT );
 	memcpy( sg_chirp->data , rx->payload + DT , DATA );
 }

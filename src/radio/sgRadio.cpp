@@ -1,5 +1,6 @@
 #include "sgRadio.h"
 
+
 /******************
 * SnIpTable Class *
 ******************/
@@ -82,30 +83,95 @@ void SnIpTable::snIpInsert(uint8_t * data, int index, SnTableIndex type) {
 SansgridRadio::SansgridRadio(HardwareSerial * xbee_link, SansgridSerial * serial_link, SnIpTable * table_link){
 	Radio = xbee_link;
 	sn_table = table_link;
-	packet = serial_link->payload;
+	payload = serial_link->payload;
+	ip = serial_link->ip_addr;
 }
 
 SansgridRadio::~SansgridRadio(){
 	sn_table = NULL;
-	packet = NULL;
+	payload = NULL;
+	ip = NULL;
 	Radio = NULL;
 }
 
-void SansgridRadio::test() {
-	char xbsn[64];
-	Radio->println("Sansgrid is Alive!");
-	atCmd(xbsn,"ATID");
-	Radio->println(xbsn);
+void SansgridRadio::processSpi() {
+	SansgridDataTypeEnum type;
+	memcpy(&type,payload,1);
+	switch (type) {
+		case SG_EYEBALL:
+			
+		case SG_FLY:
+		case SG_PECK:
+			// set broadcast flag
+			break;
+		case SG_HATCH: 
+			// router ip received
+			break;
+		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+		case SG_CHIRP_SENSOR_DISCONNECT:
+			// clean up and prepare to leave network
+			break;
+		default:
+			break;
+	}
+	memcpy((packet_out_f0+9),payload,50);
+	memcpy((packet_out_f1+9),(payload+50),31);
+}
+
+void SansgridRadio::loadFrame(int frame) {
+	uint8_t * p = NULL;
+	switch (frame) {
+		case 0:
+			p = packet_out_f0;
+			break;
+		case 1:
+			p = packet_out_f1;
+			break;
+		}
+	
+	if (p != NULL) {
+		memcpy(packet_buffer,p,sizeof(packet_buffer));
+	}
+
+}
+
+void SansgridRadio::init() {
+	setXBsn();
+	memcpy(packet_out_f0,&xbsn,XB_SN_LN);
+	memcpy(packet_out_f1,&xbsn,XB_SN_LN);
+	packet_out_f0[XB_SN_LN] = 0x0;
+	packet_out_f1[XB_SN_LN] = 0x1;
+	return;
+}
+
+bool SansgridRadio::rxComplete() {
+	return true;
+}
+
+void SansgridRadio::setXBsn() {
+	uint8_t * xbsn_str = new uint8_t[16];
+	uint8_t * cmdOut = new uint8_t[8];
+	memset(xbsn_str,0,16);
+	memset(cmdOut,0,8);
+	Radio->println("\nSansgrid is Alive!\n");
+	atCmd(cmdOut,"ATSH");
+	memcpy((xbsn_str+2),cmdOut,8);
+	atCmd(cmdOut,"ATSL");
+	memcpy((xbsn_str+8),cmdOut,8);
+	Radio->write(xbsn_str,16);
+	atox(xbsn, (char *)xbsn_str, 8); 
+	while(Radio->available() > 0) { Radio->read(); }
+	delete xbsn_str;
 }
 
 void SansgridRadio::read() {
 	//Radio->println("Radio is reading");
-	int i = PACKET_SZ;
-  while(Radio->available() > 0 && i >= 0) {
+	int i = 0;
+  while(Radio->available() > 0 && i < MAX_XB_PYLD) {
     delay(2);
-    packet_buffer[i--] = Radio->read();
+    packet_buffer[i++] = Radio->read();
   }
-	processPacket();
+	//processPacket();
 }
 
 void SansgridRadio::set_mode(RadioMode mode) {
@@ -117,39 +183,68 @@ void SansgridRadio::write() {
   Radio->write(packet_buffer,sizeof(packet_buffer));
 }
 
-void SansgridRadio::atCmd(char * result,const char * cmd) {
+void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 	int i = 0;
-	Radio->println("Entering Command Mode");
-	Radio->print("+++");
-	delay(300);
-	while(Radio->available() > 0 && i < sizeof(result)) {
-		result[i++] = Radio->read();
+	Radio->println("\nEntering Command Mode\n");
+	delay(100);
+	while (Radio->available() > 0) { Radio->read();}
+	while(Radio->available() == 0) {
+		if (i > 3) {
+			Radio->println("ATCN");
+			delay(1200);
+			Radio->println("\nCommand Failed on +++ timeout\n");
+			return;
+		}
+		for (int z = 0; z < 3; z++) {
+			Radio->print("+");
+			delay(50);
+		}
+		delay(3000);
+		i++;
 	}
-	if (strncmp(result, "OK", sizeof("OK"))) {
+	Radio->println();
+	i = 0;
+	
+	while(Radio->available() > 0) {
+		Radio->read();
+	}
+	
+	//Radio->println();
+
+//if (strncmp(result, "OK", sizeof("OK"))) {
 		Radio->println(cmd);
-		while(Radio->available() > 0 && i < sizeof(result)) {
-			result[i++] = Radio->read();
+
+		delay(1200);
+		uint8_t buffer[8];
+		i = 0;
+		while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
+//			memset((result+i),Radio->read(),1);
+		  buffer[i] = Radio->read();
+		//	Radio->write
+			i++;
+			delay(2);
 		}	
-		char * tmp;
-		sprintf(tmp,"Command return value: %s",result);
-		
-	Radio->println("ATCN");
-	Radio->println("Exiting Command Mode");
+		Radio->println();
+		delay(100);
+		Radio->println("ATCN");
+		delay(1000);
 	//debugger->debug(NOTIFICATION,__FUNC__,tmp);
-	}
-	else {
-	Radio->println("ATCN");
+//	}
+//	else {
+	//	Radio->println("ATCN");
+	//}
+	
 	Radio->println("Exiting Command Mode");
-	}
+	memcpy(result,&buffer[0],8);
 }
 
 
 uint8_t * SansgridRadio::genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn) {
 	uint8_t * key;
 	key = new uint8_t[SNIPBYTEWIDTH];
-	for (int i = 0; i < SNIPBYTEWIDTH/2; i++) {
+	for (int i = 0; i < SNIPBYTEWIDTH/2; i+=2) {
 		key[i] = man_id[i];
-		key[++i] = mod_id[i];
+		key[i+1] = mod_id[i];
 	}
 	for (int i = 0; i < SNIPBYTEWIDTH; i++) {
 		key[i] ^= dev_sn[i];
@@ -197,13 +292,13 @@ void SansgridRadio::processPacket() {
 /**************************
 * Global Helper Functions * 
 **************************/
-
+/*
 void sgDebugInit(SerialDebug * db) {
 		//debugger = db;
 		//debugger->debug(NOTIFICATION,__FUNC__,"Serial Debugger for Radio Setup");
 		delay(50);
 }
-
+*/
 int btoi(byte * b,int ln) {
   int rv = 0; 
   int s_i = 0;
@@ -212,6 +307,42 @@ int btoi(byte * b,int ln) {
      s_i += 8;
   }
   return rv;
+}
+
+void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
+	// convert the full string of hex values into an array
+	uint32_t i_str, i_hex = 0;
+	int increment = 0;
+	char chunk[3];
+	uint32_t length;
+	uint32_t uval;
+
+	memset(hexarray,0,hexsize);
+	if (str == NULL)
+		return;
+	length = strlen(str);
+	//offset = hexsize - ((length+1)/2);
+
+	for (i_str=0; i_str<length;) {
+		if (((length ^ i_str) & 0x1) == 0x1) {
+			// make sure we catch case of 0x123
+			// where we should parse as 0x1  0x23
+			chunk[0] = str[i_str];
+			chunk[1] = '\0';
+			//sscanf(&str[i], "%1s", chunk);
+			increment = 1;
+		} else {
+			chunk[0] = str[i_str];
+			chunk[1] = str[i_str+1];
+			chunk[2] = '\0';
+			//sscanf(&str[i], "%2s", chunk);
+			increment = 2;
+		}
+		sscanf(chunk, "%x", &uval);
+		hexarray[i_hex++] = (uval & 0xff);
+		i_str+=increment;
+	}
+	return;
 }
 
 // Stubs

@@ -24,6 +24,7 @@
 #define __SPIMASTER_H__
 
 #include <Arduino.h>
+#include <SPI.h>
 
 #define SLAVE_SELECT  10           // SS pin
 #define SLAVE_READY  8             // Hand shake pin identifying Slave has 
@@ -42,15 +43,15 @@
 void spiMasterInit( int ss , int sr );
 
 // Receive ASCII char to Master from Slave
-void spiMasterReceive( byte data_out , char * data_in , int size , int ss );
+void spiMasterReceive( byte  data_out , char * data_in , int size , int ss );
 
 // Receive BYTE (uint8_t) to Master from Slave
-void spiMasterReceive( byte data_out , byte * data_in , int size , int ss );
+void spiMasterReceive( byte  data_out , byte * data_in , int size , int ss );
 
 // Transmit ASCII character to Slave from Master
 void spiMasterTransmit( char * data_out , int size , int ss );
 
-// Transmit BYTE (uint8_t to Slave from Master
+// Transmit BYTE (uint8_t) to Slave from Master
 void spiMasterTransmit( byte * data_out , int size , int ss );
 
 // Transmit Padding

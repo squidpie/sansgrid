@@ -2,7 +2,7 @@
 #define _H_SANSGRID_RADIO
 
 #include <Arduino.h>
-#include <SerialDebug.h>
+//#include <SerialDebug.h>
 #include <sgSerial.h>
 #include <payloads.h>
 
@@ -46,9 +46,11 @@ enum SnTableIndex {
 	SN,
 };
 
-static SerialDebug * debugger;
-void sgDebugInit(SerialDebug * db);
+//static SerialDebug * debugger;
+//void sgDebugInit(SerialDebug * db);
 int btoi(byte * b,int ln);
+
+void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
 
 void write_spi();
 void read_spi();
@@ -76,18 +78,24 @@ class SnIpTable {
 		void snIpInsertSn(uint8_t * sn, int index);
 };
 
+#define MAX_XB_PYLD 65
+#define XB_SN_LN 8
 
 class SansgridRadio {
 	private:
 		RadioMode router_mode;
-		uint8_t packet_buffer[PACKET_SZ];
-		uint8_t * packet;
+		uint8_t packet_buffer[MAX_XB_PYLD];
+		uint8_t packet_out_f0[MAX_XB_PYLD];
+		uint8_t packet_out_f1[MAX_XB_PYLD];
+		uint8_t * payload;
+		uint8_t * ip;
+		uint8_t xbsn[XB_SN_LN];
+		void setXBsn(void);
 		int findSn(int sn);
-		void processPacket(void);
-		void atCmd(char *,const char *);
+		void atCmd(uint8_t *,const char *);
 		uint8_t * genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn);
 		SnIpTable * sn_table;
-		SerialDebug debug;
+		//SerialDebug debug;
 		HardwareSerial * Radio;
 	public:
 		SansgridRadio(HardwareSerial *,SansgridSerial *, SnIpTable *);
@@ -95,7 +103,11 @@ class SansgridRadio {
 		void read();
 		void write();
 		void set_mode(RadioMode mode);
-		void test();
+		void init();
+		bool rxComplete();
+		void processSpi();
+		void loadFrame(int frame = -1);
+		void processPacket(void);
 };
 
 

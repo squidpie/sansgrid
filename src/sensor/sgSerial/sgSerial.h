@@ -25,6 +25,7 @@
 
 #include <Arduino.h>
 #include <spiMaster.h>
+#include <SPI.h>
 
 #define CONTROL 1				   // Number of bytes in control 
 #define IP_ADDRESS 16			   // Number of bytes in source/destination 
