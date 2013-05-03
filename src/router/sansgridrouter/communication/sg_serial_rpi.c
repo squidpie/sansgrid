@@ -45,6 +45,10 @@
 #define WRITE_CYCLE_U	1
 #define WRITE_MAX_BYTES 1
 
+// What pin the slave interrupt is on
+// wiringPi pin number
+#define SLAVE_INT_PIN 	0
+
 static sem_t wait_on_slave;
 static int sem_initd = 0;
 
@@ -111,7 +115,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		syslog(LOG_ERR, "Couldn't setup wiringPi for listening!");
 		return -1;
 	} 
-	if (wiringPiISR(BUTTON_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
+	if (wiringPiISR(SLAVE_INT_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
 		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
 		return -1;
 	}
