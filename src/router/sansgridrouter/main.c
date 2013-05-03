@@ -34,11 +34,14 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <syslog.h>
+#include <errno.h>
 
 
 #ifndef DATADIR
 #define DATADIR "../../router_to_server"
 #endif
+
+#define SG_SOCKET_BUFF_SIZE 1000
 
 void usage(int status);
 
@@ -48,8 +51,10 @@ void *dispatchRuntime(void *arg) {
 	SansgridSerial *sg_serial;
 
 	while (1) {
-		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) 
+		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) {
+			syslog(LOG_ERR, "Dispatch Queue Failed, Quitting");
 			exit(EXIT_FAILURE);
+		}
 		// FIXME: Use sgPayloadGetType, defined in payload_handlers.c
 		switch (sg_serial->payload[0]) {
 			case SG_HATCH:
@@ -178,7 +183,7 @@ int sgSocketListen(void) {
 	int s, s2;								// socket info
 	struct sockaddr_un local, remote;		// socket addresses
 	socklen_t len;							// socket lengths
-	char str[100];							// socket transmissions
+	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
 	char socket_path[150];					// socket locations
 	SansgridSerial sg_serial;
 	int exit_code;
@@ -227,7 +232,7 @@ int sgSocketListen(void) {
 		// Receive and interpret the data
 		done = 0;
 		do {
-			n = recv(s2, str, 100, 0);
+			n = recv(s2, str, SG_SOCKET_BUFF_SIZE, 0);
 			syslog(LOG_DEBUG, "received data: %s", str);
 			// make sure we got something
 			if (n <= 0) {
@@ -244,7 +249,7 @@ int sgSocketListen(void) {
 				else
 					str[n] = '\0';
 
-				syslog(LOG_DEBUG, "interpreting command");
+				syslog(LOG_DEBUG, "interpreting command %s", str);
 				// Interpret command
 				if (!strcmp(str, "kill")) {
 					// Kill the server
@@ -279,6 +284,9 @@ int sgSocketListen(void) {
 					perror("send");
 					done = 1;
 				}
+				if (done) {
+					syslog(LOG_DEBUG, "Finishing");
+				}
 			}
 		} while (!done);
 
@@ -294,7 +302,7 @@ int sgSocketSend(const char *data, const int size) {
 	int s, t;
 	socklen_t len;
 	struct sockaddr_un remote;
-	char str[100];
+	char str[SG_SOCKET_BUFF_SIZE];
 	char socket_path[150];
 	getSansgridDir(socket_path);
 
@@ -324,18 +332,18 @@ int sgSocketSend(const char *data, const int size) {
 	strcpy(remote.sun_path, socket_path);
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 	if (connect(s, (struct sockaddr*)&remote, len) == -1) {
-		perror("connect");
+		syslog(LOG_ERR, "connect: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	// Send the command
 	if (send(s, data, size, 0) == -1) {
-		perror("send");
+		syslog(LOG_ERR, "send: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	// Get the ACK back from the server
-	if ((t = recv(s, str, 100, 0)) > 0) {
+	if ((t = recv(s, str, SG_SOCKET_BUFF_SIZE, 0)) > 0) {
 		// strip newline
 		if (str[t-1] == '\n') {
 			str[t-1] = '\0';
@@ -345,14 +353,14 @@ int sgSocketSend(const char *data, const int size) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
-			printf("Shutting down daemon...\n");
+			syslog(LOG_INFO, "Shutting down daemon...\n");
 		} else {
 			printf("%s\n", str);
 		}
 	} else {
 		// problems
 		if (t < 0) perror ("recv");
-		else printf("Server closed connection\n");
+		else syslog(LOG_ERR, "Server closed connection\n");
 		exit(EXIT_FAILURE);
 	}
 	// cleanup
