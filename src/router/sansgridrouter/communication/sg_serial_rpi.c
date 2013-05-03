@@ -22,6 +22,8 @@
 
 //#ifdef SG_ARCH_PI
 
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdint.h>
 #include <sgSerial.h>
 #include <stdio.h>
@@ -43,13 +45,8 @@
 #define WRITE_MAX_BYTES 1
 
 
-ssize_t write_noconst(int fd, void *buf, size_t count)
-{
-	return write(fd, buf, count);
-}
 
-
-int spiTransfer(char *buffer, int size, ssize_t(*op)(int, void*, size_t))
+int spiTransfer(char *buffer, int size)
 {
 	int i;
 	int fd;
@@ -67,7 +64,7 @@ int spiTransfer(char *buffer, int size, ssize_t(*op)(int, void*, size_t))
 		// Only one page (of 32 bytes) can be written
 		// at a time. If more than 32 bytes are being written,
 		// break the line into multiple pages
-		spiTransfer(&buffer[WRITE_MAX_BYTES], size-WRITE_MAX_BYTES, op);
+		spiTransfer(&buffer[WRITE_MAX_BYTES], size-WRITE_MAX_BYTES);
 	}
 
 	return 0;
@@ -85,7 +82,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
 
 	memcpy(buffer, sg_serial, size);
-	spiTransfer(buffer, size, write_noconst);
+	spiTransfer(buffer, size);
 
 	close(fd);
 
@@ -95,9 +92,31 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
-	// TODO: Get code from
+	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
-	return -1;
+	char buffer[sizeof(SansgridSerial)+1];
+	sem_t wait_on_slave;
+	if (wiringPiSPISetup() < 0) {
+		syslog(LOG_ERR, "Couldn't setup wiringPi for listening!");
+		return -1;
+	} 
+	if (wiringPiISR(BUTTON_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
+		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
+		return -1;
+	}
+	sem_init(&wait_on_slave, 0, 0);
+	memset(buffer, 0x0, sizeof(buffer));
+	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
+
+	// receive data
+	sem_wait(&wait_on_slave);
+	// Slave wants to send data
+	spiTransfer(buffer, sizeof(SansgridSerial));
+
+	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
+	*size = sizeof(SansgridSerial);
+
+	return 0;
 }
 
 //#else
