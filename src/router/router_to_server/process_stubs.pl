@@ -4,9 +4,16 @@
 $sleep = ( scalar(@ARGV) > 0 ) ? shift(@ARGV) : 3;
 
 while ( $file = glob("*payload") ) {
+
+	print "Next: $file\n";
 	
 	# Assumes that sansrts.pl is in the $PATH
-	`sansrts.pl \$(cat $file)`;
+	`sansrts.pl "\$(cat $file)"`;
 
-	sleep $sleep;
+	for ( $i = 0; $i < $sleep; ++$i) {
+		print ".";
+		sleep 1;
+	}
+	print "\n";
+
 }

@@ -44,7 +44,7 @@ switch ($user_request) {
 sub generate_eyeball {
 
 	my $input;
-	my $payload = $ff_del . "dt" . $nf_del . "01" . $ff_del;
+	my $payload = $ff_del . "dt" . $nf_del . "00" . $ff_del;
 
 	#rdid
 	$payload .= "rdid" . $nf_del . int(rand(64000)) . $ff_del;
@@ -109,7 +109,7 @@ sub generate_mock {
 		$payload .= "senspubkey" . $nf_del . $user_request . $ff_del;
 
 	} else {
-		$payload .= $ff_del . "dt" . $nf_del . "08" . $ff_del;
+		$payload .= "dt" . $nf_del . "08" . $ff_del;
 		$payload .= "senspubkey" . $nf_del . $ff_del;
 	}
 
@@ -136,7 +136,7 @@ sub generate_peacock {
 	$payload .= "rdid" . $nf_del . &getField("rdid") . $ff_del;
 
 
-	print "SENSOR A\n";
+	print "\nSIGNAL A\n";
 	$payload .= "sida" . $nf_del . &getField("ID #") . $ff_del;
 
 	print "Classification ( 0 = digital, 1 = analog, 2 = text )";
@@ -157,7 +157,7 @@ sub generate_peacock {
 	# If there's a 'B' I/O
 	if ($user_request eq "y") {
 
-		print "\nSENSOR B\n";
+		print "\nSIGNAL B\n";
 		$payload .= "sidb" . $nf_del . &getField("ID #") . $ff_del;
 
 		print "Classification ( 0 = digital, 1 = analog, 2 = text )";
@@ -184,7 +184,7 @@ sub generate_peacock {
 	# If there isn't a 'B' I/O
 	} else {
 
-		$payload .= "sidb" . $nf_del . "rd" . $ff_del;
+		$payload .= "sidb" . $nf_del . "fd" . $ff_del;
 
 		$payload .= "classb" . $nf_del . $ff_del;
 

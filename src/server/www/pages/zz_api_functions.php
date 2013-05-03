@@ -264,13 +264,13 @@ function processPeacock ($router_ip, $payload, $db) {
 	$sida		= $payload["sida"];
 	$classa		= $payload["classa"];
 	$dira		= $payload["dira"];
-	$labela		= $payload["labela"];
-	$unitsa		= $payload["unitsa"];
+	$labela		= $payload["labela"] != "" ?  $payload["labela"] : "-";
+	$unitsa		= $payload["unitsa"] != "" ?  $payload["unitsa"] : "&nsbp;";
 	$sidb		= $payload["sidb"];
 	$classb		= $payload["classb"];
 	$dirb		= $payload["dirb"];
-	$labelb		= $payload["labelb"];
-	$unitsb		= $payload["unitsb"];
+	$labelb		= $payload["labelb"] != "" ?  $payload["labelb"] : "-";
+	$unitsb		= $payload["unitsb"] != "" ?  $payload["unitsb"] : "&nsbp;";
 	$additional	= $payload["additional"];
 
 	// First we gotta find out the sensor's information from the pipeline;
@@ -405,9 +405,5 @@ function generateNest ($router_ip, $rdid, $db) {
 		or die ("Error: Couldn't execute query ne1.");
 
 }
-
-
-
-
 
 ?>
