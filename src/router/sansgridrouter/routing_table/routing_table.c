@@ -23,6 +23,7 @@
  */
 
 
+#include <stdio.h>
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -487,5 +488,19 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
+int32_t routingTableGetStatus(RoutingTable *table, char *str) {
+	// Print table status
+	uint32_t i, j;
+	uint8_t ip_addr[IP_SIZE];
+	for (i=0; i<table->table_alloc; i++) {
+		if (table->routing_table[i]) {
+			maskip(ip_addr, table->base, i);
+			for (j=0; i<IP_SIZE; j++)
+				sprintf(str, "%x:", ip_addr[j]);
+			sprintf(str, "\n");
+		}
+	}
+	return 0;
+}
 
 // vim: ft=c ts=4 noet sw=4:

@@ -275,7 +275,8 @@ int sgSocketListen(void) {
 				syslog(LOG_DEBUG, "Still Still alive");
 				if (!strcmp(str, "status")) {	
 					syslog(LOG_DEBUG, "daemon checking status");
-					sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+					//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+					routingTableGetStatus(routing_table, str);
 					n = strlen(str);
 				}
 				syslog(LOG_DEBUG, "sending back: %s", str);
