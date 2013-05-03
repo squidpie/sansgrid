@@ -23,10 +23,12 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <syslog.h>
 #include <sgSerial.h>
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
+	syslog(LOG_INFO, "Sending packet over SPI");
 	/*
 	printf("sending");
 	printf(" %2x | ", sg_serial->control);
