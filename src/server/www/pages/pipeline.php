@@ -6,6 +6,8 @@ $tx_definitions['Sing'] = "Sing has been sent (with or without key), awaiting Mo
 $tx_definitions['Peck'] = "Awaiting permission to mate with sensor.";
 $tx_definitions['Mock'] = "Waiting for sensor to Peacock.";
 $tx_definitions['Squawk1'] = "Initial Squawk, no server challenge.";
+$tx_definitions['Squawk2'] = "Server awaiting sensor's challenge.";
+$tx_definitions['Squawk3'] = "Server responded to sensor's challenge.";
 
 $db = returnDatabaseConnection();
 

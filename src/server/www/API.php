@@ -92,7 +92,20 @@ switch ( hexdec($data["dt"]) ) {
 		processPeacock($router_ip, $data, $db);
 		break;
 	case 21: 	// 21 = 0x15
-		processSquawkResponse($router_ip, $data, $db);
+		// Sensor's response to server's initial squawk  (No sensor challenge)
+		processSquawkSensorReply($router_ip, $data, $db);
+		break;
+	case 22: 	// 22 = 0x16
+		// Sensor's response to server's initial squawk (Sensor challenge coming)
+		processSquawkSensorReply($router_ip, $data, $db);
+		break;
+	case 23: 	// 23 = 0x17
+		// Sensor sending its own challenge
+		processSquawkSensorChallenge($router_ip, $data, $db);
+		break;
+	case 29: 	// 29 = 0x1d
+		// Sensor has accepts the server's response to its challenge
+		processSquawkAcceptsChallenge($router_ip, $data, $db);
 		break;
 	default: 
 		die ("Error: Unknown data type: ' " . hexdec($data["dt"]) . " '\n");
