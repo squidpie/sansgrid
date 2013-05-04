@@ -60,7 +60,8 @@ void getSansgridDir(char wd[150]) {
 	char *home_path = getenv("HOME");
 
 	if (!home_path) {
-		printf("ERROR: Can't find home directory\n");
+		syslog(LOG_DEBUG, "Can't find home directory");
+		//printf("ERROR: Can't find home directory\n");
 		exit(EXIT_FAILURE);
 	}
 	snprintf(wd, 120, "%s/.sansgrid", home_path);

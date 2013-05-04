@@ -41,7 +41,8 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		return -1;
 	char cmd[2000];
 	char payload[size*5];
-	char config_path[150];
+	char sansgrid_path[300];
+	char config_path[300];
 	FILE *FPTR = NULL;
 	char key[100],
 		 url[50];
@@ -51,8 +52,8 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	syslog(LOG_INFO, "Sending packet over TCP");
 
 	// get the configuration path
-	getSansgridDir(config_path);
-	snprintf(config_path, 150, "%s/sansgrid.conf", config_path);
+	getSansgridDir(sansgrid_path);
+	snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
 	if ((FPTR = fopen(config_path, "r")) == NULL) {
 		syslog(LOG_DEBUG, "Couldn't find path %s", config_path);
 		return -1;
