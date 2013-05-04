@@ -22,14 +22,16 @@ print "Choose a process to emulate:\n";
 printf ("%4d  -  %s\n", 1, "Eyeball");
 printf ("%4d  -  %s\n", 2, "Mock");
 printf ("%4d  -  %s\n", 3, "Peacock");
+printf ("%4d  -  %s\n", 4, "Squawk");
 
 print "\n";
-$user_request = &verifyInput( (1,2,3) );
+$user_request = &verifyInput( (1,2,3,4) );
 
 switch ($user_request) {
 	case 1 { &generate_eyeball();}
 	case 2 { &generate_mock();}
 	case 3 { &generate_peacock();}
+	case 4 { &generate_squawk();}
 }
 
 # END OF MAIN CODE
@@ -201,7 +203,81 @@ sub generate_peacock {
 
 	&savePayload($payload);
 
-} # End generate_mock 
+} # End generate_peacock
+
+
+# ############################################################################## 
+# generate_squawk()
+#
+#	Generate peacock payload
+#
+sub generate_squawk {
+
+	my $input;
+	my $payload;
+
+	#rdid
+	$payload .= $ff_del . "rdid" . $nf_del . &getField("rdid") . $ff_del;
+
+
+	print "Choose a squawk type:\n";
+	print "  1) Sensor response to server challenge, no sensor challenge.\n";
+	print "  2) Sensor response to server challenge, sensor challenge coming.\n";
+	print "  3) Sensor challenge to server.\n";
+	print "  4) Sensor accepts server's response.\n";
+	$user_request = &verifyInput( (1, 2, 3, 4) );
+
+	switch ($user_request) {
+
+		#1) Sensor response to server challenge, no sensor challenge.
+		case 1 { 
+			$payload .= "dt" . $nf_del . "15" . $ff_del;
+			$payload .= "data" . $nf_del
+						. &getField("Challenge response") . $ff_del;
+
+		}
+
+		# 2) Sensor response to server challenge, sensor challenge coming.
+		case 2 { 
+			$payload .= "dt" . $nf_del . "16" . $ff_del;
+			$payload .= "data" . $nf_del
+						. &getField("Challenge response") . $ff_del;
+
+		}
+
+		# 3) Sensor challenge to server.
+		case 3 { 
+			$payload .= "dt" . $nf_del . "17" . $ff_del;
+
+			$user_request = &getField("Challenge (type 'R' to generate a random challenge)\n");
+
+			if ($user_request eq "R") {
+
+				$user_request = &getField("OK, how many characters (not bytes!)?\n");
+				my $count = $user_request;
+
+				$user_request =  "";
+				for (my $i = 0; $i < $count; ++$i) {
+					$user_request .= sprintf ("%x", int(rand(15)));
+				}
+
+			}
+
+			$payload .= "data" . $nf_del . $user_request . $ff_del;
+
+		}
+
+		# 4) Sensor accepts server's response.
+		case 4 { 
+			$payload .= "dt" . $nf_del . "1d" . $ff_del;
+			$payload .= "data" . $nf_del . $ff_del;
+
+		}
+	}
+
+	&savePayload($payload);
+
+} # End generate_squawk
 
 
 # ############################################################################## 

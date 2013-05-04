@@ -91,6 +91,9 @@ switch ( hexdec($data["dt"]) ) {
 	case 12: 	// 11 = 0x0C
 		processPeacock($router_ip, $data, $db);
 		break;
+	case 21: 	// 21 = 0x15
+		processSquawkResponse($router_ip, $data, $db);
+		break;
 	default: 
 		die ("Error: Unknown data type: ' " . hexdec($data["dt"]) . " '\n");
 		break; 	# Technically not needed since we just died.

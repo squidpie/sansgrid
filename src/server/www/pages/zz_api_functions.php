@@ -38,19 +38,42 @@ function processEyeball ($router_ip, $payload, $db) {
 
 	// If sensor is recognized
 	if ($count == 1)  {
+
+		// Let's get this sensor's id
+		$query  = "SELECT id_sensor FROM sensor ";
+		$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
+		$query .= "AND sn='$sn' AND has_mated='y'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query eb5.");
+		$row = mysqli_fetch_assoc($result);
+		$id_sensor = $row['id_sensor'];
+
+		// Let's also set the sensor's status to "offline".  This takes care
+		// of the possiblity of a sensor trying to reconnect to the network 
+		// while we're under the impression it's still connected. 
+		$query  = "UPDATE sensor SET status='offline' ";
+		$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
+		$query .= "AND sn='$sn' AND has_mated='y'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query eb6.");
 		
+		// Build the Peck
 		$reply = appendToPayload($reply, "dt", 			"1");
 		$reply = appendToPayload($reply, "ip", 			"");
-		$reply = appendToPayload($reply, "sid", 	 	$row['server_id']);
+		$reply = appendToPayload($reply, "sid", 	 	$server_id);
 		$reply = appendToPayload($reply, "recognition",	"0");
 		$reply = appendToPayload($reply, "manid", 		$manid);
 		$reply = appendToPayload($reply, "modnum", 		$modnum);
 		$reply = appendToPayload($reply, "sn", 			$sn);
 		
+		// Send Peck
 		xmitToRouter($reply, $router_ip);
 
+		// Sleep for 250 ms after Peck before sending Squawk. 
+		usleep(250000);		
 
-		// SQUAWKING BELONGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// Now we start squawking.  SQUAWK!!!
+		generateSquawk ($rdid, $id_sensor, $router_ip, $db);
 	
 
 	// .. else sensor is not recognized
@@ -335,6 +358,74 @@ function processPeacock ($router_ip, $payload, $db) {
 	}
 
 } // End processPeacock
+
+
+// ****************************************
+
+function generateSquawk ($rdid, $id_sensor, $router_ip, $db) {
+	global $SG;
+
+	// Beginning the Squawk payload
+	// All replies should include the originating rdid
+	$reply = appendToPayload($SG['ff_del'], "rdid", $rdid);
+
+	// Do we have a server key?
+	$query = "SELECT server_key FROM server";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq1.");
+	$row = mysqli_fetch_assoc($result);
+	$server_key = $row['server_key'];
+
+
+	// If we don't have a server key...
+	if ($server_key == "" ) {
+		
+		$dt =  "12";
+
+		// No challenge
+		$challenge = "";
+
+	// ...else we do have a server key;
+	} else {
+
+		$dt = "11";
+
+		$challenge = generateRandomHash($SG['skl']);
+	}
+
+	$reply = appendToPayload($reply, "dt", 		$dt);
+	$reply = appendToPayload($reply, "data", 	"$challenge");
+
+
+	// Log it
+	$msg  = "[$router_ip] - Eyeball: recognized sensor. ";
+	$msg .= "Squawking to commence ";
+	$msg .= "(Sensor: $id_sensor). ";
+	if ($challenge == "") {
+		$msg .= "No challenge. ";
+	} else {
+		$msg .= "Challenge = $challenge.";
+	}
+	addToLog($msg);
+
+
+	xmitToRouter($reply, $router_ip);
+
+	// Update pipeline
+	updatePipeline ($rdid, $id_sensor, $router_ip, 'Squawk1', $challenge);
+
+	// Debugging only
+	if ( ($challenge != "") && ($SG['debug'] == TRUE ) ) {
+		
+		$challenge_response = countOnes(sgXOR($server_key, $challenge));
+
+		$reply = appendToPayload($SG['ff_del'], "rdid", $rdid);
+		$reply = appendToPayload($reply, "dt", 		"__DEBUG__");
+		$reply = appendToPayload($reply, "data", 	"$challenge_response");
+
+		xmitToRouter($reply, $router_ip);
+	}
+}
 
 /* ************************************************************************** */
 

@@ -26,7 +26,19 @@ $SG['maxtime']['Peck']  	=  3 * 60;		// Peck - 5 minutes
 $SG['maxtime']['Sing']  	=  3 * 60;		// Sing - 5 minutes
 $SG['maxtime']['Mock']  	=  3 * 60;		// Mock - 5 minutes
 $SG['maxtime']['Peacock1']  =  3 * 60;		// Peacock, more coming - 3 minutes
+$SG['maxtime']['Squawk1']   =  3 * 60;		// Squawk sent, no key - 3 minutes
 #$SG['maxtime']['FailedMate']= 10 * 60;		// A mating which never completed
 										    // could leave residual data in places
 											// other than the pipeline. 
+
+
+$SG['skl'] = 128;			// Server key length.  Changing this value will almost
+							// assuredly break things.  Just don't do it. 
+							// Note: bytes * 2 = key length
+$SG['skl'] = 8;			
+$SG['skl'] = 4;			
+
+$SG['debug'] = TRUE;		// Never, ever, ever set this to true!  And no matter
+							// what happens, make sure you never feed it after
+							// midnight!!!
 ?>

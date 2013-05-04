@@ -54,7 +54,7 @@ $query = "CREATE TABLE log (id_log INT NOT NULL UNIQUE AUTO_INCREMENT, log VARCH
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitting.");
 
 // Table: pipeline
-$query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), last_update TIMESTAMP)";
+$query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), workspace VARCHAR(250), last_update TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
 
 // Table: com (Compendium of Manufacturers) 
