@@ -23,6 +23,9 @@
 #ifndef __SG_ROUTER_MAIN_H__
 #define __SG_ROUTER_MAIN_H__
 
+// choose whether or not we should enforce packet order
+#define SG_ROUTER_ENFORCE_PKT_ORD	1
+
 #include <sys/types.h>
 #include <unistd.h>
 

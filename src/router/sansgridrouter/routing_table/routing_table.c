@@ -23,6 +23,7 @@
  */
 
 
+#include <stdio.h>
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -219,6 +220,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
+		syslog(LOG_INFO, "Allocating a device at %i", index);
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		memcpy(dev_prop, properties, sizeof(DeviceProperties));
@@ -487,5 +489,22 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
+int32_t routingTableGetStatus(RoutingTable *table, char *str) {
+	// Print table status
+	uint32_t i, j;
+	uint8_t ip_addr[IP_SIZE];
+	str[0] = '\0';
+	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
+	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			syslog(LOG_DEBUG, "found one!");
+			maskip(ip_addr, table->base, i);
+			for (j=0; j<IP_SIZE; j++)
+				sprintf(str, "%s%x:", str, ip_addr[j]);
+			sprintf(str, "%s\n", str);
+		}
+	}
+	return 0;
+}
 
 // vim: ft=c ts=4 noet sw=4:

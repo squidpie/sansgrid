@@ -22,8 +22,6 @@
 #include <string.h>
 #include "payload_handlers.h"
 #include "../routing_table/routing_table.h"
-//#include "../../../lib/sgSerial.h"
-//#include "../../../lib/payloads.h"
 #include "../communication/sg_tcp.h"
 
 

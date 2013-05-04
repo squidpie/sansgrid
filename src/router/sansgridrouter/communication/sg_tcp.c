@@ -45,12 +45,12 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	syslog(LOG_INFO, "Sending packet over TCP");
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
-		syslog(LOG_ERR, "Router-->Server conversion failed");
+		syslog(LOG_DEBUG, "Router-->Server conversion failed");
 		return -1;
 	} else {
 		snprintf(cmd, 1000, "sansrts.pl \"%s\"", payload);
 		if ((FPTR = popen(cmd, "r")) == NULL) {
-			syslog(LOG_ERR, "Router-->Server send failed");
+			syslog(LOG_DEBUG, "Router-->Server send failed");
 			return -1;
 		}
 		exit_code = pclose(FPTR);
