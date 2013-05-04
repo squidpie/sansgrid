@@ -271,13 +271,14 @@ int sgSocketListen(void) {
 						queueEnqueue(dispatch, &sg_serial);
 						syslog(LOG_DEBUG, "daemon got good packet");
 					}
-				} 
-				syslog(LOG_DEBUG, "Still Still alive");
-				if (!strcmp(str, "status")) {	
+				} else if (!strcmp(str, "status")) {	
 					syslog(LOG_DEBUG, "daemon checking status");
 					//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 					routingTableGetStatus(routing_table, str);
 					n = strlen(str);
+				} else if (!strcmp(str, "devices")) {
+					syslog(LOG_DEBUG, "daemon return # of devices");
+					sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 				}
 				syslog(LOG_DEBUG, "sending back: %s", str);
 				// Send commnad back to client as ACK
@@ -477,6 +478,10 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(option, "status")) {
 			// print the status of the router daemon
 			sgSocketSend("status", 7);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "devices")) {
+			// get the number of devices
+			sgSocketSend("devices", 8);
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
