@@ -30,6 +30,7 @@
 #include <syslog.h>
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
+#include "../sansgrid_router.h"
 
 
 
@@ -38,17 +39,45 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	if (!size) 
 		return -1;
-	char cmd[1000];
+	char cmd[2000];
 	char payload[size*5];
+	char config_path[150];
 	FILE *FPTR = NULL;
+	char key[100],
+		 url[50];
+	char *buffer = NULL;
+	int buff_size = 1000;
 	int exit_code;
 	syslog(LOG_INFO, "Sending packet over TCP");
+
+	// get the configuration path
+	getSansgridDir(config_path);
+	snprintf(config_path, 150, "%s/sansgrid.conf", config_path);
+	if ((FPTR = fopen(config_path, "r")) == NULL) {
+		syslog(LOG_DEBUG, "Couldn't find path %s", config_path);
+		return -1;
+	} else {
+		buffer = (char*)malloc(buff_size*sizeof(char));
+		if (buffer == NULL) {
+			syslog(LOG_ERR, "Couldn't allocate buffer!");
+			return -1;
+		}
+		while (getline(&buffer, &size, FPTR) != -1) {
+			if (strstr(buffer, "key")) {
+				sscanf(buffer, "key = '%s'", key);
+			} else if (strstr(buffer, "url")) {
+				sscanf(buffer, "url = '%s'", url);
+			}
+		}
+		free(buffer);
+		fclose(FPTR);
+	}
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
 		syslog(LOG_DEBUG, "Router-->Server conversion failed");
 		return -1;
 	} else {
-		snprintf(cmd, 1000, "sansrts.pl \"%s\"", payload);
+		snprintf(cmd, 2000, "curl -s --data-urlencode --payload=\"%s\"", payload);
 		if ((FPTR = popen(cmd, "r")) == NULL) {
 			syslog(LOG_DEBUG, "Router-->Server send failed");
 			return -1;

@@ -146,6 +146,7 @@ int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial)
 	sg_eyeball->mode = SG_EYEBALL_MATE;
 	
 	routingTableAssignIPStatic(routing_table, sg_hatching->ip, dev_prop);
+	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
 }

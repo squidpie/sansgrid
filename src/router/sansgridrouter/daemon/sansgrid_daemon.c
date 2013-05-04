@@ -64,6 +64,8 @@ void getSansgridDir(char wd[150]) {
 		exit(EXIT_FAILURE);
 	}
 	snprintf(wd, 120, "%s/.sansgrid", home_path);
+	// FIXME: check to see if dir exists
+	// 			if not, get config from /etc/sansgrid
 
 }
 

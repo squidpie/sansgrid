@@ -37,10 +37,6 @@
 #include <errno.h>
 
 
-#ifndef DATADIR
-#define DATADIR "../../router_to_server"
-#endif
-
 #define SG_SOCKET_BUFF_SIZE 1000
 
 void usage(int status);
@@ -403,6 +399,9 @@ int main(int argc, char *argv[]) {
 	char config_path[150];				// Sansgrid Dir
 	pid_t sgpid;						// Sansgrid PID
 	char payload[400];
+	uint8_t ip_addr[IP_SIZE];
+	SansgridHatching sg_hatch;
+	SansgridSerial sg_serial;
 
 	getSansgridDir(config_path);
 
@@ -521,6 +520,18 @@ int main(int argc, char *argv[]) {
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_base);
 	void *arg;
+
+	// TODO: set IP address correctly
+	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	memset(ip_addr, 0x0, IP_SIZE);
+	sg_hatch.datatype = SG_HATCH;
+	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
+	memcpy(&sg_serial.payload, &sg_hatch, sizeof(SansgridHatching));
+	sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
+	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
+	routerHandleHatching(routing_table, &sg_serial);
+
 
 	// Spin off readers/writers
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
