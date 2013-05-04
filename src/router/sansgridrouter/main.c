@@ -37,10 +37,6 @@
 #include <errno.h>
 
 
-#ifndef DATADIR
-#define DATADIR "../../router_to_server"
-#endif
-
 #define SG_SOCKET_BUFF_SIZE 1000
 
 void usage(int status);
@@ -162,6 +158,7 @@ void *heartbeatRuntime(void *arg) {
 		sleep(HEARTBEAT_INTERVAL/count);
 		//sleepMicro(HEARTBEAT_UINTERVAL / count);
 		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
+			syslog(LOG_DEBUG, "sending to device %u", ip_addr[IP_SIZE-1]);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 			sgSerialSend(&sg_serial, sizeof(SansgridSerial));
 		}
@@ -233,12 +230,12 @@ int sgSocketListen(void) {
 		done = 0;
 		do {
 			n = recv(s2, str, SG_SOCKET_BUFF_SIZE, 0);
-			syslog(LOG_DEBUG, "received data: %s", str);
+			syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
 			// make sure we got something
 			if (n <= 0) {
 				if (n < 0) {
 					perror("recv");
-					syslog(LOG_ERR, "daemon receive error");
+					syslog(LOG_ERR, "sansgrid daemon: receive error");
 				}
 				done = 1;
 			}
@@ -249,45 +246,45 @@ int sgSocketListen(void) {
 				else
 					str[n] = '\0';
 
-				syslog(LOG_DEBUG, "interpreting command %s", str);
+				syslog(LOG_DEBUG, "sansgrid daemon: interpreting command %s", str);
 				// Interpret command
 				if (!strcmp(str, "kill")) {
 					// Kill the server
 					shutdown_server = 1;
 					done = 1;
-					syslog(LOG_DEBUG, "daemon shutting down");
+					syslog(LOG_DEBUG, "sansgrid daemon: shutting down");
 				} 
 				syslog(LOG_DEBUG, "Still alive");
 				if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 					// Got a packet from the server
-					syslog(LOG_DEBUG, "interpreting packet: %s", packet);
+					syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
 					exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
 							&sg_serial);
 					if (exit_code == -1) {
 						strcpy(str, "bad packet");
-						syslog(LOG_DEBUG, "daemon got bad packet");
+						syslog(LOG_DEBUG, "sansgrid daemon: got bad packet");
 					} else {
 						strcpy(str, "packet accepted");
 						queueEnqueue(dispatch, &sg_serial);
-						syslog(LOG_DEBUG, "daemon got good packet");
+						syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
 					}
 				} else if (!strcmp(str, "status")) {	
-					syslog(LOG_DEBUG, "daemon checking status");
+					syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 					//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 					routingTableGetStatus(routing_table, str);
 					n = strlen(str);
 				} else if (!strcmp(str, "devices")) {
-					syslog(LOG_DEBUG, "daemon return # of devices");
+					syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 					sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 				}
-				syslog(LOG_DEBUG, "sending back: %s", str);
+				syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 				// Send commnad back to client as ACK
 				if (send(s2, str, n, 0) < 0) {
 					perror("send");
 					done = 1;
 				}
 				if (done) {
-					syslog(LOG_DEBUG, "Finishing");
+					syslog(LOG_DEBUG, "sansgrid daemon: Finishing");
 				}
 			}
 		} while (!done);
@@ -334,13 +331,13 @@ int sgSocketSend(const char *data, const int size) {
 	strcpy(remote.sun_path, socket_path);
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 	if (connect(s, (struct sockaddr*)&remote, len) == -1) {
-		syslog(LOG_ERR, "connect: %s", strerror(errno));
+		syslog(LOG_ERR, "sansgrid client: connect error: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	// Send the command
 	if (send(s, data, size, 0) == -1) {
-		syslog(LOG_ERR, "send: %s", strerror(errno));
+		syslog(LOG_ERR, "sansgrid client: send error: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -355,14 +352,14 @@ int sgSocketSend(const char *data, const int size) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
-			syslog(LOG_INFO, "Shutting down daemon...\n");
+			syslog(LOG_INFO, "sansgrid client: Shutting down daemon...\n");
 		} else {
 			printf("%s\n", str);
 		}
 	} else {
 		// problems
 		if (t < 0) perror ("recv");
-		else syslog(LOG_ERR, "Server closed connection\n");
+		else syslog(LOG_ERR, "sansgrid client: Server closed connection\n");
 		exit(EXIT_FAILURE);
 	}
 	// cleanup
@@ -403,6 +400,9 @@ int main(int argc, char *argv[]) {
 	char config_path[150];				// Sansgrid Dir
 	pid_t sgpid;						// Sansgrid PID
 	char payload[400];
+	uint8_t ip_addr[IP_SIZE];
+	SansgridHatching sg_hatch;
+	SansgridSerial sg_serial;
 
 	getSansgridDir(config_path);
 
@@ -521,6 +521,18 @@ int main(int argc, char *argv[]) {
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_base);
 	void *arg;
+
+	// TODO: set IP address correctly
+	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	memset(ip_addr, 0x0, IP_SIZE);
+	sg_hatch.datatype = SG_HATCH;
+	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
+	memcpy(&sg_serial.payload, &sg_hatch, sizeof(SansgridHatching));
+	sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
+	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
+	routerHandleHatching(routing_table, &sg_serial);
+
 
 	// Spin off readers/writers
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);

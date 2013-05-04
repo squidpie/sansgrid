@@ -419,7 +419,7 @@ int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	if (!table->table_alloc)
 		return 0;
 	for (i=(table->hbptr+1)%ROUTING_ARRAYSIZE; 
-			!table->routing_table[i];
+			!table->routing_table[i] || (i == 0) || (i == 1);
 			i = (i+1)%ROUTING_ARRAYSIZE) {
 	}
 	table->hbptr = i;
