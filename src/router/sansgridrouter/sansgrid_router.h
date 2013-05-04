@@ -23,6 +23,9 @@
 #ifndef __SG_ROUTER_MAIN_H__
 #define __SG_ROUTER_MAIN_H__
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "dispatch/dispatch.h"
 #include "routing_table/routing_table.h"
 #include "daemon/sansgrid_daemon.h"
@@ -30,6 +33,10 @@
 Queue *dispatch;
 RoutingTable *routing_table;
 uint8_t router_base[IP_SIZE];
+
+
+int sgStorePID(pid_t pid);
+
 
 #endif
 

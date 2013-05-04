@@ -27,6 +27,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <syslog.h>
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
 
@@ -35,8 +36,32 @@
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
+	if (!size) 
+		return -1;
+	char cmd[1000];
+	char payload[size*5];
+	FILE *FPTR = NULL;
+	int exit_code;
+	syslog(LOG_INFO, "Sending packet over TCP");
 
-	return -1;
+	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
+		syslog(LOG_ERR, "Router-->Server conversion failed");
+		return -1;
+	} else {
+		snprintf(cmd, 1000, "sansrts.pl \"%s\"", payload);
+		if ((FPTR = popen(cmd, "r")) == NULL) {
+			syslog(LOG_ERR, "Router-->Server send failed");
+			return -1;
+		}
+		exit_code = pclose(FPTR);
+		if (exit_code > 0) {
+			syslog(LOG_INFO, "send command exited successfully");
+		} else {
+			syslog(LOG_INFO, "send command exited with exit code %i", exit_code);
+		}
+	}
+
+	return 0;
 }
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
