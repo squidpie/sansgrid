@@ -27,7 +27,6 @@
 //#define HEARTBEAT_UINTERVAL 4000000	// interval, in usecs, between device heartbeats 
 #define HEARTBEAT_INTERVAL 240		// interval, in seconds, between device heartbeats
 
-//#include "../../../lib/payloads.h"
 #include <payloads.h>
 
 enum SansgridHeartbeatStatusEnum {
