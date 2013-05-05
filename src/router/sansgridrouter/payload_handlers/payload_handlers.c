@@ -22,8 +22,6 @@
 #include <string.h>
 #include "payload_handlers.h"
 #include "../routing_table/routing_table.h"
-//#include "../../../lib/sgSerial.h"
-//#include "../../../lib/payloads.h"
 #include "../communication/sg_tcp.h"
 
 
@@ -122,7 +120,6 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
-	int i;
 	SANSGRID_UNION(SansgridHatching, SansgridHatchingConv) sg_hatching_union;
 	SansgridHatching *sg_hatching;
 	DeviceProperties *dev_prop;
@@ -134,20 +131,16 @@ int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial)
 	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
 	sg_eyeball = &dev_prop->dev_attr;
-	for (i=0; i<4; i++) {
-		// TODO: Define more attributes here
-		sg_eyeball->manid[i] = 0x0;
-		sg_eyeball->modnum[i] = 0x0;
-		sg_eyeball->datatype = SG_EYEBALL;
-	}
+	memset(sg_eyeball->manid, 0x0, sizeof(sg_eyeball->manid));
+	memset(sg_eyeball->modnum, 0x0, sizeof(sg_eyeball->modnum));
+	memset(sg_eyeball->serial_number, 0x0, sizeof(sg_eyeball->serial_number));
+	sg_eyeball->datatype = SG_EYEBALL;
 
-	for (i=0; i<8; i++) {
-		sg_eyeball->serial_number[i] = 0x0;
-	}
 	sg_eyeball->profile = 0x0;
 	sg_eyeball->mode = SG_EYEBALL_MATE;
 	
 	routingTableAssignIPStatic(routing_table, sg_hatching->ip, dev_prop);
+	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
 }

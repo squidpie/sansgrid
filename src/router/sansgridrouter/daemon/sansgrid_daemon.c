@@ -60,10 +60,13 @@ void getSansgridDir(char wd[150]) {
 	char *home_path = getenv("HOME");
 
 	if (!home_path) {
-		printf("ERROR: Can't find home directory\n");
+		syslog(LOG_DEBUG, "Can't find home directory");
+		//printf("ERROR: Can't find home directory\n");
 		exit(EXIT_FAILURE);
 	}
 	snprintf(wd, 120, "%s/.sansgrid", home_path);
+	// FIXME: check to see if dir exists
+	// 			if not, get config from /etc/sansgrid
 
 }
 
@@ -97,19 +100,11 @@ int isRunning(void) {
 	fclose(FPTR);
 	return sgpid;
 }
-	
+
 
 int daemon_init(void) {
 	pid_t pid;
 	pid_t sid;
-	FILE *PIDFILE;
-	char config_path[150];
-	char pidpath[150];
-
-	if (isRunning()) {
-		printf("sansgridrouter already running\n");
-		return EXIT_FAILURE;
-	}
 
 	pid = fork();
 
@@ -119,16 +114,7 @@ int daemon_init(void) {
 
 	// kill parent process
 	if (pid > 0) {
-		getSansgridDir(config_path);
-		snprintf(pidpath, 150, "%s/sansgridrouter.pid", config_path);
-		if ((PIDFILE = fopen(pidpath, "w")) == NULL) {
-			perror("fopen");
-			// FIXME: Kill child process too (here)
-			exit(EXIT_FAILURE);
-		}
-		printf("Running as process %i\n", pid);
-		fprintf(PIDFILE, "%i\n", pid);
-		fclose(PIDFILE);
+		sgStorePID(pid);
 		exit(EXIT_SUCCESS);
 	}
 

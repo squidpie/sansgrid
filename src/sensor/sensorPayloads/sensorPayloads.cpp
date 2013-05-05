@@ -24,10 +24,11 @@
 #include "sensorPayloads.h"
 
 // Initialize SensorConfig static members
-byte SensorConfig::dt[ DT ] = { 0xF0 };
+bool SensorConfig::connected = false;
 byte SensorConfig::manid[ MANID ] = { 0x01, 0x00, 0x00, 0x00 };
 byte SensorConfig::modnum[ MODNUM ] = { 0x01, 0x00, 0x00, 0x00 };
 char SensorConfig::sn[ SN + 1 ] = "00112233";
+char SensorConfig::network_name[ DATA + 1 ] = "Sansgrid";
 byte SensorConfig::ip_address[ IP_ADDRESS ] = { 0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 byte SensorConfig::router_ip[ IP_ADDRESS ] = { 0x00,0x00,0x00,0x00,

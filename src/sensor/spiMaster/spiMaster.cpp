@@ -21,7 +21,6 @@
  */
  
 #include <Arduino.h>
-#include <SPI.h>
 #include "spiMaster.h"
 
 // Initialize SPI Master
@@ -40,7 +39,7 @@ void spiMasterInit( int ss , int sr ){
 }
 
 // Receive ASCII char (int8_t) to Master from Slave
-void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
+void spiMasterReceive( byte  data_out , char * data_in , int size , int ss ){
 	// Loop through untill all characters received
 	for( int i = 0 ; i < size ; i++ ){
 		if( i == ( size - 1 ) )
@@ -52,7 +51,7 @@ void spiMasterReceive( byte data_out , char * data_in , int size , int ss ){
 }
 
 // Receive BYTE (uint8_t) to Master from Slave
-void spiMasterReceive( byte data_out , byte * data_in , int size , int ss ){
+void spiMasterReceive( byte  data_out , byte * data_in , int size , int ss ){
 	// Loop through untill all characters received
 	for( int i = 0 ; i < size ; i++ ){
 		if( i == ( size - 1 ) )

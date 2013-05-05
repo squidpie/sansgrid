@@ -22,6 +22,8 @@
 
 //#ifdef SG_ARCH_PI
 
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdint.h>
 #include <sgSerial.h>
 #include <stdio.h>
@@ -38,117 +40,107 @@
 #define MHZ(freq) (1000*KHZ(freq))
 
 // EEPROM-specific defines
-#define SPI_SPEED_MHZ	2
-#define WRITE 		0x02
-#define READ		0x03
-#define WRITE_ENABLE 	0x06
-#define WRITE_CYCLE	5000
+#define SPI_SPEED_KHZ	500
+//#define WRITE_CYCLE_M	1
+#define WRITE_CYCLE_U	1
+#define WRITE_MAX_BYTES 1
 
-//int spiWrite(char *buffer, uint16_t address, int size) {
-int spiWrite(sgSerial *sg_serial, int size) {
+// What pin the slave interrupt is on
+// wiringPi pin number
+#define SLAVE_INT_PIN 	0
+
+static sem_t wait_on_slave;
+static int sem_initd = 0;
+
+int spiSetup(void) {
+	int fd;
+	// Set up SPI
+	if ((fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_MHZ))) < 0) {
+		syslog(LOG_ERR, "SPI Setup failed: %s\n", strerror (errno));
+		return -1;
+	} else {
+		return fd;
+	}
+}
+
+
+int spiTransfer(char *buffer, int size) {
 	int i;
 	int fd;
-	// only 32 bytes can be written at a time; see below
-	int bounded_size = (size > 32 ? 32 : size);
-	// prepend the command and address to the data
-	char newbuffer[bounded_size+3];
+	// only a certain amount of byte can be written at a time. see below
+	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
 
-	// Set up SPI
-	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
-		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
-
-	// Have to make room for command and address
-	for (i=3; i<bounded_size+3; i++)
-		newbuffer[i] = buffer[i-3];
-
-	// Allow writes to the EEPROM
-	// Has to be done before every write cycle
-	newbuffer[0] = WRITE_ENABLE;
-	write(fd, newbuffer, 1);
-
-	// Write to specified address
-	newbuffer[0] = WRITE;
-	newbuffer[1] = address >> 8;
-	newbuffer[2] = address & 0xff;
-
-	write(fd, newbuffer, bounded_size+3);
+	wiringPiSPIDataRW(0, buffer, bounded_size);
 	// Wait for the write to cycle
-	usleep(WRITE_CYCLE);
-	close(fd);
-	if (size > 32) {
-		// Only one page (of 32 bytes) can be written
-		// at a time. If more than 32 bytes are being written,
-		// break the line into multiple pages
-		spiWrite(&buffer[32], address+0x0020, size-32);
+	usleep(WRITE_CYCLE_U);
+	if (size > WRITE_MAX_BYTES) {
+		// Only a certain amount of bytes can be writeen at a time
+		// If we go over that limit, break the write up into multiple
+		// chunks
+		spiTransfer(&buffer[WRITE_MAX_BYTES], size-WRITE_MAX_BYTES);
 	}
 
 	return 0;
 }
 
+int8_t sgSerialOpen(void) {
+	return 0;
+}
 
-int spiRead(char *buffer, uint16_t address, int size) {
-	// Read from an EEPROM chip over SPI
+
+int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
+	// Send size bytes of serialdata
 	int fd;
-	char newbuffer[size+3];
-	int i;
+	char buffer[size+1];
 
-	// Set up reading from EEPROM
-	if ((fd = wiringPiSPISetup (0, MHZ(SPI_SPEED_MHZ))) < 0)
-		fprintf(stderr, "SPI Setup failed: %s\n", strerror (errno));
+	if ((fd = spiSetup()) == -1) {
+		return -1;
+	}
 
-	// Prepend command and address to buffer
-	newbuffer[0] = READ;
-	newbuffer[1] = address >> 8;
-	newbuffer[2] = address & 0xff;
+	memcpy(buffer, sg_serial, size);
+	spiTransfer(buffer, size);
 
-	// Send command/address, read data
-	wiringPiSPIDataRW(0, newbuffer, size+3);
-
-	// shift the command and address out of buffer
-	for (i=0; i<size; i++)
-		buffer[i] = newbuffer[i+3];
-	// finish up
 	close(fd);
 
 	return 0;
 }
 
-int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
-	// Send size bytes of serialdata
-	return -1;
-}
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
-	return -1;
-}
+	// Code from
+	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
+	char buffer[sizeof(SansgridSerial)+1];
+	if (wiringPiSPISetup() < 0) {
+		syslog(LOG_ERR, "Couldn't setup wiringPi for listening!");
+		return -1;
+	} 
+	if (wiringPiISR(SLAVE_INT_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
+		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
+		return -1;
+	}
+	if (!sem_init) {
+		sem_init(&wait_on_slave, 0, 0);
+		sem_init = 1;
+	}
+	memset(buffer, 0x0, sizeof(buffer));
+	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 
-/*
-// EEPROM-Specific main function
-int main(void) {
-	int i;
-	int fd;
-	char buffer[70];
+	// receive data
+	sem_wait(&wait_on_slave);
 
-	// Writing to the EEPROM chip
-	snprintf(buffer, 64, "This is a much longer sentence. It is bigger than 32.");
-	spiWrite(buffer, 0x0000, 64);
+	// Slave wants to send data
+	if ((fd = spiSetup()) == -1) {
+		return -1;
+	}
+	spiTransfer(buffer, sizeof(SansgridSerial));
+	close(fd);
 
-	snprintf(buffer, 32, "Well I'll be!");
-	spiWrite(buffer, 0x0040, 32);
-
-
-	// Read using wraparound
-	spiRead(buffer, 0x0000, 64);
-	printf("%s\n", buffer);
-
-	// Read the second datum
-	spiRead(buffer, 0x0040, 32);
-	printf("%s\n", buffer);
+	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
+	*size = sizeof(SansgridSerial);
 
 	return 0;
 }
-*/
 
 //#else
 //#error "Expected Raspberry Pi Architecture Definition"

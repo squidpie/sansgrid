@@ -24,6 +24,7 @@
 #define __SENSOR_CONNECT_H__
 
 #include <Arduino.h>
+#include <spiMaster.h>
 #include <sgSerial.h>
 #include <sensorPayloads.h>
 

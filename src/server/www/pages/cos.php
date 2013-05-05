@@ -129,7 +129,7 @@ $page .= "</form>";
 
 <div id="main">
 
-<h2>Compendium of Sensors</h2>
+<h2>Compendium of Sensor Types</h2>
 <? print $page; ?>
 
 </div> 			<!-- end of <div id="main"> -->

@@ -225,6 +225,32 @@ input.sgtext {
 	background-color: #d3c892;
 	}
 
+/* ************************************************************************** */
+/* Fieldset style used to list sensors in index.php */
+fieldset.SGfieldset {
+	border: 1px solid lightgrey;
+	margin-bottom: 2.5em;
+	padding: .5em .5em .5em 1em;
+	position: relative;
+	box-shadow: .4em .4em 1px grey;
+	}
+
+fieldset.SGfieldset h4 {
+	margin-left: -.5em;
+	}
+
+fieldset.SGfieldset legend {
+	background-color: #A0A0A0;
+	border-bottom: 	1px solid #27272C;
+	border-left: 	1px solid lightgrey;
+	border-top: 	1px solid lightgrey;
+	border-right: 	1px solid #27272C;
+	font-size: 130%;
+	padding: .2em;
+	position: absolute;
+	right: .2em;
+	top: -1em;
+	}
 
 /* ************************************************************************** */
 /* General style */

@@ -20,10 +20,8 @@
  *
  */
 
- #include "sgSerial.h"
- #include <Arduino.h>
- #include <SPI.h>
- #include <spiMaster.h>
+#include <Arduino.h>
+#include "sgSerial.h"
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 

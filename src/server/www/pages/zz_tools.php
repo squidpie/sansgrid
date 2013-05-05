@@ -21,7 +21,7 @@ function deleteSensorByID ($id_sensor) {
 
 
 /* ************************************************************************** */
-// Returns a random hex stringth
+// Returns a random hex string that's $length characters long
 function generateRandomHash ($length) {
 	$tmp = "";
 	for ($i = 0; $i < $length; ++$i) {
@@ -31,6 +31,70 @@ function generateRandomHash ($length) {
 
 	return $tmp;
 }
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
+// The php internal XOR function doesn't work with large values.  So we have
+// our own XOR function now.  This function takes in two hexadecimal numbers
+// and returns a binary string of those two numbers XOR'd.
+function sgXor ($num1, $num2) {
+	
+	// Convert to a binary string
+	$num1 = base_convert ($num1, 16, 2);
+	$num2 = base_convert ($num2, 16, 2);
+
+	// Ensure that both strings have the proper length
+	$num1 = zeroPad($num1);
+	$num2 = zeroPad($num2);
+
+	// Build the XOR'd response MSB to LSB
+	$xord = "";
+	for ($i = 0 ; $i < strlen($num1); ++$i) {
+
+		$bit1 = substr ($num1, $i, 1);
+		$bit2 = substr ($num2, $i, 1);
+
+		$xord .= $bit1 == $bit2 ? 0 : 1;
+	}
+
+	return $xord;
+} // END sgXor ($num1, $num2)
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
+// Takes a binary string in and returns that same string padded with zeroes 
+// to ensure that it is appropriate length as determined by $SG['skl']
+function zeroPad ($bin_string) {
+	global $SG;
+
+	$byte_count = $SG['skl'] / 2;				// 2 characters per byte
+
+	$max_binary_length = 8 * $byte_count;		// 8 bits per byte
+
+	$diff = $max_binary_length - strlen($bin_string); // How many 0s do we need?
+
+	$new = "";
+	for ($i = 0; $i < $diff; ++$i) {
+		$new .= "0";
+	}
+
+	$new .= $bin_string;
+	return $new;
+} // END zeroPad ($bin_string)
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
+// Takes a string in and returns a count of how many 1s it contains
+function countOnes ($str) {
+	$num = 0;
+	for ($i = 0 ; $i < strlen($str); ++$i) {
+		$num += substr ($str, $i, 1);
+	}
+	return $num;
+} // END countOnes ($str)
 /* ************************************************************************** */
 
 
@@ -67,7 +131,8 @@ function xmitToRouter ($outbound_payload, $url="") {
 	print "This doesn't belong here (zz_tools.php) but: $outbound_payload\n";
 	#return;
 
-	$url="10.42.0.40/API-router.php";
+	#$url="10.42.0.40/API-router.php";
+	$url="$url/API-router.php";
 
 	// Make it safe to transmit via http
 

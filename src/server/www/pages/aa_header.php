@@ -2,8 +2,8 @@
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 function get_header() {
-	global $SG_project_url;
-	$url = $SG_project_url;
+	global $SG;
+	$url = $SG['project_url'];
 
 	// If the server requires mating verification, then we'll have to add a 
 	// link to the mating verification page. 
@@ -45,10 +45,10 @@ function get_header() {
 	$msg .= "<div id=\"navbar\">\n";
 	$msg .= "\t<nav>\n";
 	$msg .= "\t<ul>\n";
-	$msg .= "\t\t<li id=\"logo\"><a href=\"#\"></a></li>\n";
+	$msg .= "\t\t<li id=\"logo\"><a href=\"$url\"></a></li>\n";
 	$msg .= "\t\t<li><a href=\"#\">Sensors</a>\n";
 	$msg .= "\t\t\t<ul>\n";
-	$msg .= "\t\t\t\t<li><a href=\"#\">Known Sensors</a></li>\n";
+	$msg .= "\t\t\t\t<li><a href=\"$url/pages/sensors.php\">Known Sensors</a></li>\n";
 	$msg .= "\t\t\t\t<li><a href=\"$url/pages/com.php\">Manufacturer<br>Compendium</a></li>\n";
 	$msg .= "\t\t\t\t<li><a href=\"$url/pages/cos.php\">Sensor<br>Compendium</a></li>\n";
 	$msg .= "\t\t\t</ul>\n";

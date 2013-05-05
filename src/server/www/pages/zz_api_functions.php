@@ -38,19 +38,42 @@ function processEyeball ($router_ip, $payload, $db) {
 
 	// If sensor is recognized
 	if ($count == 1)  {
+
+		// Let's get this sensor's id
+		$query  = "SELECT id_sensor FROM sensor ";
+		$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
+		$query .= "AND sn='$sn' AND has_mated='y'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query eb5.");
+		$row = mysqli_fetch_assoc($result);
+		$id_sensor = $row['id_sensor'];
+
+		// Let's also set the sensor's status to "offline".  This takes care
+		// of the possiblity of a sensor trying to reconnect to the network 
+		// while we're under the impression it's still connected. 
+		$query  = "UPDATE sensor SET status='offline' ";
+		$query .= "WHERE modnum='$modnum' AND manid='$manid' ";
+		$query .= "AND sn='$sn' AND has_mated='y'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query eb6.");
 		
+		// Build the Peck
 		$reply = appendToPayload($reply, "dt", 			"1");
 		$reply = appendToPayload($reply, "ip", 			"");
-		$reply = appendToPayload($reply, "sid", 	 	$row['server_id']);
+		$reply = appendToPayload($reply, "sid", 	 	$server_id);
 		$reply = appendToPayload($reply, "recognition",	"0");
 		$reply = appendToPayload($reply, "manid", 		$manid);
 		$reply = appendToPayload($reply, "modnum", 		$modnum);
 		$reply = appendToPayload($reply, "sn", 			$sn);
 		
+		// Send Peck
 		xmitToRouter($reply, $router_ip);
 
+		// Sleep for 250 ms after Peck before sending Squawk. 
+		usleep(250000);		
 
-		// SQUAWKING BELONGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// Now we start squawking.  SQUAWK!!!
+		generateSquawk ($rdid, $id_sensor, $router_ip, $db);
 	
 
 	// .. else sensor is not recognized
@@ -74,7 +97,7 @@ function processEyeball ($router_ip, $payload, $db) {
 			$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
 			$msg .= "model number&nbsp;=&nbsp;$modnum, ";
 			$msg .= "serial number&nbsp;=&nbsp;$sn. ";
-			$msg .= "(Sensor: $id_sensor) ";
+			#$msg .= "(Sensor: $id_sensor) ";
 			addToLog($msg);
 
 			xmitToRouter($reply, $router_ip);
@@ -264,13 +287,13 @@ function processPeacock ($router_ip, $payload, $db) {
 	$sida		= $payload["sida"];
 	$classa		= $payload["classa"];
 	$dira		= $payload["dira"];
-	$labela		= $payload["labela"];
-	$unitsa		= $payload["unitsa"];
+	$labela		= $payload["labela"] != "" ?  $payload["labela"] : "-";
+	$unitsa		= $payload["unitsa"] != "" ?  $payload["unitsa"] : "&nsbp;";
 	$sidb		= $payload["sidb"];
 	$classb		= $payload["classb"];
 	$dirb		= $payload["dirb"];
-	$labelb		= $payload["labelb"];
-	$unitsb		= $payload["unitsb"];
+	$labelb		= $payload["labelb"] != "" ?  $payload["labelb"] : "-";
+	$unitsb		= $payload["unitsb"] != "" ?  $payload["unitsb"] : "&nsbp;";
 	$additional	= $payload["additional"];
 
 	// First we gotta find out the sensor's information from the pipeline;
@@ -336,7 +359,310 @@ function processPeacock ($router_ip, $payload, $db) {
 
 } // End processPeacock
 
+
+// ****************************************
+
+function generateSquawk ($rdid, $id_sensor, $router_ip, $db) {
+	global $SG;
+
+	// Beginning the squawk payload
+	// all replies should include the originating rdid
+	$reply = appendtopayload($SG['ff_del'], "rdid", $rdid);
+
+	// Do we have a server key?
+	$query = "SELECT server_key FROM server";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq1.");
+	$row = mysqli_fetch_assoc($result);
+	$server_key = $row['server_key'];
+
+
+	// If we don't have a server key...
+	if ($server_key == "" ) {
+		
+		$dt =  "12";
+
+		// No challenge
+		$challenge = "";
+
+	// ...else we do have a server key;
+	} else {
+
+		$dt = "11";
+
+		$challenge = generaterandomhash($SG['skl']);
+	}
+
+	$reply = appendtopayload($reply, "dt", 		$dt);
+	$reply = appendtopayload($reply, "data", 	"$challenge");
+
+
+	// log it
+	$msg  = "[$router_ip] - Eyeball: Recognized sensor. ";
+	$msg .= "Squawking to commence ";
+	$msg .= "(Sensor: $id_sensor). ";
+	if ($challenge == "") {
+		$msg .= "No challenge. ";
+	} else {
+		$msg .= "Challenge = $challenge.";
+	}
+	addtolog($msg);
+
+
+	xmittorouter($reply, $router_ip);
+
+	// update pipeline
+	updatepipeline ($rdid, $id_sensor, $router_ip, 'Squawk1', $challenge);
+
+	// debugging only
+	if ( ($challenge != "") && ($SG['debug'] == true ) ) {
+		
+		$challenge_response = countones(sgxor($server_key, $challenge));
+
+		$reply = appendtopayload($SG['ff_del'], "rdid", $rdid);
+		$reply = appendtopayload($reply, "dt", 		"__debug__");
+		$reply = appendtopayload($reply, "data", 	"$challenge_response");
+
+		xmittorouter($reply, $router_ip);
+	}
+
+} // End generatesquawk()
+
+
+// ****************************************
+
+
+function processSquawkSensorReply($router_ip, $payload, $db) {
+	global $SG;
+
+	$rdid 				= $payload['rdid'];
+	$dt   				= $payload['dt'];
+	$challenge_response = $payload['data'];
+
+	// Get id_sensor
+	$query = "SELECT id_sensor FROM pipeline WHERE rdid='$rdid'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq3.");
+	$row = mysqli_fetch_assoc($result);
+	$id_sensor = $row['id_sensor'];
+
+	// Do we have a server key?
+	$query = "SELECT server_key FROM server";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq4.");
+	$row = mysqli_fetch_assoc($result);
+	$server_key = $row['server_key'];
+
+
+	// If we don't have a server key then there's no response to check
+	if ($server_key == "" ) {
+
+		// If the sensor's not going to send a challenge then we nest
+		if ($dt == "15") {
+			generateNest($router_ip, $rdid, $db);
+
+		} else {
+
+			$msg  = "[$router_ip] - Squawk: ";
+			$msg .= "Awaiting sensor's challenge. ";
+			$msg .= "(Sensor: $id_sensor). ";
+			addtolog($msg);
+
+			// If the sensor is going to send a challenge then update the pipeline
+			// to signify that we're ready for it.
+			updatePipeline ($rdid, $id_sensor, $router_ip, 'Squawk2');
+		}
+		
+		
+
+	// ...else, check the challenge response
+	} else {
+
+		// Get the challenge we sent the sensor
+		$query = "SELECT workspace FROM pipeline WHERE rdid='$rdid'";
+		$result = mysqli_query($db, $query) 
+			or die ("error: couldn't execute query sq2.");
+		$row = mysqli_fetch_assoc($result);
+		$challenge = $row['workspace'];
+
+		
+		// So the right answer is (DAH DAH DAHHHHH):
+		$correct_response = countones(sgxor($server_key, $challenge));
+	
+		// Was the sensor right?
+		if ($correct_response == $challenge_response) {
+
+			// If the sensor's not going to send a challenge then we nest
+			if ($dt == "15") {
+				// Log it
+				$msg  = "[$router_ip] - Squawk: Successful authenticated. ";
+				$msg .= "Permission to Nest granted. ";
+				$msg .= "(Sensor: $id_sensor). ";
+				addtolog($msg);
+
+				generateNest($router_ip, $rdid, $db);
+
+
+
+			} else { 
+				// Log it
+				// Log it
+				$msg  = "[$router_ip] - Squawk: Successful authenticated. ";
+				$msg .= "Awaiting sensor's challenge. ";
+				$msg .= "(Sensor: $id_sensor). ";
+				addtolog($msg);
+
+				// If the sensor is going to send a challenge then update the 
+				// pipeline to signify that we're ready for it.
+				updatePipeline ($rdid, $id_sensor, $router_ip, 'Squawk2');
+			}
+		 
+
+		// else the sensor was wrong. :(
+		} else {
+
+			// Beginning the Squawk payload
+			// All replies should include the originating rdid
+			$reply = appendtopayload($SG['ff_del'], "rdid", $rdid);
+
+			$reply = appendtopayload($reply, "dt", 		"1b");
+			$reply = appendtopayload($reply, "data", 	"");
+
+			// Log it
+			$msg  = "[$router_ip] - Squawk: Sensor failed authentication. ";
+			$msg .= "Bye bye. ";
+			$msg .= "(Sensor: $id_sensor). ";
+			addtolog($msg);
+
+			// Send it
+			xmittorouter($reply, $router_ip);
+
+			// Bye sensor :(
+			deleteFromPipelineByRdid($rdid, $db);
+		}
+
+	}
+
+} // End processSquawkSensorReply();
+
+
+// ****************************************
+
+
+function processSquawkSensorChallenge($router_ip, $payload, $db) {
+	global $SG;
+
+	$rdid 		= $payload['rdid'];
+	$dt   		= $payload['dt'];
+	$challenge	= $payload['data'];
+
+	// OK, before we get started we need to realize that this payload (dt=0x17)
+	// comes immediately after the previous (dt=0x16) without any server 
+	// interaction between.  Hence, network issues may cause the server to see
+	// 0x17 before 0x16, which is bad.  If that's the case we'll just sit and
+	// wait until we see that 0x16 is has set the pipeline status to 'Squawk2'
+	// or until the sensor times out of the pipeline.
+	$keep_waiting = TRUE;
+	while ( $keep_waiting == TRUE ) {
+		$query = "SELECT COUNT(*) AS count  FROM pipeline WHERE rdid='$rdid'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query sq7.");
+		$row = mysqli_fetch_assoc($result);
+
+
+		// If the sensor has timed out of the pipeline then we just quit
+		if ($row['count'] < 1 ) {
+			die ("Pipeline timeout during Squawk.");
+		}
+
+		// Now check for Squawk2
+		$query  = "SELECT COUNT(*) AS count  FROM pipeline ";
+		$query .= "WHERE rdid='$rdid' AND latest_tx='Squawk2'";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query sq7.");
+		$row = mysqli_fetch_assoc($result);
+
+
+		// If the sensor has timed out of the pipeline then we just quit
+		if ($row['count'] > 0 ) {
+			$keep_waiting = FALSE;
+		}
+
+		// Sleep for 250 ms
+		usleep(250000);		
+
+	}
+
+
+	// Get id_sensor
+	$query = "SELECT id_sensor FROM pipeline WHERE rdid='$rdid'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq5.");
+	$row = mysqli_fetch_assoc($result);
+	$id_sensor = $row['id_sensor'];
+
+	// Get the sensor's key
+	$query = "SELECT sensor_key FROM sensor WHERE id_sensor='$id_sensor'";
+	$result = mysqli_query($db, $query) 
+		or die ("Error: Couldn't execute query sq6.");
+	$row = mysqli_fetch_assoc($result);
+	$sensor_key = $row['sensor_key'];
+
+
+	// If we don't have a sensor key, then the sensor shouldn't have sent a
+	// challenge.  So we're just to kick it off the network.
+	if ($sensor_key == "") {
+		// THIS SHOULD A CHIRP OF TYPE 0X25
+		// THIS IS NOT DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		print "id_sensor = $id_sensor\n";
+		die ("oops...");
+	}
+
+
+	// So the right answer is (DAH DAH DAHHHHH):
+	$response = countones(sgxor($sensor_key, $challenge));
+
+	// All replies should include the originating rdid
+	$reply = appendtopayload($SG['ff_del'], "rdid", $rdid);
+
+	$reply = appendtopayload($reply, "dt", 		"1c");
+	$reply = appendtopayload($reply, "data", 	$response);
+	
+	// Log it
+	$msg  = "[$router_ip] - Squawk: Replied to sensor challenge. ";
+	$msg .= "Awaiting sensor's acceptance. ";
+	$msg .= "(Sensor: $id_sensor). ";
+	addtolog($msg);
+
+	// If the sensor is going to send a challenge then update the 
+	// pipeline to signify that we're ready for it.
+	updatePipeline ($rdid, $id_sensor, $router_ip, 'Squawk3');
+		 
+
+	// Send it
+	xmittorouter($reply, $router_ip);
+
+} // End processSquawkSensorChallenge()
+
+
+// ****************************************
+
+
+function processSquawkAcceptsChallenge($router_ip, $payload, $db) {
+	global $SG;
+
+	$rdid 				= $payload['rdid'];
+	$dt   				= $payload['dt'];
+	$challenge_response = $payload['data'];
+
+
+	generateNest($router_ip, $rdid, $db);
+
+} // End processSquawkAcceptsChallenge()
+
+
 /* ************************************************************************** */
+
 
 function generateNest ($router_ip, $rdid, $db) {
 	global $SG;
@@ -405,9 +731,5 @@ function generateNest ($router_ip, $rdid, $db) {
 		or die ("Error: Couldn't execute query ne1.");
 
 }
-
-
-
-
 
 ?>

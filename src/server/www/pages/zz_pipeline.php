@@ -3,7 +3,7 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 // Updates the pipeline...
 // We should get either an rdid (during mating) or an id_sensor (during squawking). 
-function updatePipeline ($rdid, $id_sensor, $router_ip, $tx) {
+function updatePipeline ($rdid, $id_sensor, $router_ip, $tx, $workspace="") {
 	$db = returnDatabaseConnection();
 
 
@@ -13,9 +13,10 @@ function updatePipeline ($rdid, $id_sensor, $router_ip, $tx) {
 		// Delete the current entry before adding a new one for this rdid.
 		deleteFromPipelineByRdid ($rdid, $db);
 
-		$query  = "INSERT INTO pipeline (rdid, id_sensor, router_ip, latest_tx) ";
-		$query .= "VALUES ('$rdid', '$id_sensor', '$router_ip', '$tx');";
-		$result = mysqli_query($db, $query) or die ("Error: Couldn't execute query pl1.");
+		$query  = "INSERT INTO pipeline (rdid, id_sensor, router_ip, latest_tx, workspace) ";
+		$query .= "VALUES ('$rdid', '$id_sensor', '$router_ip', '$tx', '$workspace');";
+		$result = mysqli_query($db, $query) 
+			or die ("Error: Couldn't execute query pl1.");
 
 	// Squawking
 	} else {
@@ -57,13 +58,16 @@ function cleanPipeline() {
 			// Remove sensor I/O from 'io' table
 			// !!!!!!!!!!!!!! THIS ISN'T DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
 
-			// Remove sensor from 'sensor' table
-			$query  = "DELETE FROM sensor WHERE id_sensor='$id_sensor' ";
-			mysqli_query($db, $query) or die ("Error: Can't execute query pl4 ($latest_tx).");
+			// Remove sensor from 'sensor' table IF we've never mated before
+			$query  = "DELETE FROM sensor  ";
+			$query .= "WHERE id_sensor='$id_sensor' AND has_mated='n'";
+			mysqli_query($db, $query) 
+				or die ("Error: Can't execute query pl4 ($latest_tx).");
 
 			// Remove sensor from 'pipeline' table
 			$query  = "DELETE FROM pipeline WHERE id_sensor='$id_sensor' ";
-			mysqli_query($db, $query) or die ("Error: Can't execute query pl5 ($latest_tx).");
+			mysqli_query($db, $query) 
+				or die ("Error: Can't execute query pl5 ($latest_tx).");
 
 		}
 	}
