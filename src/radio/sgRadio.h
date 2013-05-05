@@ -5,22 +5,26 @@
 //#include <SerialDebug.h>
 #include <sgSerial.h>
 #include <payloads.h>
+#include "sgSnIp.h"
 
 #define __FUNC__ (char *)__func__
 
-#define PACKET_SZ 100
+#define SG_PACKET_SZ 89
 #define IP_TABLE_SZ 12
 #define PACKET_ID 0
 
 #define PECK_TYPE 1
 #define EYEBALL_TYPE 0
 
-#define PECKIP 1
-#define PECKSN 				57
-#define PECKMANID 		1
-#define PECKMODID 		5
 
-#define EYE_SN_ENTRY 8
+#define PECK_R_IP		1
+#define PECK_A_IP 	17		
+#define PECK_SN 		58
+#define PECK_MANID 	50
+#define PECK_MODID 	54
+
+#define EYEBALL_SN 8
+
 
 #define IP_LENGTH 16
 #define SN_LENGTH 8
@@ -29,21 +33,37 @@
 #define SPI_IRQ_PIN 8
 #define ROUTER_MODE_PIN 12
 
-#define SNIPEXPANDFACTOR 1.5
-#define DEFAULTSNIPSIZE 1
-#define SNIPTABLEWIDTH	2
-#define SNIPBYTEWIDTH		8
-
 #define XBSN	81
+
+#define MAX_XB_PYLD 50
+#define XB_SN_LN 8
+#define PACKET_HEADER_SZ XB_SN_LN + 1
+#define F0_PYLD_SZ 41
+#define F1_PYLD_SZ 40
+#define RADIO_PKT_SZ 90
+#define FRAG_BUF_SZ 32
+
+#define MODE(mode) (router_mode == mode)
+#define IS_OK(err) (((sizeof(err) > 1) && (*err == 0x4F) && (*(err + 1) == 0x4B))) // check that err = 'OK'
+
+#define BROADCAST 0x0
 
 enum RadioMode {
 	SENSOR,
 	ROUTER
 };
 
-enum SnTableIndex {
-	IP,
-	SN,
+enum FragTableEntry {
+	FRAG_PENDING = 0,
+	FRAG_SN = 1,
+	FRAG_F0 = 9,
+	FRAG_F1 = 50
+};
+
+enum packetIndex {
+	PKT_FRAME = 0,
+	PKT_XBSN = 1,
+	PKT_PYLD = 9
 };
 
 //static SerialDebug * debugger;
@@ -55,61 +75,49 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize);
 void write_spi();
 void read_spi();
 
-typedef struct {
-	uint8_t ip[SNIPBYTEWIDTH];
-	uint8_t sn[SNIPBYTEWIDTH];
-}SnIpEntry;
-
-class SnIpTable {
-	private:
-		SnIpEntry * table;
-		int next;
-		int size;
-		void snIpExpand(void);
-		void snIpInsert(uint8_t * data, int index, SnTableIndex type = SN);
-	public:
-		SnIpTable();
-		~SnIpTable();
-		int snIpFindSn(uint8_t *);
-		int snIpFindIp(uint8_t *);
-		void snIpInsertIp(uint8_t * ip, uint8_t * key);
-		void snIpInsertIp(uint8_t * ip, int index);
-		void snIpInsertSn(uint8_t * sn);
-		void snIpInsertSn(uint8_t * sn, int index);
-};
-
-#define MAX_XB_PYLD 65
-#define XB_SN_LN 8
 
 class SansgridRadio {
 	private:
 		RadioMode router_mode;
-		uint8_t packet_buffer[MAX_XB_PYLD];
+		
+		uint8_t incoming_packet[MAX_XB_PYLD];
 		uint8_t packet_out_f0[MAX_XB_PYLD];
 		uint8_t packet_out_f1[MAX_XB_PYLD];
+		uint8_t packet_buffer[SG_PACKET_SZ];
+		
+		uint8_t frag_buffer[FRAG_BUF_SZ][RADIO_PKT_SZ];
+		unsigned int next;
+		
+		uint8_t xbsn[XB_SN_LN];
+		uint8_t origin_xbsn[XB_SN_LN];
+		
 		uint8_t * payload;
 		uint8_t * ip;
-		uint8_t xbsn[XB_SN_LN];
+		SansgridSerial * SpiData;
+		HardwareSerial * Radio;
+		
+		SnIpTable * sn_table;
+		//SerialDebug debug;
+		
 		void setXBsn(void);
 		int findSn(int sn);
 		void atCmd(uint8_t *,const char *);
+		bool mode(enum RadioMode mode);
+		bool setDestAddr(uint64_t addr);
 		uint8_t * genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn);
-		SnIpTable * sn_table;
-		//SerialDebug debug;
-		HardwareSerial * Radio;
+		
 	public:
-		SansgridRadio(HardwareSerial *,SansgridSerial *, SnIpTable *);
+		SansgridRadio();
 		~SansgridRadio();
 		void read();
 		void write();
 		void set_mode(RadioMode mode);
-		void init();
+		void init(HardwareSerial *, SansgridSerial *, SnIpTable *);
 		bool rxComplete();
 		void processSpi();
 		void loadFrame(int frame = -1);
 		void processPacket(void);
+		bool defrag(void);
 };
-
-
 
 #endif

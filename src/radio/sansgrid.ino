@@ -14,13 +14,14 @@ void readPacket();
 const int ledPin = 13;
 int length;
 
+
 SansgridSerial SpiData;
 SnIpTable RouteTable;
-SansgridRadio Radio = SansgridRadio(&Serial,&SpiData, &RouteTable);
+HardwareSerial * test;
 
+SansgridRadio * Radio;
 
-
-uint8_t packet_buffer[PACKET_SZ];
+uint8_t packet_buffer[SG_PACKET_SZ];
 
 // SPI Setup 
 #define SLAVE_READY 7
@@ -49,28 +50,30 @@ void setup() {
 		sgDebugInit(&SerialDebugger);
 		//SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
 	#else
-		Serial.begin(115200);
+	Serial.begin(115200);
 	#endif
   pinMode(ledPin, OUTPUT);
   pinMode(ROUTER_MODE_PIN, INPUT);
   digitalWrite(ROUTER_MODE_PIN, HIGH);
   pinMode(SPI_IRQ_PIN, INPUT);
   digitalWrite(SPI_IRQ_PIN, HIGH);
-  if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
-    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
-  	Radio.set_mode(ROUTER);
-	}
 	pinMode(MISO, OUTPUT);
 	SPCR |= _BV(SPE);
 	pos = 0;
 	process_flag = false;
+	spi_active = false;
 	pinMode(SLAVE_READY, OUTPUT);
 	digitalWrite(SLAVE_READY, HIGH);
 	SPI.attachInterrupt();
 
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
-	//Serial.println("this is a test of the emergency broadcasting system");
-	//Radio.test();
+	Radio = new SansgridRadio;
+	Radio->init(&Serial, &SpiData, &RouteTable);
+  if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
+    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
+  	Radio->set_mode(ROUTER);
+	}
+	Serial.println("Setup Complete");
 }
 
 ISR(SPI_STC_vect) {
@@ -88,12 +91,13 @@ void loop() {
 		pos = 0;
 		process_flag = false;
 		spi_active = false;
-		Radio.processSpi();
+		Radio->processSpi();
 		digitalWrite(SLAVE_READY, HIGH);
-		Radio.loadFrame(0);
-		Radio.write();
-		Radio.loadFrame(1);
-		Radio.write();
+		Radio->loadFrame(0);
+		Radio->write();
+		Radio->loadFrame(1);
+		Radio->write();
+		Serial.println("Packet written");
 	}
 	if (!spi_active) {
 // put your main code here, to run repeatedly: 
@@ -102,13 +106,15 @@ void loop() {
 			//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
 		 // Serial.flush();
 			//readPacket();
+	readPacket();
+	/*
 			Radio.read();
 			Radio.processPacket();
 			if(Radio.rxComplete()) {
 				memcpy(rx,&SpiData,sizeof(SpiData)); 
 				spi_active = true;
 				digitalWrite(SLAVE_READY, LOW);
-			}
+			}*/
 		}
 	}
     
@@ -117,7 +123,7 @@ void loop() {
 
 void readPacket() {
 	int i = 0;
-	while(Serial.available() > 0 && i < PACKET_SZ) {
+	while(Serial.available() > 0 && i < SG_PACKET_SZ) {
 		delay(2);
 		packet_buffer[i++] = Serial.read();
 	}
