@@ -60,11 +60,13 @@ void getSansgridDir(char wd[150]) {
 	char *home_path = getenv("HOME");
 
 	if (!home_path) {
-		syslog(LOG_DEBUG, "Can't find home directory");
+		//syslog(LOG_DEBUG, "Can't find home directory");
+		syslog(LOG_DEBUG, "Didn't get home directory");
 		//printf("ERROR: Can't find home directory\n");
-		exit(EXIT_FAILURE);
+		sprintf(wd, "/home/pi/.sansgrid");
+	} else {
+		snprintf(wd, 120, "%s/.sansgrid", home_path);
 	}
-	snprintf(wd, 120, "%s/.sansgrid", home_path);
 	// FIXME: check to see if dir exists
 	// 			if not, get config from /etc/sansgrid
 

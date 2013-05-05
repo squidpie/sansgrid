@@ -21,6 +21,7 @@
 
 #define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
 
+#include <syslog.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -295,6 +296,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
 			dict[size].key = &key[sizeof(DELIM_KEY)-2];

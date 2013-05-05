@@ -52,8 +52,10 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	syslog(LOG_INFO, "Sending packet over TCP");
 
 	// get the configuration path
-	getSansgridDir(sansgrid_path);
-	snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
+	//getSansgridDir(sansgrid_path);
+	//snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
+	snprintf(config_path, 300, "sansrts.pl");
+	/*
 	if ((FPTR = fopen(config_path, "r")) == NULL) {
 		syslog(LOG_DEBUG, "Couldn't find path %s", config_path);
 		return -1;
@@ -73,12 +75,15 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		free(buffer);
 		fclose(FPTR);
 	}
+	*/
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
 		syslog(LOG_DEBUG, "Router-->Server conversion failed");
 		return -1;
 	} else {
-		snprintf(cmd, 2000, "curl -s --data-urlencode --payload=\"%s\"", payload);
+		syslog(LOG_DEBUG, "Sending packet %s", payload);
+		//snprintf(cmd, 2000, "curl -s --data-urlencode --payload=\"%s\"", payload);
+		snprintf(cmd, 2000, "%s \"%s\"", config_path, payload);
 		if ((FPTR = popen(cmd, "r")) == NULL) {
 			syslog(LOG_DEBUG, "Router-->Server send failed");
 			return -1;

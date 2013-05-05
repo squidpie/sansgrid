@@ -22,6 +22,7 @@
 
 //#ifdef SG_ARCH_PI
 
+#define _POSIX_C_SOURCE 199309L
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdint.h>
@@ -34,6 +35,7 @@
 #include <stdint.h>
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
+#include <syslog.h>
 
 
 #define KHZ(freq) (1000*freq)
@@ -47,7 +49,7 @@
 
 // What pin the slave interrupt is on
 // wiringPi pin number
-#define SLAVE_INT_PIN 	0
+#define SLAVE_INT_PIN 	2
 
 static sem_t wait_on_slave;
 static int sem_initd = 0;
@@ -55,7 +57,7 @@ static int sem_initd = 0;
 int spiSetup(void) {
 	int fd;
 	// Set up SPI
-	if ((fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_MHZ))) < 0) {
+	if ((fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_KHZ))) < 0) {
 		syslog(LOG_ERR, "SPI Setup failed: %s\n", strerror (errno));
 		return -1;
 	} else {
@@ -66,13 +68,15 @@ int spiSetup(void) {
 
 int spiTransfer(char *buffer, int size) {
 	int i;
-	int fd;
 	// only a certain amount of byte can be written at a time. see below
 	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
+	struct timespec req = { 0, WRITE_CYCLE_U*1000 };
+	struct timespec rem;
 
-	wiringPiSPIDataRW(0, buffer, bounded_size);
+	wiringPiSPIDataRW(0, (unsigned char*)buffer, bounded_size);
 	// Wait for the write to cycle
-	usleep(WRITE_CYCLE_U);
+	//usleep(WRITE_CYCLE_U);
+	nanosleep(&req, &rem);
 	if (size > WRITE_MAX_BYTES) {
 		// Only a certain amount of bytes can be writeen at a time
 		// If we go over that limit, break the write up into multiple
@@ -105,23 +109,30 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	return 0;
 }
 
+void sgSerialSlaveSending(void) {
+	sem_post(&wait_on_slave);
+}
 
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
+	int fd;
 	char buffer[sizeof(SansgridSerial)+1];
-	if (wiringPiSPISetup() < 0) {
-		syslog(LOG_ERR, "Couldn't setup wiringPi for listening!");
-		return -1;
-	} 
+	/*
+	if (wiringPiSetupSys() == -1) {
+		syslog(LOG_ERR, "Couldn't setup wiringPi system!");
+		exit(EXIT_FAILURE);
+	}
+	//syslog(LOG_DEBUG, "Using pin %i", SLAVE_INT_PIN);
 	if (wiringPiISR(SLAVE_INT_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
 		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
-	if (!sem_init) {
+	*/
+	if (!sem_initd) {
 		sem_init(&wait_on_slave, 0, 0);
-		sem_init = 1;
+		sem_initd = 1;
 	}
 	memset(buffer, 0x0, sizeof(buffer));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
@@ -130,14 +141,18 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	sem_wait(&wait_on_slave);
 
 	// Slave wants to send data
+	/*
 	if ((fd = spiSetup()) == -1) {
-		return -1;
+		syslog(LOG_ERR, "setting up SPI failed");
+		exit(EXIT_FAILURE);
 	}
 	spiTransfer(buffer, sizeof(SansgridSerial));
 	close(fd);
 
+	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
+	*/
 
 	return 0;
 }

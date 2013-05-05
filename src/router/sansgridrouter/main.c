@@ -181,12 +181,14 @@ int sgSocketListen(void) {
 	struct sockaddr_un local, remote;		// socket addresses
 	socklen_t len;							// socket lengths
 	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
+	char home_path[150];
 	char socket_path[150];					// socket locations
 	SansgridSerial sg_serial;
 	int exit_code;
 	char *packet;
 
-	getSansgridDir(socket_path);
+	getSansgridDir(home_path);
+	strcpy(socket_path, home_path);
 
 	// Create a socket endpoint
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -303,7 +305,10 @@ int sgSocketSend(const char *data, const int size) {
 	struct sockaddr_un remote;
 	char str[SG_SOCKET_BUFF_SIZE];
 	char socket_path[150];
-	getSansgridDir(socket_path);
+	char home_path[150];
+
+	getSansgridDir(home_path);
+	strcpy(socket_path, home_path);
 
 	// FIXME:
 	// 	I'll probably have to add a function
@@ -373,7 +378,9 @@ int sgStorePID(pid_t pid) {
 	FILE *PIDFILE;
 	char config_path[150];
 	char pidpath[150];
-	getSansgridDir(config_path);
+	char home_path[150];
+	getSansgridDir(home_path);
+	strcpy(config_path, home_path);
 	snprintf(pidpath, 150, "%s/sansgridrouter.pid", config_path);
 	if ((PIDFILE = fopen(pidpath, "w")) == NULL) {
 		perror("fopen");
@@ -397,6 +404,7 @@ int main(int argc, char *argv[]) {
 	int c;								// getopt var
 	char *option = NULL;				// getopt var
 	int32_t no_daemonize = 0;			// bool: should we run in foreground?
+	char home_path[150];
 	char config_path[150];				// Sansgrid Dir
 	pid_t sgpid;						// Sansgrid PID
 	char payload[400];
@@ -404,7 +412,8 @@ int main(int argc, char *argv[]) {
 	SansgridHatching sg_hatch;
 	SansgridSerial sg_serial;
 
-	getSansgridDir(config_path);
+	getSansgridDir(home_path);
+	strcpy(config_path, home_path);
 
 	// Parse arguments with getopt
 	while (1) {
