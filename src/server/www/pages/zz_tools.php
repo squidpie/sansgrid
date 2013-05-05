@@ -131,7 +131,8 @@ function xmitToRouter ($outbound_payload, $url="") {
 	print "This doesn't belong here (zz_tools.php) but: $outbound_payload\n";
 	#return;
 
-	$url="10.42.0.40/API-router.php";
+	#$url="10.42.0.40/API-router.php";
+	$url="$url/API-router.php";
 
 	// Make it safe to transmit via http
 

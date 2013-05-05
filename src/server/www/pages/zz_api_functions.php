@@ -97,7 +97,7 @@ function processEyeball ($router_ip, $payload, $db) {
 			$msg .= "Manufacturer's ID&nbsp;=&nbsp;$manid, ";
 			$msg .= "model number&nbsp;=&nbsp;$modnum, ";
 			$msg .= "serial number&nbsp;=&nbsp;$sn. ";
-			$msg .= "(Sensor: $id_sensor) ";
+			#$msg .= "(Sensor: $id_sensor) ";
 			addToLog($msg);
 
 			xmitToRouter($reply, $router_ip);
