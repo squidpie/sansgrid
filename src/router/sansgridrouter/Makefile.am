@@ -35,6 +35,7 @@ SANSGRID_TEST = \
 #libSgPayloads_a_SOURCES = ../../lib/payloads.h
 
 #SANSGRID_COMM = communication/sg_serial_rpi.c
+SANSGRID_COMM = communication/sg_serial_generic.c
 
 sansgridrouter_SOURCES = $(SANSGRID_BASE) \
 			  $(SANSGRID_COMM) \

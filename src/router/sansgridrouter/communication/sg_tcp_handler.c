@@ -357,11 +357,23 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
+	uint32_t i;
+	int field_not_zero = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
 	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
-	for (uint32_t i=0; i<size; i++) {
-		sprintf(payload, "%s%.2x", payload, value[i]);
+	for (i=0; i<size; i++) {
+		if (value[i] != 0x0) {
+			field_not_zero = 1;
+			break;
+		}
+	}
+	if (field_not_zero) {
+		for (; i<size; i++) {
+			sprintf(payload, "%s%.2x", payload, value[i]);
+		}
+	} else {
+		sprintf(payload, "%s%.2x", payload, 0x0);
 	}
 	return 0;
 }
