@@ -34,6 +34,7 @@ bool SansgridRadio::setDestAddr(uint64_t addr) {
 		return 0;
 	}
 	else if(!IS_OK(at_response)) {
+		Radio->println("AT cmd Failed with");
 		delete at_response;
 		return 0;
 	}
@@ -118,11 +119,11 @@ void SansgridRadio::processSpi() {
 	
 	Radio->println("Copying back to packet_out_[f0/f1]");
 	delay(50);
-	memcpy((packet_out_f0+PACKET_HEADER_SZ),payload,F0_PYLD_SZ);
+	memcpy(&packet_out_f0[PACKET_HEADER_SZ],payload,F0_PYLD_SZ);
 	Radio->write(packet_out_f0,sizeof(packet_out_f0));
 	delay(50);
-	memcpy((packet_out_f1+PACKET_HEADER_SZ),(payload+F0_PYLD_SZ),F1_PYLD_SZ);
-	Radio->write(packet_out_f1,sizeof(packet_out_f1));
+	memcpy(&packet_out_f1[PACKET_HEADER_SZ],(payload+F0_PYLD_SZ),F1_PYLD_SZ);
+	Radio->write(packet_out_f1,MAX_XB_PYLD);
 	delay(50);
 }
 
@@ -139,7 +140,7 @@ bool SansgridRadio::defrag() {
 			if (frag_buffer[i][FRAG_PENDING] && memcmp(&frag_buffer[i][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN)){
 				frag_buffer[i][FRAG_PENDING] = 0;
 				memcpy(&frag_buffer[i][FRAG_F1], &incoming_packet[PKT_PYLD],F1_PYLD_SZ);
-				memcpy(&packet_buffer, &frag_buffer[i][FRAG_F0],sizeof(packet_buffer));
+				memcpy(&packet_buffer[0], &frag_buffer[i][0],SG_PACKET_SZ);
 				memcpy(&origin_xbsn, &frag_buffer[i][FRAG_SN], XB_SN_LN);
 				rv = true;
 				break;
@@ -235,17 +236,67 @@ bool SansgridRadio::rxComplete() {
 
 void SansgridRadio::setXBsn() {
 	uint8_t * xbsn_str = new uint8_t[16];
+	//char xbsn_str[17];
 	uint8_t * cmdOut = new uint8_t[8];
-	memset(xbsn_str,0,16);
+	memset(xbsn_str,0,17);
 	memset(cmdOut,0,8);
 // Radio->println("\nSansgrid is Alive!\n");
 	atCmd(cmdOut,"ATSH");
-	memcpy((xbsn_str+2),cmdOut,8);
+	memcpy((xbsn_str+2),cmdOut,6);
 	atCmd(cmdOut,"ATSL");
 	memcpy((xbsn_str+8),cmdOut,8);
-	//Radio->write(xbsn_str,16);
-	atox(xbsn, (char *)xbsn_str, XB_SN_LN); 
-	Radio->write(xbsn,XB_SN_LN);
+	//Radio->println((const char *)xbsn_str);
+	//Radio->println();
+	uint8_t hex_tmp = 0;
+	for(int i = 0; i < 17; i++){
+		Radio->write(xbsn_str[i]);
+		sscanf((const char *)(xbsn_str + i), "%hx", &hex_tmp);
+		Radio->write(hex_tmp);
+	}
+/*
+	sscanf(&xbsn_str[0],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[0] = hex_tmp << 4;
+	sscanf(&xbsn_str[1],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[0] |= hex_tmp;
+	sscanf(&xbsn_str[2],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[1] = hex_tmp << 4;
+	sscanf(&xbsn_str[3],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[1] |= hex_tmp;
+	sscanf(&xbsn_str[4],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[2] = hex_tmp << 4;
+	sscanf(&xbsn_str[5],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[2] |= hex_tmp;
+	sscanf(&xbsn_str[6],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[3] = hex_tmp << 4;
+	sscanf(&xbsn_str[7],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[3] |= hex_tmp;
+	sscanf(&xbsn_str[8],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[4] = hex_tmp << 4;
+	sscanf(&xbsn_str[9],"%hx",&hex_tmp);
+	Radio->write(hex_tmp);
+	xbsn[4] |= hex_tmp;
+	
+	sscanf((char *)&xbsn_str[0], "%hhx", &xbsn[0]);
+	sscanf((char *)&xbsn_str[2], "%hhx", &xbsn[1]);
+	sscanf((char *)&xbsn_str[4], "%hhx", &xbsn[2]);
+	sscanf((char *)&xbsn_str[6], "%hhx", &xbsn[3]);
+	sscanf((char *)&xbsn_str[8], "%hhx", &xbsn[4]);
+	sscanf((char *)&xbsn_str[10], "%hhx", &xbsn[5]);
+	sscanf((char *)&xbsn_str[12], "%hhx", &xbsn[6]);
+	sscanf((char *)&xbsn_str[14], "%hhx", &xbsn[7]);
+	*/
+
+	//atox(xbsn, (char *)xbsn_str, XB_SN_LN); 
+	//Radio->write(xbsn,XB_SN_LN);
 	Radio->println(" xbsn set compelte");
 	while(Radio->available() > 0) { Radio->read(); }
 	delete xbsn_str;
