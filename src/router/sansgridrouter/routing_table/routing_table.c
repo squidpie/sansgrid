@@ -229,7 +229,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	if (tableChkFull(table))
 		return 1;
 
-	index = locationToTablePtr(ip_addr, table->base);
+	index = locationToTablePtr(ip_addr, table->base) % ROUTING_ARRAYSIZE;
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
