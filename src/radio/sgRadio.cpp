@@ -235,69 +235,24 @@ bool SansgridRadio::rxComplete() {
 }
 
 void SansgridRadio::setXBsn() {
-	uint8_t * xbsn_str = new uint8_t[16];
-	//char xbsn_str[17];
+	char xbsn_str[17];
 	uint8_t * cmdOut = new uint8_t[8];
-	memset(xbsn_str,0,17);
+
+	memset(xbsn_str,'0',17);
 	memset(cmdOut,0,8);
-// Radio->println("\nSansgrid is Alive!\n");
+	xbsn_str[16] = '\0';
+	
+	// get char sn value
 	atCmd(cmdOut,"ATSH");
-	memcpy((xbsn_str+2),cmdOut,6);
+	memcpy((xbsn_str+2),cmdOut,6); // hard code that sn starts with a 00 byte
+	
 	atCmd(cmdOut,"ATSL");
 	memcpy((xbsn_str+8),cmdOut,8);
-	//Radio->println((const char *)xbsn_str);
-	//Radio->println();
-	uint8_t hex_tmp = 0;
-	for(int i = 0; i < 17; i++){
-		Radio->write(xbsn_str[i]);
-		sscanf((const char *)(xbsn_str + i), "%hx", &hex_tmp);
-		Radio->write(hex_tmp);
-	}
-/*
-	sscanf(&xbsn_str[0],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[0] = hex_tmp << 4;
-	sscanf(&xbsn_str[1],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[0] |= hex_tmp;
-	sscanf(&xbsn_str[2],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[1] = hex_tmp << 4;
-	sscanf(&xbsn_str[3],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[1] |= hex_tmp;
-	sscanf(&xbsn_str[4],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[2] = hex_tmp << 4;
-	sscanf(&xbsn_str[5],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[2] |= hex_tmp;
-	sscanf(&xbsn_str[6],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[3] = hex_tmp << 4;
-	sscanf(&xbsn_str[7],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[3] |= hex_tmp;
-	sscanf(&xbsn_str[8],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[4] = hex_tmp << 4;
-	sscanf(&xbsn_str[9],"%hx",&hex_tmp);
-	Radio->write(hex_tmp);
-	xbsn[4] |= hex_tmp;
-	
-	sscanf((char *)&xbsn_str[0], "%hhx", &xbsn[0]);
-	sscanf((char *)&xbsn_str[2], "%hhx", &xbsn[1]);
-	sscanf((char *)&xbsn_str[4], "%hhx", &xbsn[2]);
-	sscanf((char *)&xbsn_str[6], "%hhx", &xbsn[3]);
-	sscanf((char *)&xbsn_str[8], "%hhx", &xbsn[4]);
-	sscanf((char *)&xbsn_str[10], "%hhx", &xbsn[5]);
-	sscanf((char *)&xbsn_str[12], "%hhx", &xbsn[6]);
-	sscanf((char *)&xbsn_str[14], "%hhx", &xbsn[7]);
-	*/
 
-	//atox(xbsn, (char *)xbsn_str, XB_SN_LN); 
-	//Radio->write(xbsn,XB_SN_LN);
-	Radio->println(" xbsn set compelte");
+	//convert to hex
+	atox(xbsn,xbsn_str,XB_SN_LN);
+
+	// flush buffer and collect garbage 
 	while(Radio->available() > 0) { Radio->read(); }
 	delete xbsn_str;
 	delete cmdOut;
@@ -420,8 +375,11 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	char chunk[3];
 	uint32_t length;
 	uint32_t uval;
+	char offset;
+	uint8_t adjust;
 
 	memset(hexarray,0,hexsize);
+
 	if (str == NULL)
 		return;
 	length = strlen(str);
@@ -442,7 +400,33 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 			//sscanf(&str[i], "%2s", chunk);
 			increment = 2;
 		}
-		sscanf(chunk, "%x", &uval);
+		//sscanf(chunk, "%x", &uval);
+		if (chunk[0] >= 'A') {
+			offset = 'A';
+			adjust = 10;
+		}
+		else {
+			offset = '0';
+			adjust = 0;
+		}
+		if (chunk[1] != '\0') {
+			uval = ((chunk[0] - offset) + adjust) << 4;
+			
+			if (chunk[1] >= 'A') {
+				offset = 'A';
+				adjust = 10;
+			}
+			else {
+				offset = '0';
+				adjust = 0;
+			}
+			uval |= (chunk[1] - offset) + adjust;
+		}
+
+		else {
+			uval = (chunk[0] - offset) + adjust;
+		}
+
 		hexarray[i_hex++] = (uval & 0xff);
 		i_str+=increment;
 	}
