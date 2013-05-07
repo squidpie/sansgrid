@@ -466,11 +466,13 @@ int main(int argc, char *argv[]) {
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
+			{"serverip",	required_argument,	0,				's'},
+			{"serverkey",	required_argument,	0,				'k'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "d:fhp:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "d:fhp:vs:k:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -490,11 +492,17 @@ int main(int argc, char *argv[]) {
 				// help
 				usage(EXIT_SUCCESS);
 				break;
+			case 'k':
+				// Server key is given
+				break;
 			case 'p':
 				// Payload is given
 				sprintf(payload, "packet: %s", optarg);
 				sgSocketSend(payload, strlen(payload));
 				exit(EXIT_SUCCESS);
+				break;
+			case 's':
+				// Server IP address given
 				break;
 			case 'v':
 				// version
@@ -551,6 +559,14 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "change-server-ip")) {
+			// Change the server IP address for the running daemon
+			printf("Not implemented yet\n");
+			exit(EXIT_FAILURE);
+		} else if (!strcmp(option, "change-server-key")) {
+			// Change the server key for the running daemon
+			printf("Not implemented yet\n");
+			exit(EXIT_FAILURE);
 		} else {
 			// bad option
 			printf("Unknown Arg: %s\n", option);

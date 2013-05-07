@@ -33,6 +33,16 @@
 #include "routing_table/routing_table.h"
 #include "daemon/sansgrid_daemon.h"
 
+typedef struct RouterOpts {
+	// options to pull out of a config file
+	// or to grab from command-line arguments
+	char essid[80];
+	char serverip[20];
+	char serverkey[512];
+} RouterOpts;
+	
+
+
 Queue *dispatch;
 RoutingTable *routing_table;
 uint8_t router_base[IP_SIZE];
