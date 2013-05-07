@@ -489,19 +489,25 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
-int32_t routingTableGetStatus(RoutingTable *table, char *str) {
+int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	// Print table status
 	uint32_t i, j;
 	uint8_t ip_addr[IP_SIZE];
+	int index = 0;
 	str[0] = '\0';
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {
-			syslog(LOG_DEBUG, "found one!");
-			maskip(ip_addr, table->base, i);
-			for (j=0; j<IP_SIZE; j++)
-				sprintf(str, "%s%x:", str, ip_addr[j]);
-			sprintf(str, "%s\n", str);
+			if (index == devnum) {
+				syslog(LOG_DEBUG, "found one!");
+				maskip(ip_addr, table->base, i);
+				for (j=0; j<IP_SIZE; j++)
+					sprintf(str, "%s%x:", str, ip_addr[j]);
+				sprintf(str, "%s\n", str);
+				break;
+			} else {
+				index++;
+			}
 		}
 	}
 	return 0;

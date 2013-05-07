@@ -77,7 +77,7 @@ int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status);
 enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableGetDeviceCount(RoutingTable *table);
-int32_t routingTableGetStatus(RoutingTable *table, char *str);
+int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str);
 
 
 #endif
