@@ -103,7 +103,7 @@ int32_t payloadRoutingInit(void) {
 	for (int i=0; i<IP_SIZE; i++)
 		base[i] = 0x0;
 	mark_point();
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 	fail_if((routing_table == NULL), "Error: routing table is not initialized!");
 	mark_point();
 

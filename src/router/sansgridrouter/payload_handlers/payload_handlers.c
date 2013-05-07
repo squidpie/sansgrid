@@ -152,6 +152,18 @@ int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Fly data type
 	// Send a SansgridFly from router to radio
 	
+	SANSGRID_UNION(SansgridFly, SansgridFlyConv) sg_fly_union;
+	char essid[80];
+	SansgridFly *sg_fly;
+
+	sg_fly_union.serialdata = sg_serial->payload;
+	sg_fly = sg_fly_union.formdata;
+
+	routingTableGetEssid(routing_table, essid);
+	if (strcmp(essid, sg_fly->network_name)) {
+		// essids don't match, so that's weird
+		syslog(LOG_DEBUG, "Sansgrid Network name doesn't match internal network name");
+	}
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 	
 	return 0;

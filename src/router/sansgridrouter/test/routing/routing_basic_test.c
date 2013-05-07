@@ -65,7 +65,7 @@ START_TEST (testRoutingTableAdd) {
 	for (i=0; i<IP_SIZE; i++)
 		base[i] = 0x0;
 
-	table = routingTableInit(base);
+	table = routingTableInit(base, "Testing ESSID");
 
 
 	for (i=0; i<32; i++) {
@@ -91,7 +91,7 @@ START_TEST (testRoutingTableLookup) {
 	for (i=0; i<IP_SIZE; i++)
 		base[i] = 0x0;
 
-	table = routingTableInit(base);
+	table = routingTableInit(base, "Testing ESSID");
 
 	dev_prop.dev_attr.manid[0] = 0x5;
 

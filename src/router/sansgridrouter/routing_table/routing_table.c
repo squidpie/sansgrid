@@ -49,10 +49,13 @@ typedef struct RoutingNode {
 struct RoutingTable {
 	uint32_t tableptr;			// index, used for alloc
 	uint32_t table_alloc;
+	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+
+	char essid[80];				// network name
 	uint8_t base[IP_SIZE];
 	uint8_t broadcast[IP_SIZE];
+
 	uint32_t hbptr;				// index, used for heartbeat
-	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 };
 
 
@@ -166,7 +169,7 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 
 
 
-RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	// Initialize the routing table
 	
 	int i;
@@ -178,6 +181,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
 	table->hbptr = 0;
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
 	memset(table->broadcast, 0xff, IP_SIZE*sizeof(uint8_t));
+	strncpy(table->essid, essid, sizeof(table->essid));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
 	
 
@@ -206,6 +210,12 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 	return table;
 }
 
+void routingTableGetEssid(RoutingTable *table, char essid[80]) {
+
+	tableAssertValid(table);
+	strncpy(essid, table->essid, sizeof(table->essid));
+	return;
+}
 
 int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	   DeviceProperties *properties) {

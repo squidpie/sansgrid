@@ -60,8 +60,9 @@ struct DeviceProperties {
 //int32_t littleEndian(void);
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
-RoutingTable *routingTableInit(uint8_t base[IP_SIZE]);
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]);
 RoutingTable *routingTableDestroy(RoutingTable *table);
+void routingTableGetEssid(RoutingTable *table, char essid[80]);
 int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);

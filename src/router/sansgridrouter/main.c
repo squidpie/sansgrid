@@ -579,7 +579,8 @@ int main(int argc, char *argv[]) {
 
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
-	routing_table = routingTableInit(router_base);
+	// TODO: Assign ESSID from config file
+	routing_table = routingTableInit(router_base, "Stock ESSID");
 	void *arg;
 
 	// TODO: set IP address correctly
