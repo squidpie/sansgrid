@@ -33,6 +33,7 @@
 #include "../sansgrid_router.h"
 
 
+#define USE_SANSRTS 1
 
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
@@ -41,21 +42,24 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		return -1;
 	char cmd[2000];
 	char payload[size*5];
-	char sansgrid_path[300];
 	char config_path[300];
 	FILE *FPTR = NULL;
+#ifndef USE_SANSRTS
 	char key[100],
 		 url[50];
+	char sansgrid_path[300];
+#endif
 	char *buffer = NULL;
-	int buff_size = 1000;
+	int buff_size = size;
 	int exit_code;
 	syslog(LOG_INFO, "Sending packet over TCP");
 
 	// get the configuration path
-	//getSansgridDir(sansgrid_path);
-	//snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
+#ifdef USE_SANSRTS
 	snprintf(config_path, 300, "sansrts.pl");
-	/*
+#else
+	getSansgridDir(sansgrid_path);
+	snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
 	if ((FPTR = fopen(config_path, "r")) == NULL) {
 		syslog(LOG_DEBUG, "Couldn't find path %s", config_path);
 		return -1;
@@ -67,27 +71,36 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		}
 		while (getline(&buffer, &size, FPTR) != -1) {
 			if (strstr(buffer, "key")) {
-				sscanf(buffer, "key = '%s'", key);
+				sscanf(buffer, "key = %s", key);
 			} else if (strstr(buffer, "url")) {
-				sscanf(buffer, "url = '%s'", url);
+				sscanf(buffer, "url = %s", url);
 			}
 		}
 		free(buffer);
 		fclose(FPTR);
 	}
-	*/
+#endif
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
 		syslog(LOG_DEBUG, "Router-->Server conversion failed");
 		return -1;
 	} else {
 		syslog(LOG_DEBUG, "Sending packet %s", payload);
-		//snprintf(cmd, 2000, "curl -s --data-urlencode --payload=\"%s\"", payload);
+#ifdef USE_SANSRTS
 		snprintf(cmd, 2000, "%s \"%s\"", config_path, payload);
+#else
+		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode --key=%s --data-urlencode --payload=\"%s\"", 
+				url, key, payload);
+#endif
 		if ((FPTR = popen(cmd, "r")) == NULL) {
 			syslog(LOG_DEBUG, "Router-->Server send failed");
 			return -1;
 		}
+		buff_size = size;
+		buffer = (char*)malloc(buff_size*sizeof(char));
+		while (getline(&buffer, &size, FPTR) != -1) {
+		}
+		free(buffer);
 		exit_code = pclose(FPTR);
 		if (exit_code > 0) {
 			syslog(LOG_INFO, "send command exited successfully");

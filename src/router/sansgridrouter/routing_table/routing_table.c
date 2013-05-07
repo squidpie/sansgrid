@@ -49,10 +49,13 @@ typedef struct RoutingNode {
 struct RoutingTable {
 	uint32_t tableptr;			// index, used for alloc
 	uint32_t table_alloc;
+	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+
+	char essid[80];				// network name
 	uint8_t base[IP_SIZE];
 	uint8_t broadcast[IP_SIZE];
+
 	uint32_t hbptr;				// index, used for heartbeat
-	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 };
 
 
@@ -111,12 +114,15 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
 	int32_t i;
 	uint8_t offset[IP_SIZE];
 	uint32_t location[IP_SIZE/4];
+	uint32_t index;
 
 	for (i=0; i<IP_SIZE; i++)
 		offset[i] = ip_addr[i] - base[i];
 	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
 
-	return location[IP_SIZE/4-1];
+	index = location[IP_SIZE/4-1] % ROUTING_ARRAYSIZE;
+
+	return index;
 }
 
 
@@ -163,7 +169,7 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 
 
 
-RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	// Initialize the routing table
 	
 	int i;
@@ -175,6 +181,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
 	table->hbptr = 0;
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
 	memset(table->broadcast, 0xff, IP_SIZE*sizeof(uint8_t));
+	strncpy(table->essid, essid, sizeof(table->essid));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
 	
 
@@ -203,6 +210,12 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 	return table;
 }
 
+void routingTableGetEssid(RoutingTable *table, char essid[80]) {
+
+	tableAssertValid(table);
+	strncpy(essid, table->essid, sizeof(table->essid));
+	return;
+}
 
 int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	   DeviceProperties *properties) {
@@ -228,8 +241,10 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		table->routing_table[index]->lost_pings = 0;
 		table->table_alloc++;
 		return 0;
-	} else
+	} else {
+		syslog(LOG_INFO, "Device already exists at %i", index);
 		return 1;
+	}
 }
 
 
@@ -489,19 +504,37 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
-int32_t routingTableGetStatus(RoutingTable *table, char *str) {
+int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	// Print table status
 	uint32_t i, j;
 	uint8_t ip_addr[IP_SIZE];
+	int index = 0;
+	int last_was_zero = 0;
 	str[0] = '\0';
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {
-			syslog(LOG_DEBUG, "found one!");
-			maskip(ip_addr, table->base, i);
-			for (j=0; j<IP_SIZE; j++)
-				sprintf(str, "%s%x:", str, ip_addr[j]);
-			sprintf(str, "%s\n", str);
+			if (index == devnum) {
+				syslog(LOG_DEBUG, "found one!");
+				maskip(ip_addr, table->base, i);
+				sprintf(str, "%.4i\t", i);
+				for (j=0; j<IP_SIZE; j++) {
+					if (ip_addr[j] != 0x0) {
+						sprintf(str, "%s%.2x", str, ip_addr[j]);
+						last_was_zero = 0;
+						if (j+1 < IP_SIZE && last_was_zero < 2)
+							strcat(str, ":");
+					} else if (!last_was_zero) {
+						strcat(str, "::");
+						last_was_zero = 1;
+					}
+
+				}
+				sprintf(str, "%s\n", str);
+				break;
+			} else {
+				index++;
+			}
 		}
 	}
 	return 0;

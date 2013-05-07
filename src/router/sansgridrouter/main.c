@@ -144,8 +144,7 @@ void *heartbeatRuntime(void *arg) {
 	SansgridHeartbeat sg_hb;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 
-	for (int i=0; i<80; i++)
-		sg_hb.padding[i] = 0x0;
+	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
@@ -166,11 +165,45 @@ void *heartbeatRuntime(void *arg) {
 
 	pthread_exit(arg);
 }
-	
+
+void *flyRuntime(void *arg) {
+	// handle broadcast of ESSID
+	while (1) {
+		sleep(1);
+	}
+
+	pthread_exit(arg);
+}
 	
 
 void fnExit(void) {
 	printf("Exiting\n");
+}
+
+
+int socketDoSend(int s, const char *str) {
+	if (send(s, str, strlen(str), 0) == -1) {
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
+int socketDoReceive(int s, char *str) {
+	int t;
+	if ((t = recv(s, str, SG_SOCKET_BUFF_SIZE, 0)) > 0) {
+		// strip newline
+		if (str[t-1] == '\n') {
+			str[t-1] = '\0';
+		} else {
+			str[t] = '\0';
+		}
+		return t;
+	} else {
+		// problems
+		if (t < 0) perror ("recv");
+		return -1;
+	}
 }
 
 
@@ -211,6 +244,7 @@ int sgSocketListen(void) {
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
+	chmod(socket_path, 0777);
 
 	// listen for socket connections
 	if (listen(s, 5) == -1) {
@@ -220,83 +254,97 @@ int sgSocketListen(void) {
 	int shutdown_server = 0;
 
 	do {
-		int done, n;
 		// Block until a connection appears
 		// Then Accept the connection
 		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
 			perror("accept");
 			exit(EXIT_FAILURE);
 		}
-		
 		// Receive and interpret the data
-		done = 0;
-		do {
-			n = recv(s2, str, SG_SOCKET_BUFF_SIZE, 0);
-			syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
-			// make sure we got something
-			if (n <= 0) {
-				if (n < 0) {
-					perror("recv");
-					syslog(LOG_ERR, "sansgrid daemon: receive error");
-				}
-				done = 1;
-			}
-			if (!done) {
-				// Strip newlines
-				if (str[n-1] == '\n')
-					str[n-1] = '\0';
-				else
-					str[n] = '\0';
+		if (socketDoReceive(s2, str) == -1) {
+			syslog(LOG_ERR, "sansgrid daemon: receive error");
+			break;
+		}
+		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
 
-				syslog(LOG_DEBUG, "sansgrid daemon: interpreting command %s", str);
-				// Interpret command
-				if (!strcmp(str, "kill")) {
-					// Kill the server
-					shutdown_server = 1;
-					done = 1;
-					syslog(LOG_DEBUG, "sansgrid daemon: shutting down");
-				} 
-				syslog(LOG_DEBUG, "Still alive");
-				if ((packet = strstr(str, DELIM_KEY)) != NULL) {
-					// Got a packet from the server
-					syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
-					exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
-							&sg_serial);
-					if (exit_code == -1) {
-						strcpy(str, "bad packet");
-						syslog(LOG_DEBUG, "sansgrid daemon: got bad packet");
-					} else {
-						strcpy(str, "packet accepted");
-						queueEnqueue(dispatch, &sg_serial);
-						syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
-					}
-				} else if (!strcmp(str, "status")) {	
-					syslog(LOG_DEBUG, "sansgrid daemon: checking status");
-					//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
-					routingTableGetStatus(routing_table, str);
-					n = strlen(str);
-				} else if (!strcmp(str, "devices")) {
-					syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
-					sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+
+		// Interpret command
+		if (!strcmp(str, "kill")) {
+			// Kill the server
+			shutdown_server = 1;
+			syslog(LOG_DEBUG, "sansgrid daemon: shutting down");
+			socketDoSend(s2, str);
+		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
+			// Got a packet from the server
+			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
+			exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
+					&sg_serial);
+			if (exit_code == -1) {
+				strcpy(str, "bad packet");
+				syslog(LOG_DEBUG, "sansgrid daemon: got bad packet");
+			} else {
+				strcpy(str, "packet accepted");
+				queueEnqueue(dispatch, &sg_serial);
+				syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
+				if (socketDoSend(s2, str) == -1) {
+					close(s2);
+					continue;
 				}
+			}
+		} else if (strstr(str, "drop") != NULL) {
+			// drop a device
+			uint32_t device = 0;
+			uint8_t ip_addr[IP_SIZE];
+			syslog(LOG_DEBUG, "Dropping device");
+			if (strlen(str) <= strlen("drop")) {
+				strcpy(str, "No device specified");
+			} else if ((device = atoi(&str[5])) != 0) {
+				// drop device
+				routingTableRDIDToIP(routing_table, device, ip_addr);
+				if (routingTableLookup(routing_table, ip_addr) == 1) {
+					routerFreeDevice(routing_table, ip_addr);
+					strcpy(str, "Device freed");
+				} else {
+					strcpy(str, "Device not found");
+				}
+			} else {
+				strcpy(str, "Bad device given");
+			}
+			if (socketDoSend(s2, str) < 0) {
+				close(s2);
+				continue;
+			}
+		} else if (!strcmp(str, "status")) {	
+			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
+			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+			int devnum = routingTableGetDeviceCount(routing_table);
+			for (int i=0; i<devnum; i++) {
+				routingTableGetStatus(routing_table, i, str);
 				syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
-				// Send commnad back to client as ACK
-				if (send(s2, str, n, 0) < 0) {
-					perror("send");
-					done = 1;
-				}
-				if (done) {
-					syslog(LOG_DEBUG, "sansgrid daemon: Finishing");
+				if (socketDoSend(s2, str) < 0) {
+					break;
 				}
 			}
-		} while (!done);
+		} else if (!strcmp(str, "devices")) {
+			// Get the number of devices
+			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
+			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "drop")) {
+			// Drop a device using the router
+		}
+		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 
-		// cleanup
 		close(s2);
 	} while (!shutdown_server);
 
+	// cleanup
+
 	return 0;
 }
+
+
+
 
 
 int sgSocketSend(const char *data, const int size) {
@@ -323,6 +371,10 @@ int sgSocketSend(const char *data, const int size) {
 		printf("sansgridrouter isn't running\n");
 		exit(EXIT_SUCCESS);
 	}
+	if (size > SG_SOCKET_BUFF_SIZE) {
+		printf("String is too large!");
+		return -1;
+	}
 	// Create a socket
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -341,19 +393,14 @@ int sgSocketSend(const char *data, const int size) {
 	}
 
 	// Send the command
-	if (send(s, data, size, 0) == -1) {
+	syslog(LOG_DEBUG, "sansgrid client: sending data");
+	if (socketDoSend(s, data) == -1) {
 		syslog(LOG_ERR, "sansgrid client: send error: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	// Get the ACK back from the server
-	if ((t = recv(s, str, SG_SOCKET_BUFF_SIZE, 0)) > 0) {
-		// strip newline
-		if (str[t-1] == '\n') {
-			str[t-1] = '\0';
-		} else {
-			str[t] = '\0';
-		}
+	while ((t = socketDoReceive(s, str)) > 0) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
@@ -361,11 +408,6 @@ int sgSocketSend(const char *data, const int size) {
 		} else {
 			printf("%s\n", str);
 		}
-	} else {
-		// problems
-		if (t < 0) perror ("recv");
-		else syslog(LOG_ERR, "sansgrid client: Server closed connection\n");
-		exit(EXIT_FAILURE);
 	}
 	// cleanup
 	close(s);
@@ -399,7 +441,8 @@ int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch
 				server_read_thread,		// thread for reading from server
-				heartbeat_thread;		// thread for pinging sensors
+				heartbeat_thread,		// thread for pinging sensors
+				fly_thread;				// thread for broadcasting ESSID
 
 	int c;								// getopt var
 	char *option = NULL;				// getopt var
@@ -423,11 +466,13 @@ int main(int argc, char *argv[]) {
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
+			{"serverip",	required_argument,	0,				's'},
+			{"serverkey",	required_argument,	0,				'k'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "fhp:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "d:fhp:vs:k:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -447,11 +492,17 @@ int main(int argc, char *argv[]) {
 				// help
 				usage(EXIT_SUCCESS);
 				break;
+			case 'k':
+				// Server key is given
+				break;
 			case 'p':
 				// Payload is given
 				sprintf(payload, "packet: %s", optarg);
 				sgSocketSend(payload, strlen(payload));
 				exit(EXIT_SUCCESS);
+				break;
+			case 's':
+				// Server IP address given
 				break;
 			case 'v':
 				// version
@@ -492,6 +543,14 @@ int main(int argc, char *argv[]) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "drop")) {
+			// drop a device
+			if (optind < argc) {
+				char doDrop[1000];
+				sprintf(doDrop, "drop %s", argv[optind]);
+				sgSocketSend(doDrop, strlen(doDrop));
+				exit(EXIT_SUCCESS);
+			}
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -500,6 +559,14 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "change-server-ip")) {
+			// Change the server IP address for the running daemon
+			printf("Not implemented yet\n");
+			exit(EXIT_FAILURE);
+		} else if (!strcmp(option, "change-server-key")) {
+			// Change the server key for the running daemon
+			printf("Not implemented yet\n");
+			exit(EXIT_FAILURE);
 		} else {
 			// bad option
 			printf("Unknown Arg: %s\n", option);
@@ -528,7 +595,8 @@ int main(int argc, char *argv[]) {
 
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
-	routing_table = routingTableInit(router_base);
+	// TODO: Assign ESSID from config file
+	routing_table = routingTableInit(router_base, "Stock ESSID");
 	void *arg;
 
 	// TODO: set IP address correctly
@@ -548,6 +616,7 @@ int main(int argc, char *argv[]) {
 	pthread_create(&server_read_thread, NULL, serverReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
+	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
 
 	// Listen for commands or data from the server
 	sgSocketListen();
@@ -557,11 +626,13 @@ int main(int argc, char *argv[]) {
 	pthread_cancel(server_read_thread);
 	pthread_cancel(dispatch_thread);
 	pthread_cancel(heartbeat_thread);
+	pthread_cancel(fly_thread);
 
 	pthread_join(serial_read_thread, &arg);
 	pthread_join(server_read_thread, &arg);
 	pthread_join(dispatch_thread, &arg);
 	pthread_join(heartbeat_thread, &arg);
+	pthread_join(fly_thread, &arg);
 
 	// Cleanup
 	queueDestroy(dispatch);
@@ -577,9 +648,15 @@ void usage(int status) {
 		printf("Usage: sansgrid [OPTION]\n");
 		printf("\
   -f  --foreground           Don't background daemon\n\
-  -p  --packet               Send a sansgrid payload to the server\n\
+  -p  --packet [PACKET]      Send a sansgrid payload to the server\n\
+  -d  --drop [DEVICE]        Drop a device from the system\n\
   -h, --help                 display this help and exit\n\
-  -v, --version              output version information and exit\n");
+  -v, --version              output version information and exit\n\
+\n\
+      status                 show status of devices\n\
+      kill                   shutdown the router daemon\n\
+      running                check to see if router daemon is running\n\
+      devices                print number of devices tracked\n");
 	}
 	exit(status);
 }

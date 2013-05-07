@@ -296,6 +296,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	memset(sg_serial->ip_addr, 0x0, sizeof(sg_serial->ip_addr));
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
@@ -357,11 +358,23 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
+	uint32_t i;
+	int field_not_zero = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
 	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
-	for (uint32_t i=0; i<size; i++) {
-		sprintf(payload, "%s%.2x", payload, value[i]);
+	for (i=0; i<size; i++) {
+		if (value[i] != 0x0) {
+			field_not_zero = 1;
+			break;
+		}
+	}
+	if (field_not_zero) {
+		for (; i<size; i++) {
+			sprintf(payload, "%s%.2x", payload, value[i]);
+		}
+	} else {
+		sprintf(payload, "%s%.2x", payload, 0x0);
 	}
 	return 0;
 }
@@ -408,6 +421,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
 		// no match found: this really shouldn't happen
+		syslog(LOG_DEBUG, "No device found");
 		return -1;
 	} else {
 		// match found; continue

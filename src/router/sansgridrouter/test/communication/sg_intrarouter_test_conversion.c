@@ -35,7 +35,7 @@ START_TEST(testEyeballConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -84,7 +84,7 @@ START_TEST(testPeckConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -132,7 +132,7 @@ START_TEST(testSingConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -181,7 +181,7 @@ START_TEST(testMockConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -231,7 +231,7 @@ START_TEST(testPeacockConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 
 	mark_point();
@@ -283,7 +283,7 @@ START_TEST(testNestConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
@@ -333,7 +333,7 @@ START_TEST(testSquawkConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
-	routing_table = routingTableInit(base);
+	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
 	testStructInit(&test_struct);
