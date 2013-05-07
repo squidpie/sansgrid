@@ -494,6 +494,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	uint32_t i, j;
 	uint8_t ip_addr[IP_SIZE];
 	int index = 0;
+	int last_was_zero = 0;
 	str[0] = '\0';
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
@@ -501,8 +502,19 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 			if (index == devnum) {
 				syslog(LOG_DEBUG, "found one!");
 				maskip(ip_addr, table->base, i);
-				for (j=0; j<IP_SIZE; j++)
-					sprintf(str, "%s%x:", str, ip_addr[j]);
+				sprintf(str, "%.4i\t", i);
+				for (j=0; j<IP_SIZE; j++) {
+					if (ip_addr[j] != 0x0) {
+						sprintf(str, "%s%.2x", str, ip_addr[j]);
+						last_was_zero = 0;
+						if (j+1 < IP_SIZE && last_was_zero < 2)
+							strcat(str, ":");
+					} else if (!last_was_zero) {
+						strcat(str, "::");
+						last_was_zero = 1;
+					}
+
+				}
 				sprintf(str, "%s\n", str);
 				break;
 			} else {

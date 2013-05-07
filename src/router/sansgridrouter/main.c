@@ -295,9 +295,12 @@ int sgSocketListen(void) {
 				}
 			}
 		} else if (!strcmp(str, "devices")) {
+			// Get the number of devices
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			socketDoSend(s2, str);
+		} else if (!strcmp(str, "drop")) {
+			// Drop a device using the router
 		}
 		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 
