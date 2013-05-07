@@ -18,8 +18,10 @@
  *
  *
  */
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <syslog.h>
 #include "payload_handlers.h"
 #include "../routing_table/routing_table.h"
 #include "../communication/sg_tcp.h"
@@ -174,10 +176,20 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	dev_prop->next_expected_packet = SG_DEVSTATUS_PECKING;
 	memcpy(&dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
 
+	memset(ip_addr, 0x0, sizeof(ip_addr));
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
-		routingTableAssignIP(routing_table, ip_addr, dev_prop);
-		memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
+		if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
+			// no IP address given
+			// Assign an IP address
+			routingTableAssignIP(routing_table, ip_addr, dev_prop);
+			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
+		} else {
+			// IP address given
+			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr, dev_prop) == 1) {
+				syslog(LOG_INFO, "Couldn't statically assign IP");
+			}
+		}
 
 		// Send packet to the server
 		sgTCPSend(sg_serial, sizeof(SansgridSerial));

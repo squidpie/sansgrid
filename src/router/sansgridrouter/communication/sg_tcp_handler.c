@@ -296,6 +296,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	memset(sg_serial->ip_addr, 0x0, sizeof(sg_serial->ip_addr));
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
@@ -420,6 +421,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
 		// no match found: this really shouldn't happen
+		syslog(LOG_DEBUG, "No device found");
 		return -1;
 	} else {
 		// match found; continue

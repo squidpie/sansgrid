@@ -111,12 +111,15 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
 	int32_t i;
 	uint8_t offset[IP_SIZE];
 	uint32_t location[IP_SIZE/4];
+	uint32_t index;
 
 	for (i=0; i<IP_SIZE; i++)
 		offset[i] = ip_addr[i] - base[i];
 	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
 
-	return location[IP_SIZE/4-1];
+	index = location[IP_SIZE/4-1] % ROUTING_ARRAYSIZE;
+
+	return index;
 }
 
 
@@ -228,8 +231,10 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		table->routing_table[index]->lost_pings = 0;
 		table->table_alloc++;
 		return 0;
-	} else
+	} else {
+		syslog(LOG_INFO, "Device already exists at %i", index);
 		return 1;
+	}
 }
 
 
