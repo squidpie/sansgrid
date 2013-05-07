@@ -291,6 +291,29 @@ int sgSocketListen(void) {
 					continue;
 				}
 			}
+		} else if (strstr(str, "drop") != NULL) {
+			// drop a device
+			uint32_t device = 0;
+			uint8_t ip_addr[IP_SIZE];
+			syslog(LOG_DEBUG, "Dropping device");
+			if (strlen(str) <= strlen("drop")) {
+				strcpy(str, "No device specified");
+			} else if ((device = atoi(&str[5])) != 0) {
+				// drop device
+				routingTableRDIDToIP(routing_table, device, ip_addr);
+				if (routingTableLookup(routing_table, ip_addr) == 1) {
+					routerFreeDevice(routing_table, ip_addr);
+					strcpy(str, "Device freed");
+				} else {
+					strcpy(str, "Device not found");
+				}
+			} else {
+				strcpy(str, "Bad device given");
+			}
+			if (socketDoSend(s2, str) < 0) {
+				close(s2);
+				continue;
+			}
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -370,6 +393,7 @@ int sgSocketSend(const char *data, const int size) {
 	}
 
 	// Send the command
+	syslog(LOG_DEBUG, "sansgrid client: sending data");
 	if (socketDoSend(s, data) == -1) {
 		syslog(LOG_ERR, "sansgrid client: send error: %s", strerror(errno));
 		exit(EXIT_FAILURE);
@@ -442,7 +466,6 @@ int main(int argc, char *argv[]) {
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
-			{"drop",		required_argument,	0,				'd'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
@@ -458,9 +481,6 @@ int main(int argc, char *argv[]) {
 				if (optarg)
 					printf("With arg %s", optarg);
 				printf("\n");
-				break;
-			case 'd':
-				// drop a device
 				break;
 			case 'f':
 				// Run in the foreground
@@ -515,6 +535,14 @@ int main(int argc, char *argv[]) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "drop")) {
+			// drop a device
+			if (optind < argc) {
+				char doDrop[1000];
+				sprintf(doDrop, "drop %s", argv[optind]);
+				sgSocketSend(doDrop, strlen(doDrop));
+				exit(EXIT_SUCCESS);
+			}
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {

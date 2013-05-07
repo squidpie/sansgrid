@@ -25,7 +25,7 @@
 #include "../communication/sg_tcp.h"
 
 
-static void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
+void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 	// Something went wrong. Transmit NETWORK_DISCONNECT_SENSOR to ip_addr
 	SansgridSerial sg_serial;
 	SansgridChirp sg_chirp;
