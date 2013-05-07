@@ -603,9 +603,15 @@ void usage(int status) {
 		printf("Usage: sansgrid [OPTION]\n");
 		printf("\
   -f  --foreground           Don't background daemon\n\
-  -p  --packet               Send a sansgrid payload to the server\n\
+  -p  --packet [PACKET]      Send a sansgrid payload to the server\n\
+  -d  --drop [DEVICE]        Drop a device from the system\n\
   -h, --help                 display this help and exit\n\
-  -v, --version              output version information and exit\n");
+  -v, --version              output version information and exit\n\
+\n\
+      status                 show status of devices\n\
+      kill                   shutdown the router daemon\n\
+      running                check to see if router daemon is running\n\
+      devices                print number of devices tracked\n");
 	}
 	exit(status);
 }
