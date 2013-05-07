@@ -144,8 +144,7 @@ void *heartbeatRuntime(void *arg) {
 	SansgridHeartbeat sg_hb;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 
-	for (int i=0; i<80; i++)
-		sg_hb.padding[i] = 0x0;
+	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 	while (1) {
 		count = routingTableGetDeviceCount(routing_table);
@@ -166,7 +165,15 @@ void *heartbeatRuntime(void *arg) {
 
 	pthread_exit(arg);
 }
-	
+
+void *flyRuntime(void *arg) {
+	// handle broadcast of ESSID
+	while (1) {
+		sleep(1);
+	}
+
+	pthread_exit(arg);
+}
 	
 
 void fnExit(void) {
@@ -237,6 +244,7 @@ int sgSocketListen(void) {
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
+	chmod(socket_path, 0777);
 
 	// listen for socket connections
 	if (listen(s, 5) == -1) {
@@ -409,7 +417,8 @@ int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch
 				server_read_thread,		// thread for reading from server
-				heartbeat_thread;		// thread for pinging sensors
+				heartbeat_thread,		// thread for pinging sensors
+				fly_thread;				// thread for broadcasting ESSID
 
 	int c;								// getopt var
 	char *option = NULL;				// getopt var
@@ -433,11 +442,12 @@ int main(int argc, char *argv[]) {
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
+			{"drop",		required_argument,	0,				'd'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "fhp:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "d:fhp:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -448,6 +458,9 @@ int main(int argc, char *argv[]) {
 				if (optarg)
 					printf("With arg %s", optarg);
 				printf("\n");
+				break;
+			case 'd':
+				// drop a device
 				break;
 			case 'f':
 				// Run in the foreground
@@ -558,6 +571,7 @@ int main(int argc, char *argv[]) {
 	pthread_create(&server_read_thread, NULL, serverReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
+	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
 
 	// Listen for commands or data from the server
 	sgSocketListen();
@@ -567,11 +581,13 @@ int main(int argc, char *argv[]) {
 	pthread_cancel(server_read_thread);
 	pthread_cancel(dispatch_thread);
 	pthread_cancel(heartbeat_thread);
+	pthread_cancel(fly_thread);
 
 	pthread_join(serial_read_thread, &arg);
 	pthread_join(server_read_thread, &arg);
 	pthread_join(dispatch_thread, &arg);
 	pthread_join(heartbeat_thread, &arg);
+	pthread_join(fly_thread, &arg);
 
 	// Cleanup
 	queueDestroy(dispatch);
