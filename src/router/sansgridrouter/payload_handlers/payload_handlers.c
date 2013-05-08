@@ -194,12 +194,10 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
 			// no IP address given
 			// Assign an IP address
-			printf("No IP address given\n");
 			routingTableAssignIP(routing_table, ip_addr, dev_prop);
 			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 		} else {
 			// IP address given
-			printf("IP address given\n");
 			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr, dev_prop) == 1) {
 				syslog(LOG_INFO, "Couldn't statically assign IP");
 				routingTableAssignIP(routing_table, ip_addr, dev_prop);

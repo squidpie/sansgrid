@@ -240,7 +240,11 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
 		table->routing_table[index]->rdid = table->rdid_pool++;
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
-		memcpy(dev_prop, properties, sizeof(DeviceProperties));
+		if (properties != NULL) {
+			memcpy(dev_prop, properties, sizeof(DeviceProperties));
+		} else {
+			memset(dev_prop, 0x0, sizeof(DeviceProperties));
+		}
 		table->routing_table[index]->properties = dev_prop;
 		table->routing_table[index]->lost_pings = 0;
 		table->table_alloc++;

@@ -319,7 +319,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	rdid_size = (strlen(match(dict, size, "rdid"))+1)/2;
 	byteToWord(&rdid_32, rdid, 4*sizeof(uint8_t));
 	rdid_32 = rdid_32 >> ((4-rdid_size)*8);
-	printf("rdid = %u\n", rdid_32);
+	//printf("rdid = %u\n", rdid_32);
 	if (!rdid_32) {
 		// broadcast
 		//routingTableGetBroadcast(routing_table, sg_serial->ip_addr);

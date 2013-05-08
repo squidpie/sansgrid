@@ -22,6 +22,29 @@
 #include "../../communication/sg_tcp.h"
 #include "../../routing_table/routing_table.h"
 
+int checkSerialDiff(const char *testname, 
+		SansgridSerial *sg_serial, 
+		SansgridSerial *sg_serial_orig,
+		uint32_t rdid, uint32_t rdid_orig) {
+	// Check to see if sg_serial and sg_serial_orig are the same
+	mark_point();
+	fail_if(memcmp(sg_serial->payload, 
+				sg_serial_orig->payload, 
+				sizeof(SansgridNest)),
+			"%s: Converted Payload doesn't match original!", testname);
+
+	fail_if(memcmp(sg_serial->ip_addr, sg_serial_orig->ip_addr, IP_SIZE),
+			"%s: IP address doesn't match original!", testname);
+	fail_if((rdid != rdid_orig), 
+			"%s: returned identifier doesn't match original!\
+\n\tExpected: %i \
+\n\tGot: %i", rdid_orig, rdid);
+	fail_if(memcmp(sg_serial, sg_serial_orig, sizeof(SansgridSerial)),
+			"%s: Converted serial packet doesn't match original!", testname);
+
+	return 0;
+
+}
 
 START_TEST(testEyeballConversion) {
 	// Test the eyeball conversion for the intrarouter communication system
@@ -43,13 +66,14 @@ START_TEST(testEyeballConversion) {
 	test_struct.eyeball = &eyeball;
 	test_struct.eyeball_mode = SG_EYEBALL_MATE;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkEyeball(&sg_eyeball, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
@@ -61,12 +85,7 @@ START_TEST(testEyeballConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Eyeball: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Eyeball: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Eyeball", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
@@ -90,11 +109,13 @@ START_TEST(testPeckConversion) {
 	testStructInit(&test_struct);
 	test_struct.peck_mode = SG_PECK_MATE;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkPeck(&sg_peck, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -109,12 +130,7 @@ START_TEST(testPeckConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Peck: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Peck: returned identifier doesn't match original! \
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Peck", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 
 }
@@ -140,11 +156,13 @@ START_TEST(testSingConversion) {
 	test_struct.sing = &sing;
 	test_struct.sing_mode = SG_SING_WITH_KEY;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkSing(&sg_sing, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_sing, sizeof(SansgridSing));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -158,12 +176,7 @@ START_TEST(testSingConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Sing: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Sing: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Sing", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
@@ -189,11 +202,13 @@ START_TEST(testMockConversion) {
 	test_struct.mock = &mock;
 	test_struct.mock_mode = SG_MOCK_WITH_KEY;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkMock(&sg_mock, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_mock, sizeof(SansgridMock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -207,12 +222,7 @@ START_TEST(testMockConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Mock: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Mock: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Mock", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
@@ -240,11 +250,13 @@ START_TEST(testPeacockConversion) {
 	test_struct.peacock = &peacock;
 	test_struct.peacock_mode = SG_PEACOCK;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkPeacock(&sg_peacock, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -259,12 +271,7 @@ START_TEST(testPeacockConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Peacock: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Peacock: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Peacock", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
@@ -291,11 +298,13 @@ START_TEST(testNestConversion) {
 	test_struct.nest = &nest;
 	test_struct.nest_mode = SG_NEST;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkNest(&sg_nest, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_nest, sizeof(SansgridNest));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -309,12 +318,7 @@ START_TEST(testNestConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Nest: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Nest: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Nest", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
@@ -341,11 +345,13 @@ START_TEST(testSquawkConversion) {
 	test_struct.squawk_sensor = &squawk;
 	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
 	payloadMkSerial(&sg_serial);
-	routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
 	payloadMkSquawkSensor(&sg_squawk, &test_struct);
 
 	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
+
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
@@ -359,12 +365,7 @@ START_TEST(testSquawkConversion) {
 	routingTableDestroy(routing_table);
 
 	mark_point();
-	fail_if(memcmp(&sg_serial, &sg_serial_orig, sizeof(SansgridSerial)),
-			"Squawk: Converted serial packet doesn't match original!");
-	fail_if((rdid != rdid_orig), 
-			"Squawk: returned identifier doesn't match original!\
-\n\tExpected: %i \
-\n\tGot: %i", rdid_orig, rdid);
+	checkSerialDiff("Squawk", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
 END_TEST
