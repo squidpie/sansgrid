@@ -41,6 +41,7 @@ typedef struct RoutingNode {
 	// For now, this is separate from properties.
 	// Later, it may be combined with DeviceProperties
 	//struct DeviceProperties properties;
+	uint32_t rdid;
 	int32_t lost_pings;
 	DeviceProperties *properties;
 } RoutingNode;
@@ -48,6 +49,7 @@ typedef struct RoutingNode {
 
 struct RoutingTable {
 	uint32_t tableptr;			// index, used for alloc
+	uint32_t rdid_pool;			// identifier pool
 	uint32_t table_alloc;
 	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 
@@ -176,6 +178,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	RoutingTable *table;
 
 	table = (RoutingTable*)malloc(sizeof(RoutingTable));
+	table->rdid_pool = 1;
 	table->tableptr = 0;
 	table->table_alloc = 0;
 	table->hbptr = 0;
@@ -235,6 +238,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		// Allocate space for the device
 		syslog(LOG_INFO, "Allocating a device at %i", index);
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
+		table->routing_table[index]->rdid = table->rdid_pool++;
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		memcpy(dev_prop, properties, sizeof(DeviceProperties));
 		table->routing_table[index]->properties = dev_prop;
@@ -333,18 +337,28 @@ uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// return a unique identifier if found,
 	// return 0 if false
 	
+	int index;
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// device not found
 		return 0;
 	}
-	// For now, just use the index as a unique identifier
-	return locationToTablePtr(ip_addr, table->base);
+
+	index = locationToTablePtr(ip_addr, table->base);
+	return table->routing_table[index]->rdid;
 }
 
 int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]) {
 	// convert an rdid to an IP address
-	maskip(ip_addr, table->base, rdid);
-	return 0;
+	for (uint32_t i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			if (table->routing_table[i]->rdid == rdid) {
+				maskip(ip_addr, table->base, i);
+				return 0;
+			}
+		}
+	}
+	maskip(ip_addr, table->base, rdid&0xff);
+	return -1;
 }
 
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]) {
@@ -511,13 +525,15 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	int index = 0;
 	int last_was_zero = 0;
 	str[0] = '\0';
+	uint32_t rdid;
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {
 			if (index == devnum) {
 				syslog(LOG_DEBUG, "found one!");
 				maskip(ip_addr, table->base, i);
-				sprintf(str, "%.4i\t", i);
+				rdid = routingTableIPToRDID(table, ip_addr);
+				sprintf(str, "%.4i\t", rdid);
 				for (j=0; j<IP_SIZE; j++) {
 					if (ip_addr[j] != 0x0) {
 						sprintf(str, "%s%.2x", str, ip_addr[j]);

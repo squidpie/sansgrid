@@ -39,10 +39,11 @@ typedef struct RouterOpts {
 	char essid[80];
 	char serverip[20];
 	char serverkey[512];
+	int hidden_network;		// whether or not to broadcast essid
 } RouterOpts;
-	
 
 
+RouterOpts router_opts;
 Queue *dispatch;
 RoutingTable *routing_table;
 uint8_t router_base[IP_SIZE];

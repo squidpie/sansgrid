@@ -168,7 +168,18 @@ void *heartbeatRuntime(void *arg) {
 
 void *flyRuntime(void *arg) {
 	// handle broadcast of ESSID
+	SansgridFly sg_fly;
+	SansgridSerial sg_serial;
+	memset(&sg_fly, 0x0, sizeof(SansgridFly));
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	sg_fly.datatype = SG_FLY;
 	while (1) {
+		routingTableGetEssid(routing_table, sg_fly.network_name);
+		memcpy(sg_serial.payload, &sg_fly, sizeof(SansgridFly));
+		sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
+		routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
+		if (!router_opts.hidden_network)
+			routerHandleFly(routing_table, &sg_serial);
 		sleep(1);
 	}
 
@@ -314,6 +325,33 @@ int sgSocketListen(void) {
 				close(s2);
 				continue;
 			}
+		} else if (!strcmp(str, "url")) {
+			// return the url
+			strcpy(str, router_opts.serverip);
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "key")) {
+			// return the key
+			strcpy(str, router_opts.serverkey);
+			socketDoSend(s2, str);
+		} else if (strstr(str, "url")) {
+			// Set a new server URL
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverip, &str[4], sizeof(router_opts.serverip));
+				strcpy(str, "Successfully changed server IP");
+			}
+			else {
+				strcpy(str, "Couldn't change server IP");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "key")) {
+			// Set a new server key
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverkey, &str[4], sizeof(router_opts.serverkey));
+				strcpy(str, "Successfully set server key");
+			} else {
+				strcpy(str, "Couldn't set server key");
+			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -330,9 +368,27 @@ int sgSocketListen(void) {
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "drop")) {
-			// Drop a device using the router
-		}
+		} else if (!strcmp(str, "hide-network")) {
+			// Don't broadcast essid
+			syslog(LOG_INFO, "Sansgrid Daemon: Hiding ESSID network");
+			router_opts.hidden_network = 1;
+			strcpy(str, "Hiding Network");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "is-hidden")) {
+			// return if the network is hidden (not broadcasting)
+			if (router_opts.hidden_network) {
+				strcpy(str, "Hidden Network");
+			} else {
+				strcpy(str, "Shown Network");
+			}
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "show-network")) {
+			// Broadcast essid
+			syslog(LOG_INFO, "Sansgrid Daemon: Showing ESSID network");
+			router_opts.hidden_network = 0;
+			strcpy(str, "Showing Network");
+			socketDoSend(s2, str);
+		} 
 		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 
 		close(s2);
@@ -435,6 +491,63 @@ int sgStorePID(pid_t pid) {
 	return 0;
 }
 
+int parseConfFile(const char *path, RouterOpts *ropts) {
+	// parse a config file
+	FILE *FPTR;
+	char *buffer = NULL;
+	size_t buff_alloc = 50;
+	char key[100],
+		 url[100],
+		 essid[100],
+		 hidden_str[10];
+	int hidden = 0;
+
+	int foundkey = 0,
+		foundurl = 0,
+		foundessid = 0,
+		foundhidden = 0;
+
+	if ((FPTR = fopen(path, "r")) == NULL) {
+		return -1;
+	}
+	buffer = (char*)malloc(buff_alloc*sizeof(char));
+	if (buffer == NULL) {
+		syslog(LOG_ERR, "Couldn't allocate memory!");
+		return -1;
+	}
+	while (getline(&buffer, &buff_alloc, FPTR) != -1) {
+		if (strstr(buffer, "key")) {
+			sscanf(buffer, "key = %s", key);
+			foundkey = 1;
+		} else if (strstr(buffer, "url")) {
+			sscanf(buffer, "url = %s", url);
+			foundurl = 1;
+		} else if (strstr(buffer, "hidden")) {
+			sscanf(buffer, "hidden = %s", hidden_str);
+			foundhidden = 1;
+			if (strstr(hidden_str, "1")) 
+				hidden = 1;
+			else if (strstr(hidden_str, "0"))
+				hidden = 0;
+			else
+				foundhidden = 0;
+		} else if (strstr(buffer, "essid")) {
+			sscanf(buffer, "essid = %s", essid);
+			foundessid = 1;
+		}
+	}
+	fclose(FPTR);
+	if (foundessid) 
+		memcpy(ropts->essid, essid, sizeof(ropts->essid));
+	if (foundhidden)
+		ropts->hidden_network = hidden;
+	if (foundurl)
+		memcpy(ropts->serverip, url, sizeof(ropts->serverip));
+	if (foundkey)
+		memcpy(ropts->serverkey, key, sizeof(ropts->serverkey));
+
+	return 0;
+}	
 
 
 int main(int argc, char *argv[]) {
@@ -455,14 +568,21 @@ int main(int argc, char *argv[]) {
 	SansgridHatching sg_hatch;
 	SansgridSerial sg_serial;
 
+
+	memset(&router_opts, 0x0, sizeof(RouterOpts));
+
 	getSansgridDir(home_path);
 	strcpy(config_path, home_path);
+	strcat(config_path, "/sansgrid.conf");
+
+	parseConfFile(config_path, &router_opts);
 
 	// Parse arguments with getopt
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
 			{"daemon", 		no_argument, 		&no_daemonize, 	0},
+			{"config",      required_argument,  0,              'c'},
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
@@ -472,7 +592,7 @@ int main(int argc, char *argv[]) {
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "d:fhp:vs:k:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:d:fhp:vs:k:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -483,6 +603,14 @@ int main(int argc, char *argv[]) {
 				if (optarg)
 					printf("With arg %s", optarg);
 				printf("\n");
+				break;
+			case 'c':
+				// User-supplied config file
+				if (parseConfFile(optarg, &router_opts) == -1) {
+					printf("Can't parse config file: %s\n", optarg);
+					printf("Terminating\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'f':
 				// Run in the foreground
@@ -542,6 +670,33 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(option, "devices")) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "hide-network")) {
+			// hide the network
+			sgSocketSend("hide-network", 13);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "show-network")) {
+			// show the network
+			sgSocketSend("show-network", 13);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "is-hidden")) {
+			// check to see if the network is hidden
+			sgSocketSend("is-hidden", 10);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "url")) {
+			// get the url
+			sgSocketSend("url", 4);
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "url=")) {
+			// set the url
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "key")) {
+			// get the key
+			sgSocketSend("key", 4);
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "key=")) {
+			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
@@ -648,16 +803,23 @@ void usage(int status) {
 	else {
 		printf("Usage: sansgrid [OPTION]\n");
 		printf("\
+  -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
-  -p  --packet [PACKET]      Send a sansgrid payload to the server\n\
-  -d  --drop [DEVICE]        Drop a device from the system\n\
+  -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
   -h, --help                 display this help and exit\n\
   -v, --version              output version information and exit\n\
 \n\
       status                 show status of devices\n\
       kill                   shutdown the router daemon\n\
       running                check to see if router daemon is running\n\
-      devices                print number of devices tracked\n");
+      devices                print number of devices tracked\n\
+      hide-network           don't broadcast essid\n\
+      show-network           broadcast essid\n\
+	  drop [DEVICE]          drop a device\n\
+      url                    get the server IP address\n\
+      url=[SERVERIP]         set the server IP address\n\
+      key                    get the server key\n\
+	  key=[SERVERKEY]        set the server key\n");
 	}
 	exit(status);
 }
