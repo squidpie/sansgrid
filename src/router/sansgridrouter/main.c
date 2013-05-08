@@ -456,6 +456,53 @@ int sgStorePID(pid_t pid) {
 
 int parseConfFile(const char *path, RouterOpts *ropts) {
 	// parse a config file
+	FILE *FPTR;
+	char *buffer = NULL;
+	size_t buff_alloc = 50;
+	char key[100],
+		 url[100],
+		 essid[100];
+	int hidden = 0;
+
+	int foundkey = 0,
+		foundurl = 0,
+		foundessid = 0,
+		foundhidden = 0;
+
+	if ((FPTR = fopen(path, "r")) == NULL) {
+		return -1;
+	}
+	buffer = (char*)malloc(buff_alloc*sizeof(char));
+	if (buffer == NULL) {
+		syslog(LOG_ERR, "Couldn't allocate memory!");
+		return -1;
+	}
+	while (getline(&buffer, &buff_alloc, FPTR) != -1) {
+		if (strstr(buffer, "key")) {
+			sscanf(buffer, "key = %s", key);
+			foundkey = 1;
+		} else if (strstr(buffer, "url")) {
+			sscanf(buffer, "url = %s", url);
+			foundurl = 1;
+		} else if (strstr(buffer, "hidden")) {
+			sscanf(buffer, "hidden = %i", &hidden);
+			foundhidden = 1;
+		} else if (strstr(buffer, "essid")) {
+			sscanf(buffer, "essid = %s", essid);
+			foundessid = 1;
+		}
+	}
+	fclose(FPTR);
+	if (foundessid) 
+		memcpy(ropts->essid, essid, sizeof(ropts->essid));
+	if (foundhidden)
+		ropts->hidden_network = hidden;
+	if (foundurl)
+		memcpy(ropts->serverip, url, sizeof(ropts->serverip));
+	if (foundkey)
+		memcpy(ropts->serverkey, key, sizeof(ropts->serverkey));
+
+	return 0;
 }	
 
 
@@ -482,12 +529,16 @@ int main(int argc, char *argv[]) {
 
 	getSansgridDir(home_path);
 	strcpy(config_path, home_path);
+	strcat(config_path, "/sansgrid.conf");
+
+	parseConfFile(config_path, &router_opts);
 
 	// Parse arguments with getopt
 	while (1) {
 		const struct option long_options[] = {
 			{"foreground",	no_argument, 		&no_daemonize, 	1},
 			{"daemon", 		no_argument, 		&no_daemonize, 	0},
+			{"config",      required_argument,  0,              'c'},
 			{"packet",		required_argument, 	0,				'p'},
 			{"help", 		no_argument, 		0, 				'h'},
 			{"version", 	no_argument, 		0, 				'v'},
@@ -497,7 +548,7 @@ int main(int argc, char *argv[]) {
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "d:fhp:vs:k:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:d:fhp:vs:k:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -508,6 +559,14 @@ int main(int argc, char *argv[]) {
 				if (optarg)
 					printf("With arg %s", optarg);
 				printf("\n");
+				break;
+			case 'c':
+				// User-supplied config file
+				if (parseConfFile(optarg, &router_opts) == -1) {
+					printf("Can't parse config file: %s\n", optarg);
+					printf("Terminating\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'f':
 				// Run in the foreground
@@ -681,8 +740,9 @@ void usage(int status) {
 	else {
 		printf("Usage: sansgrid [OPTION]\n");
 		printf("\
+  -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
-  -p  --packet [PACKET]      Send a sansgrid payload to the server\n\
+  -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
   -h, --help                 display this help and exit\n\
   -v, --version              output version information and exit\n\
 \n\
