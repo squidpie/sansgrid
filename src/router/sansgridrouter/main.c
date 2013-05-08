@@ -329,6 +329,10 @@ int sgSocketListen(void) {
 			// return the url
 			strcpy(str, router_opts.serverip);
 			socketDoSend(s2, str);
+		} else if (!strcmp(str, "key")) {
+			// return the key
+			strcpy(str, router_opts.serverkey);
+			socketDoSend(s2, str);
 		} else if (strstr(str, "url")) {
 			// Set a new server URL
 			if (strlen(str) > 4) {
@@ -337,6 +341,15 @@ int sgSocketListen(void) {
 			}
 			else {
 				strcpy(str, "Couldn't change server IP");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "key")) {
+			// Set a new server key
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverkey, &str[4], sizeof(router_opts.serverkey));
+				strcpy(str, "Successfully set server key");
+			} else {
+				strcpy(str, "Couldn't set server key");
 			}
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
@@ -658,6 +671,21 @@ int main(int argc, char *argv[]) {
 			// show the network
 			sgSocketSend("show-network", 13);
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "url")) {
+			// get the url
+			sgSocketSend("url", 4);
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "url=")) {
+			// set the url
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "key")) {
+			// get the key
+			sgSocketSend("key", 4);
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "key=")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
 			if (optind < argc) {
@@ -775,7 +803,11 @@ void usage(int status) {
       devices                print number of devices tracked\n\
       hide-network           don't broadcast essid\n\
       show-network           broadcast essid\n\
-	  drop [DEVICE]          drop a device");
+	  drop [DEVICE]          drop a device\n\
+      url                    get the server IP address\n\
+      url=[SERVERIP]         set the server IP address\n\
+      key                    get the server key\n\
+	  key=[SERVERKEY]        set the server key\n");
 	}
 	exit(status);
 }
