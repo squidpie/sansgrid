@@ -368,6 +368,7 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	int first_byte = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
+
 	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
 	if (size == 0) {
 		field_not_zero = 0;
@@ -434,7 +435,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	uint8_t payload_type = sg_serial->payload[0];
 	uint8_t datatype = sgPayloadGetType(payload_type);
 
-	memset(rdid, 0x0, 4*sizeof(uint8_t));
+	memset(rdid, 0x0, sizeof(rdid));
 	routingTableGetBroadcast(routing_table, broadcast);
 	if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
 		// broadcast address

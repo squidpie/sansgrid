@@ -154,8 +154,13 @@ void *heartbeatRuntime(void *arg) {
 			count = 1;
 		}
 		// FIXME: check to see if interval is below 1 second
-		sleep(HEARTBEAT_INTERVAL/count);
-		//sleepMicro(HEARTBEAT_UINTERVAL / count);
+		if (HEARTBEAT_INTERVAL/count == 0) {
+			// interval is < 1 second
+			// sleep in usecs
+			sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
+		} else {
+			sleep(HEARTBEAT_INTERVAL/count);
+		}
 		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
 			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
