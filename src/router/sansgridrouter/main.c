@@ -325,6 +325,20 @@ int sgSocketListen(void) {
 				close(s2);
 				continue;
 			}
+		} else if (!strcmp(str, "url")) {
+			// return the url
+			strcpy(str, router_opts.serverip);
+			socketDoSend(s2, str);
+		} else if (strstr(str, "url")) {
+			// Set a new server URL
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverip, &str[4], sizeof(router_opts.serverip));
+				strcpy(str, "Successfully changed server IP");
+			}
+			else {
+				strcpy(str, "Couldn't change server IP");
+			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -346,12 +360,14 @@ int sgSocketListen(void) {
 			syslog(LOG_INFO, "Sansgrid Daemon: Hiding ESSID network");
 			router_opts.hidden_network = 1;
 			strcpy(str, "Hiding Network");
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "show-network")) {
 			// Broadcast essid
 			syslog(LOG_INFO, "Sansgrid Daemon: Showing ESSID network");
 			router_opts.hidden_network = 0;
 			strcpy(str, "Showing Network");
-		}
+			socketDoSend(s2, str);
+		} 
 		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 
 		close(s2);
@@ -461,7 +477,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	size_t buff_alloc = 50;
 	char key[100],
 		 url[100],
-		 essid[100];
+		 essid[100],
+		 hidden_str[10];
 	int hidden = 0;
 
 	int foundkey = 0,
@@ -485,8 +502,14 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			sscanf(buffer, "url = %s", url);
 			foundurl = 1;
 		} else if (strstr(buffer, "hidden")) {
-			sscanf(buffer, "hidden = %i", &hidden);
+			sscanf(buffer, "hidden = %s", hidden_str);
 			foundhidden = 1;
+			if (strstr(hidden_str, "1")) 
+				hidden = 1;
+			else if (strstr(hidden_str, "0"))
+				hidden = 0;
+			else
+				foundhidden = 0;
 		} else if (strstr(buffer, "essid")) {
 			sscanf(buffer, "essid = %s", essid);
 			foundessid = 1;
