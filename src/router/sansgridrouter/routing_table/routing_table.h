@@ -66,6 +66,7 @@ void routingTableGetEssid(RoutingTable *table, char essid[80]);
 int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid);
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]);

@@ -225,6 +225,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	// Statically assign IP Address if possible
 	// return 0 if success, -1 if failure
 	
+	uint32_t rdid_pool;
 	DeviceProperties *dev_prop;
 	int32_t index;
 
@@ -237,8 +238,19 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
 		syslog(LOG_INFO, "Allocating a device at %i", index);
+		rdid_pool = table->rdid_pool;
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
-		table->routing_table[index]->rdid = table->rdid_pool++;
+		if (!routingTableLookupRDID(table, index)) {
+			table->routing_table[index]->rdid = index;
+		} else {
+			while (routingTableLookupRDID(table, rdid_pool)) {
+				rdid_pool++;
+			}
+			table->routing_table[index]->rdid = rdid_pool++;
+			table->rdid_pool = rdid_pool;
+		}
+
+		//table->routing_table[index]->rdid = table->rdid_pool++;
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		if (properties != NULL) {
 			memcpy(dev_prop, properties, sizeof(DeviceProperties));
@@ -306,6 +318,29 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	free(table->routing_table[index]);
 	table->routing_table[index] = NULL;
 	table->table_alloc--;
+
+	return 0;
+}
+
+
+int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid) {
+	// Lookup an RDID in the table
+	// return true if found, false if not found
+	
+	uint32_t i;
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return 0;
+
+	// table lookup
+	
+	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			if (table->routing_table[i]->rdid == rdid) {
+				return 1;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -537,7 +572,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 				syslog(LOG_DEBUG, "found one!");
 				maskip(ip_addr, table->base, i);
 				rdid = routingTableIPToRDID(table, ip_addr);
-				sprintf(str, "%.4i\t", rdid);
+				sprintf(str, "%4i\t", rdid);
 				for (j=0; j<IP_SIZE; j++) {
 					if (ip_addr[j] != 0x0) {
 						sprintf(str, "%s%.2x", str, ip_addr[j]);
