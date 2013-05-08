@@ -25,8 +25,8 @@
 
 // Initialize SensorConfig static members
 bool SensorConfig::connected = false;
-byte SensorConfig::manid[ MANID ] = { 0x01, 0x00, 0x00, 0x00 };
-byte SensorConfig::modnum[ MODNUM ] = { 0x01, 0x00, 0x00, 0x00 };
+byte SensorConfig::manid[ MANID ] = { 0x00, 0x00, 0x00, 0x01 };
+byte SensorConfig::modnum[ MODNUM ] = { 0x00, 0x00, 0x00, 0x01 };
 char SensorConfig::sn[ SN + 1 ] = "00112233";
 char SensorConfig::network_name[ DATA + 1 ] = "Sansgrid";
 byte SensorConfig::ip_address[ IP_ADDRESS ] = { 0x00,0x00,0x00,0x00,

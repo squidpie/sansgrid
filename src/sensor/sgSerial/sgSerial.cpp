@@ -52,10 +52,24 @@ int sgSerialSend(SansgridSerial *sg_serial, int size ){
 	// Pad Packet to necessary size
 	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
 	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-            if( i == ( size - 1 ) )
-		        SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-			else
+            if( i == ( size - 1 ) ){
+				#ifdef DUE
+				SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
+				#else // End Due code Begin Uno
+				spiMasterOpen( SLAVE_SELECT );
+				SPI.transfer( padding );
+				spiMasterClose( SLAVE_SELECT );
+				#endif // DUE
+			}
+			else{
+				#ifdef DUE
 				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
+				#else // End Due code Begin Uno
+				spiMasterOpen( SLAVE_SELECT );
+				SPI.transfer( padding );
+				spiMasterClose( SLAVE_SELECT );
+				#endif // DUE
+			}
 			delayMicroseconds( DELAY );
 		}
 	}
@@ -65,17 +79,37 @@ int sgSerialSend(SansgridSerial *sg_serial, int size ){
 // Get data from serial in. Data size will be in size.
 int sgSerialReceive(SansgridSerial *sg_serial, int size){
 	byte padding = 0x00;
+	#ifdef DUE
 	SPI.transfer( SLAVE_SELECT , RECEIVE , SPI_LAST  );
+	#else // End Due code Begin Uno
+	spiMasterOpen( SLAVE_SELECT );
+	SPI.transfer( RECEIVE );
+	spiMasterClose( SLAVE_SELECT );
+	#endif // DUE
 	spiMasterReceive( RECEIVE , sg_serial->control , CONTROL , SLAVE_SELECT );
 	spiMasterReceive( RECEIVE , sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
 	spiMasterReceive( RECEIVE , sg_serial->payload , PAYLOAD , SLAVE_SELECT );
 	// Pad Packet to necessary size
 	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
 	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-			if( i == ( size - 1 ) )
-		        SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-			else
+			if( i == ( size - 1 ) ){
+				#ifdef DUE
+				SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
+				#else // End Due code Begin Uno
+				spiMasterOpen( SLAVE_SELECT );
+				SPI.transfer( padding );
+				spiMasterClose( SLAVE_SELECT );
+				#endif // DUE
+			}
+			else{
+				#ifdef DUE
 				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
+				#else // End Due code Begin Uno
+				spiMasterOpen( SLAVE_SELECT );
+				SPI.transfer( padding );
+				spiMasterClose( SLAVE_SELECT );
+				#endif // DUE
+			}
 			delayMicroseconds( DELAY );
 		}
 	}

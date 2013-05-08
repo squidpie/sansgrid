@@ -23,29 +23,57 @@
 #include <Arduino.h>
 #include "spiMaster.h"
 
+//#define DUE 1
+
 // Initialize SPI Master
 void spiMasterInit( int ss , int sr ){
-	// have to send on master in, *slave out*
+	// Have to send on Master In Slave Out
 	pinMode( sr , INPUT );
+	#ifdef DUE
 	// Initialize the SPI bus
 	SPI.begin( ss );
 	// Set order bits are shifted onto the SPI bus
 	SPI.setBitOrder( ss , MSBFIRST ); 
-	// Set SPI Baud Rate to 333 KHz
-	// 84 MHz / 168 = 333 KHz
-	SPI.setClockDivider( ss, 252 );
+	// Set SPI Baud Rate to 500 KHz
+	// 84 MHz / 252 = 500 KHz
+	SPI.setClockDivider( ss, 168 );
 	// Set SPI Mode 0-3
 	SPI.setDataMode( ss , SPI_MODE0 );
+	#else // End DUE code Begin UNO
+	// Initialize the SPI bus
+	SPI.begin();
+	// Set order bits are shifted onto the SPI bus
+	SPI.setBitOrder( MSBFIRST ); 
+	// Set SPI Baud Rate to 500 KHz
+	// 16 MHz / 168 = 333 KHz
+	SPI.setClockDivider( SPI_CLOCK_DIV32 );
+	// Set SPI Mode 0-3
+	SPI.setDataMode( SPI_MODE0 );
+	#endif // DUE
 }
 
 // Receive ASCII char (int8_t) to Master from Slave
 void spiMasterReceive( byte  data_out , char * data_in , int size , int ss ){
 	// Loop through untill all characters received
 	for( int i = 0 ; i < size ; i++ ){
-		if( i == ( size - 1 ) )
+		if( i == ( size - 1 ) ){
+			#ifdef DUE
 			data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
-		else
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			data_in[i] = SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
+		else{
+			#ifdef DUE
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			data_in[i] = SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
 		delayMicroseconds( DELAY );
 	}
 }
@@ -54,10 +82,24 @@ void spiMasterReceive( byte  data_out , char * data_in , int size , int ss ){
 void spiMasterReceive( byte  data_out , byte * data_in , int size , int ss ){
 	// Loop through untill all characters received
 	for( int i = 0 ; i < size ; i++ ){
-		if( i == ( size - 1 ) )
+		if( i == ( size - 1 ) ){
+			#ifdef DUE
 			data_in[i] = SPI.transfer( ss , data_out , SPI_LAST );
-		else
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			data_in[i] = SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
+		else{
+			#ifdef DUE
 			data_in[i] = SPI.transfer( ss , data_out , SPI_CONTINUE );
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			data_in[i] = SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
 		delayMicroseconds( DELAY );
 	}
 }
@@ -66,10 +108,24 @@ void spiMasterReceive( byte  data_out , byte * data_in , int size , int ss ){
 void spiMasterTransmit( char * data_out , int size , int ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
-		if( i == ( size - 1 ) )
+		if( i == ( size - 1 ) ){
+			#ifdef DUE
 			SPI.transfer( ss , data_out[i] , SPI_LAST );
-		else
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out[i] );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
+		else{
+			#ifdef DUE
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out[i] );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
 		delayMicroseconds( DELAY );
 	}
 }
@@ -78,10 +134,24 @@ void spiMasterTransmit( char * data_out , int size , int ss ){
 void spiMasterTransmit( byte * data_out , int size , int ss ){
 	// Loop through untill all characters transmitted
 	for( int i = 0; i < size ; i++){
-		if( i == ( size - 1 ) )
+		if( i == ( size - 1 ) ){
+			#ifdef DUE
 			SPI.transfer( ss , data_out[i] , SPI_LAST );
-		else
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out[i] );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
+		else{
+			#ifdef DUE
 			SPI.transfer( ss , data_out[i] , SPI_CONTINUE );
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out[i] );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
 		delayMicroseconds( DELAY );
 	}
 }
@@ -89,10 +159,24 @@ void spiMasterTransmit( byte * data_out , int size , int ss ){
 // Transmit Padding as a BYTE
 void spiMasterPadding( byte data_out , int size , int ss ){
 	for( int i = size ; i < NUM_BYTES ; i++){
-		if( i == ( NUM_BYTES - 1 ) )
+		if( i == ( NUM_BYTES - 1 ) ){
+			#ifdef DUE
 			SPI.transfer( ss , data_out , SPI_LAST );
-		else
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
+		else{
+			#ifdef DUE
 			SPI.transfer( ss , data_out , SPI_CONTINUE );
+			#else // End Due code Begin Uno
+			spiMasterOpen( ss );
+			SPI.transfer( data_out );
+			spiMasterClose( ss );
+			#endif // DUE
+		}
 		delayMicroseconds( DELAY );
 	}
 }

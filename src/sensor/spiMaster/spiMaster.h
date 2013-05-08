@@ -26,18 +26,18 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#define SLAVE_SELECT  10           // SS pin
-#define SLAVE_READY  8             // Hand shake pin identifying Slave has 
-                                   // data to send
-#define NUM_BYTES 98			       // Number of bytes sent or received over 
-                                   // SPI per packet
-#define CONTROL 1				   // Number of bytes in control 
-#define IP_ADDRESS 16			   // Number of bytes in source/destination 
-                                   // IP address
-#define PAYLOAD 81				   // Number of bytes in payload 
-#define RECEIVE 0x00			   // Control byte for receiving data
-#define TRANSMIT 0x01			   // Control byte for transmit data
-#define DELAY 6				   	   // Delay
+#define SLAVE_SELECT  10	// SS pin
+#define SLAVE_READY  8		// Hand shake pin identifying Slave has 
+							// data to send
+#define NUM_BYTES 98		// Number of bytes sent or received over 
+							// SPI per packet
+#define CONTROL 1			// Number of bytes in control 
+#define IP_ADDRESS 16		// Number of bytes in source/destination 
+							// IP address
+#define PAYLOAD 81			// Number of bytes in payload 
+#define RECEIVE 0x00		// Control byte for receiving data
+#define TRANSMIT 0x01		// Control byte for transmit data
+#define DELAY 6				// Delay
 
 // Initialize SPI Master
 void spiMasterInit( int ss , int sr );
