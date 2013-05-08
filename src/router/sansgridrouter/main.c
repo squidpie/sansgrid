@@ -374,6 +374,14 @@ int sgSocketListen(void) {
 			router_opts.hidden_network = 1;
 			strcpy(str, "Hiding Network");
 			socketDoSend(s2, str);
+		} else if (!strcmp(str, "is-hidden")) {
+			// return if the network is hidden (not broadcasting)
+			if (router_opts.hidden_network) {
+				strcpy(str, "Hidden Network");
+			} else {
+				strcpy(str, "Shown Network");
+			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "show-network")) {
 			// Broadcast essid
 			syslog(LOG_INFO, "Sansgrid Daemon: Showing ESSID network");
@@ -670,6 +678,10 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(option, "show-network")) {
 			// show the network
 			sgSocketSend("show-network", 13);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "is-hidden")) {
+			// check to see if the network is hidden
+			sgSocketSend("is-hidden", 10);
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "url")) {
 			// get the url

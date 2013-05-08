@@ -28,7 +28,8 @@
 
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
-	syslog(LOG_INFO, "Sending packet over SPI");
+	if (sg_serial->payload[0] != SG_FLY)
+		syslog(LOG_INFO, "Sending packet over SPI");
 	/*
 	printf("sending");
 	printf(" %2x | ", sg_serial->control);
