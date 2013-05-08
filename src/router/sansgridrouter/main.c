@@ -168,7 +168,18 @@ void *heartbeatRuntime(void *arg) {
 
 void *flyRuntime(void *arg) {
 	// handle broadcast of ESSID
+	SansgridFly sg_fly;
+	SansgridSerial sg_serial;
+	memset(&sg_fly, 0x0, sizeof(SansgridFly));
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	sg_fly.datatype = SG_FLY;
 	while (1) {
+		routingTableGetEssid(routing_table, sg_fly.network_name);
+		memcpy(sg_serial.payload, &sg_fly, sizeof(SansgridFly));
+		sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
+		routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
+		if (!router_opts.hidden_network)
+			routerHandleFly(routing_table, &sg_serial);
 		sleep(1);
 	}
 
@@ -330,8 +341,16 @@ int sgSocketListen(void) {
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "drop")) {
-			// Drop a device using the router
+		} else if (!strcmp(str, "hide-network")) {
+			// Don't broadcast essid
+			syslog(LOG_INFO, "Sansgrid Daemon: Hiding ESSID network");
+			router_opts.hidden_network = 1;
+			strcpy(str, "Hiding Network");
+		} else if (!strcmp(str, "show-network")) {
+			// Broadcast essid
+			syslog(LOG_INFO, "Sansgrid Daemon: Showing ESSID network");
+			router_opts.hidden_network = 0;
+			strcpy(str, "Showing Network");
 		}
 		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
 
@@ -435,6 +454,9 @@ int sgStorePID(pid_t pid) {
 	return 0;
 }
 
+int parseConfFile(const char *path, RouterOpts *ropts) {
+	// parse a config file
+}	
 
 
 int main(int argc, char *argv[]) {
@@ -454,6 +476,9 @@ int main(int argc, char *argv[]) {
 	uint8_t ip_addr[IP_SIZE];
 	SansgridHatching sg_hatch;
 	SansgridSerial sg_serial;
+
+
+	memset(&router_opts, 0x0, sizeof(RouterOpts));
 
 	getSansgridDir(home_path);
 	strcpy(config_path, home_path);
@@ -542,6 +567,14 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(option, "devices")) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "hide-network")) {
+			// hide the network
+			sgSocketSend("hide-network", 13);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "show-network")) {
+			// show the network
+			sgSocketSend("show-network", 13);
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
@@ -650,14 +683,16 @@ void usage(int status) {
 		printf("\
   -f  --foreground           Don't background daemon\n\
   -p  --packet [PACKET]      Send a sansgrid payload to the server\n\
-  -d  --drop [DEVICE]        Drop a device from the system\n\
   -h, --help                 display this help and exit\n\
   -v, --version              output version information and exit\n\
 \n\
       status                 show status of devices\n\
       kill                   shutdown the router daemon\n\
       running                check to see if router daemon is running\n\
-      devices                print number of devices tracked\n");
+      devices                print number of devices tracked\n\
+      hide-network           don't broadcast essid\n\
+      show-network           broadcast essid\n\
+	  drop [DEVICE]          drop a device");
 	}
 	exit(status);
 }
