@@ -157,7 +157,7 @@ void *heartbeatRuntime(void *arg) {
 		sleep(HEARTBEAT_INTERVAL/count);
 		//sleepMicro(HEARTBEAT_UINTERVAL / count);
 		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
-			syslog(LOG_DEBUG, "sending to device %u", ip_addr[IP_SIZE-1]);
+			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 			sgSerialSend(&sg_serial, sizeof(SansgridSerial));
 		}
@@ -603,6 +603,7 @@ int main(int argc, char *argv[]) {
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
+	ip_addr[IP_SIZE-1] = 0x1;
 	sg_hatch.datatype = SG_HATCH;
 	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
 	memcpy(&sg_serial.payload, &sg_hatch, sizeof(SansgridHatching));

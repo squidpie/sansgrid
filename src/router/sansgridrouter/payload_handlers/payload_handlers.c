@@ -200,6 +200,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 			// IP address given
 			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr, dev_prop) == 1) {
 				syslog(LOG_INFO, "Couldn't statically assign IP");
+				routingTableAssignIP(routing_table, ip_addr, dev_prop);
+				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 			}
 		}
 
