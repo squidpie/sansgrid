@@ -250,7 +250,6 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 			table->rdid_pool = rdid_pool;
 		}
 
-		//table->routing_table[index]->rdid = table->rdid_pool++;
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		if (properties != NULL) {
 			memcpy(dev_prop, properties, sizeof(DeviceProperties));
@@ -308,7 +307,7 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// table lookup
 	index = locationToTablePtr(ip_addr, table->base);
 
-	if (index >= ROUTING_ARRAYSIZE)
+	if (index >= ROUTING_ARRAYSIZE || index < 2)
 		return -1;
 	if (table->routing_table[index] == NULL)
 		return -1;
@@ -321,6 +320,28 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 
 	return 0;
 }
+
+
+int32_t routingTableFreeAllIPs(RoutingTable *table) {
+	// Release all IP addresses
+	
+	uint32_t i;
+	uint8_t ip_addr[IP_SIZE];
+
+	tableAssertValid(table);
+
+	for (i=2; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			maskip(ip_addr, table->base, i);
+			routingTableFreeIP(table, ip_addr);
+		}
+	}
+
+	return 0;
+}
+
+	
+	
 
 
 int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid) {

@@ -31,7 +31,7 @@
 
 
 
-void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]);
+int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]);
 enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt);
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial);

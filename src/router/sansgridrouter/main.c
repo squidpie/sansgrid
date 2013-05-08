@@ -309,14 +309,21 @@ int sgSocketListen(void) {
 			syslog(LOG_DEBUG, "Dropping device");
 			if (strlen(str) <= strlen("drop")) {
 				strcpy(str, "No device specified");
+			} else if (!strcmp(str, "drop all")) {
+				// drop all devices
+				routingTableFreeAllIPs(routing_table);
+				strcpy(str, "All devices freed");
 			} else if ((device = atoi(&str[5])) != 0) {
 				// drop device
 				routingTableRDIDToIP(routing_table, device, ip_addr);
 				if (routingTableLookup(routing_table, ip_addr) == 1) {
-					routerFreeDevice(routing_table, ip_addr);
-					strcpy(str, "Device freed");
+					if (routerFreeDevice(routing_table, ip_addr) == -1) {
+						sprintf(str, "Couldn't free device: %i", device);
+					} else {
+						sprintf(str, "Device freed: %i", device);
+					}
 				} else {
-					strcpy(str, "Device not found");
+					sprintf(str, "Device not found: %i", device);
 				}
 			} else {
 				strcpy(str, "Bad device given");

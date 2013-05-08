@@ -27,14 +27,14 @@
 #include "../communication/sg_tcp.h"
 
 
-void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
+int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 	// Something went wrong. Transmit NETWORK_DISCONNECT_SENSOR to ip_addr
 	SansgridSerial sg_serial;
 	SansgridChirp sg_chirp;
 
 	if ((ip_addr[IP_SIZE-1] & ~1) == 0x0) {
 		// router or server. Don't free device
-		return;
+		return -1;
 	}
 
 	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
@@ -48,7 +48,7 @@ void routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 
 	routingTableFreeIP(routing_table, ip_addr);	
 
-	return;
+	return 0;
 }
 
 
