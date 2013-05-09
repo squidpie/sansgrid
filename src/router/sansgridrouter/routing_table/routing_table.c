@@ -74,7 +74,7 @@ static int tableAssertValid(RoutingTable *table) {
 
 static int tableChkFull(RoutingTable *table) {
 	if (table->table_alloc >= ROUTING_ARRAYSIZE) {
-		syslog(LOG_DEBUG, "routing table full");
+		syslog(LOG_WARNING, "routing table full");
 		return 1;
 	}
 	return 0;
@@ -83,7 +83,7 @@ static int tableChkFull(RoutingTable *table) {
 
 static int tableChkEmpty(RoutingTable *table) {
 	if (table->table_alloc == 0) {
-		syslog(LOG_DEBUG, "routing table empty");
+		syslog(LOG_NOTICE, "routing table empty");
 		return 1;
 	}
 	return 0;
@@ -237,7 +237,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
-		syslog(LOG_INFO, "Allocating a device at %i", index);
+		syslog(LOG_NOTICE, "Allocating a device at %i", index);
 		rdid_pool = table->rdid_pool;
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
 		if (!routingTableLookupRDID(table, index)) {
@@ -586,6 +586,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	int last_was_zero = 0;
 	str[0] = '\0';
 	uint32_t rdid;
+	syslog(LOG_INFO, "Getting Routing Table Info");
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {

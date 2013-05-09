@@ -57,43 +57,21 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// get the configuration path
 #ifdef USE_SANSRTS
 	snprintf(config_path, 300, "sansrts.pl");
-#else
-	getSansgridDir(sansgrid_path);
-	snprintf(config_path, 300, "%s/sansgrid.conf", sansgrid_path);
-	if ((FPTR = fopen(config_path, "r")) == NULL) {
-		syslog(LOG_DEBUG, "Couldn't find path %s", config_path);
-		return -1;
-	} else {
-		buffer = (char*)malloc(buff_size*sizeof(char));
-		if (buffer == NULL) {
-			syslog(LOG_ERR, "Couldn't allocate buffer!");
-			return -1;
-		}
-		while (getline(&buffer, &size, FPTR) != -1) {
-			if (strstr(buffer, "key")) {
-				sscanf(buffer, "key = %s", key);
-			} else if (strstr(buffer, "url")) {
-				sscanf(buffer, "url = %s", url);
-			}
-		}
-		free(buffer);
-		fclose(FPTR);
-	}
 #endif
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
-		syslog(LOG_DEBUG, "Router-->Server conversion failed");
+		syslog(LOG_WARNING, "Router-->Server conversion failed");
 		return -1;
 	} else {
-		syslog(LOG_DEBUG, "Sending packet %s", payload);
+		syslog(LOG_DEBUG, "Sending packet %s to server", payload);
 #ifdef USE_SANSRTS
 		snprintf(cmd, 2000, "%s \"%s\"", config_path, payload);
 #else
 		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode --key=%s --data-urlencode --payload=\"%s\"", 
-				url, key, payload);
+				router_opts.url, router_opts.key, payload);
 #endif
 		if ((FPTR = popen(cmd, "r")) == NULL) {
-			syslog(LOG_DEBUG, "Router-->Server send failed");
+			syslog(LOG_WARNING, "Router-->Server send failed");
 			return -1;
 		}
 		buff_size = size;

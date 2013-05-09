@@ -278,7 +278,7 @@ int sgSocketListen(void) {
 		}
 		// Receive and interpret the data
 		if (socketDoReceive(s2, str) == -1) {
-			syslog(LOG_ERR, "sansgrid daemon: receive error");
+			syslog(LOG_WARNING, "sansgrid daemon: receive error");
 			break;
 		}
 		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
@@ -288,7 +288,7 @@ int sgSocketListen(void) {
 		if (!strcmp(str, "kill")) {
 			// Kill the server
 			shutdown_server = 1;
-			syslog(LOG_DEBUG, "sansgrid daemon: shutting down");
+			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			socketDoSend(s2, str);
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
@@ -297,7 +297,7 @@ int sgSocketListen(void) {
 					&sg_serial);
 			if (exit_code == -1) {
 				strcpy(str, "bad packet");
-				syslog(LOG_DEBUG, "sansgrid daemon: got bad packet");
+				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
 			} else {
 				strcpy(str, "packet accepted");
 				queueEnqueue(dispatch, &sg_serial);
@@ -311,7 +311,7 @@ int sgSocketListen(void) {
 			// drop a device
 			uint32_t device = 0;
 			uint8_t ip_addr[IP_SIZE];
-			syslog(LOG_DEBUG, "Dropping device");
+			syslog(LOG_NOTICE, "Dropping device");
 			if (strlen(str) <= strlen("drop")) {
 				strcpy(str, "No device specified");
 			} else if (!strcmp(str, "drop all")) {
@@ -382,7 +382,7 @@ int sgSocketListen(void) {
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "hide-network")) {
 			// Don't broadcast essid
-			syslog(LOG_INFO, "Sansgrid Daemon: Hiding ESSID network");
+			syslog(LOG_NOTICE, "Sansgrid Daemon: Hiding ESSID network");
 			router_opts.hidden_network = 1;
 			strcpy(str, "Hiding Network");
 			socketDoSend(s2, str);
@@ -396,12 +396,12 @@ int sgSocketListen(void) {
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "show-network")) {
 			// Broadcast essid
-			syslog(LOG_INFO, "Sansgrid Daemon: Showing ESSID network");
+			syslog(LOG_NOTICE, "Sansgrid Daemon: Showing ESSID network");
 			router_opts.hidden_network = 0;
 			strcpy(str, "Showing Network");
 			socketDoSend(s2, str);
 		} 
-		syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
+		syslog(LOG_INFO, "sansgrid daemon: sending back: %s", str);
 
 		close(s2);
 	} while (!shutdown_server);
@@ -461,7 +461,8 @@ int sgSocketSend(const char *data, const int size) {
 	}
 
 	// Send the command
-	syslog(LOG_DEBUG, "sansgrid client: sending data");
+	syslog(LOG_INFO, "sansgrid client: sending data");
+
 	if (socketDoSend(s, data) == -1) {
 		syslog(LOG_ERR, "sansgrid client: send error: %s", strerror(errno));
 		exit(EXIT_FAILURE);
@@ -472,7 +473,7 @@ int sgSocketSend(const char *data, const int size) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
 		if (!strcmp(str, "kill")) {
-			syslog(LOG_INFO, "sansgrid client: Shutting down daemon...\n");
+			syslog(LOG_NOTICE, "sansgrid client: Shutting down daemon...\n");
 		} else {
 			printf("%s\n", str);
 		}
@@ -511,20 +512,23 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	char key[100],
 		 url[100],
 		 essid[100],
-		 hidden_str[10];
+		 hidden_str[10],
+		 verbosity_str[20];
 	int hidden = 0;
+	int verbosity = 0;
 
 	int foundkey = 0,
 		foundurl = 0,
 		foundessid = 0,
-		foundhidden = 0;
+		foundhidden = 0,
+		foundverbosity = 0;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
 	}
 	buffer = (char*)malloc(buff_alloc*sizeof(char));
 	if (buffer == NULL) {
-		syslog(LOG_ERR, "Couldn't allocate memory!");
+		syslog(LOG_WARNING, "Couldn't allocate memory!");
 		return -1;
 	}
 	while (getline(&buffer, &buff_alloc, FPTR) != -1) {
@@ -546,6 +550,10 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		} else if (strstr(buffer, "essid")) {
 			sscanf(buffer, "essid = %s", essid);
 			foundessid = 1;
+		} else if (strstr(buffer, "verbosity")) {
+			sscanf(buffer, "verbosity = %s", verbosity_str);
+			verbosity = atoi(verbosity_str);
+			foundverbosity = 1;
 		}
 	}
 	fclose(FPTR);
@@ -557,6 +565,11 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		memcpy(ropts->serverip, url, sizeof(ropts->serverip));
 	if (foundkey)
 		memcpy(ropts->serverkey, key, sizeof(ropts->serverkey));
+	if (foundverbosity) {
+		ropts->verbosity = verbosity;
+		setlogmask(LOG_UPTO(verbosity));
+	}
+		
 
 	return 0;
 }	
@@ -582,6 +595,8 @@ int main(int argc, char *argv[]) {
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
+	router_opts.verbosity = LOG_ERR;
+	setlogmask(LOG_UPTO(router_opts.verbosity));
 
 	getSansgridDir(home_path);
 	strcpy(config_path, home_path);
@@ -596,21 +611,27 @@ int main(int argc, char *argv[]) {
 			{"daemon", 		no_argument, 		&no_daemonize, 	0},
 			{"config",      required_argument,  0,              'c'},
 			{"packet",		required_argument, 	0,				'p'},
+			{"verbose",     no_argument,        0,              'v'},
+			{"quiet",       no_argument,        0,              'q'},
 			{"help", 		no_argument, 		0, 				'h'},
-			{"version", 	no_argument, 		0, 				'v'},
+			{"version", 	no_argument, 		0, 				0},
 			{"serverip",	required_argument,	0,				's'},
 			{"serverkey",	required_argument,	0,				'k'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "c:d:fhp:vs:k:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:d:fhp:qvs:k:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
 			case 0:
 				if (long_options[option_index].flag != 0)
 					break;
+				if (!strcmp(long_options[option_index].name, "version")) {
+					printf("Not implemented yet!\n");
+					exit(EXIT_FAILURE);
+				}
 				printf("option %s ", long_options[option_index].name);
 				if (optarg)
 					printf("With arg %s", optarg);
@@ -641,14 +662,20 @@ int main(int argc, char *argv[]) {
 				sgSocketSend(payload, strlen(payload));
 				exit(EXIT_SUCCESS);
 				break;
+			case 'q':
+				// Less verbosity
+				if (--router_opts.verbosity < 0) {
+					router_opts.verbosity = 0;
+				}
+				setlogmask(LOG_UPTO(router_opts.verbosity));
+				break;
 			case 's':
 				// Server IP address given
 				break;
 			case 'v':
-				// version
-				// TODO: Give version
-				printf("Not implemented yet!\n");
-				exit(EXIT_SUCCESS);
+				// verbosity
+				router_opts.verbosity++;
+				setlogmask(LOG_UPTO(router_opts.verbosity));
 				break;
 			case '?':
 				// getopt_long alreaady printed an error message
@@ -818,8 +845,10 @@ void usage(int status) {
   -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
   -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
+  -v  --verbose              Be verbose (-vvvv for very verbose)\n\
+  -q  --quiet                Be less verbose\n\
   -h, --help                 display this help and exit\n\
-  -v, --version              output version information and exit\n\
+      --version              output version information and exit\n\
 \n\
       status                 show status of devices\n\
       kill                   shutdown the router daemon\n\

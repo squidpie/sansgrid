@@ -23,6 +23,7 @@
 #include <string.h>
 #include <syslog.h>
 #include "payload_handlers.h"
+#include "../sansgrid_router.h"
 #include "../routing_table/routing_table.h"
 #include "../communication/sg_tcp.h"
 
@@ -156,6 +157,7 @@ int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	char essid[80];
 	SansgridFly *sg_fly;
 
+	syslog(LOG_DEBUG, "Handling Fly Packet");
 	sg_fly_union.serialdata = sg_serial->payload;
 	sg_fly = sg_fly_union.formdata;
 
@@ -179,6 +181,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	SANSGRID_UNION(SansgridEyeball, SansgridEyeballConv) sg_eyeball_union;
 	uint8_t ip_addr[IP_SIZE];
 
+	syslog(LOG_INFO, "Handling Eyeball packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	// Convert serial data to formatted data
 	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
@@ -191,23 +195,28 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	memset(ip_addr, 0x0, sizeof(ip_addr));
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
+		syslog(LOG_DEBUG, "New device wishes to mate");
 		if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
 			// no IP address given
 			// Assign an IP address
+			syslog(LOG_INFO, "Assigning IP dynamically for new device");
 			routingTableAssignIP(routing_table, ip_addr, dev_prop);
 			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 		} else {
 			// IP address given
 			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr, dev_prop) == 1) {
-				syslog(LOG_INFO, "Couldn't statically assign IP");
+				syslog(LOG_INFO, "Couldn't statically assign IP for new device");
 				routingTableAssignIP(routing_table, ip_addr, dev_prop);
 				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 			}
 		}
 
 		// Send packet to the server
+		syslog(LOG_DEBUG, "Sending Eyeball over SPI");
 		sgTCPSend(sg_serial, sizeof(SansgridSerial));
 	} else {
+		syslog(LOG_DEBUG, "New device doesn't wish to mate");
+		syslog(LOG_WARNING, "Eyeball-nomate path not implemented yet");
 		// TODO: Not implemented yet
 		// Have to send a refusal back to sensor
 		return 1;
@@ -227,6 +236,8 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	DeviceProperties dev_prop;
 	uint8_t ip_addr[IP_SIZE];
 
+	syslog(LOG_INFO, "Handling Peck packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
@@ -287,6 +298,8 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_sing_union.serialdata = sg_serial->payload;
 	sg_sing = sg_sing_union.formdata;
 
+	syslog(LOG_INFO, "Handling Sing packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_MOCKING);
 
@@ -318,6 +331,8 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_mock_union.serialdata = sg_serial->payload;
 	sg_mock = sg_mock_union.formdata;
 
+	syslog(LOG_INFO, "Handling Mock packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
 
@@ -349,6 +364,8 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_peacock_union.serialdata = sg_serial->payload;
 	sg_peacock = sg_peacock_union.formdata;
 
+	syslog(LOG_INFO, "Handling Peacock packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	if (sg_peacock->additional_IO_needed == 1) {
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
@@ -365,6 +382,8 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	// Send a SansgridNest from server to sensor
+	syslog(LOG_INFO, "Handling Nest packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
@@ -383,6 +402,9 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_squawk_union.serialdata = sg_serial->payload;
 	sg_squawk = sg_squawk_union.formdata;
+
+	syslog(LOG_INFO, "Handling Squawk packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
@@ -454,6 +476,9 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
+	syslog(LOG_INFO, "Handling Heartbeat packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
+
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			// Heartbeat from router to sensor
@@ -487,6 +512,8 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
+	syslog(LOG_INFO, "Handling Chirp packet: device IP ends with %u", 
+			sg_serial->ip_addr[IP_SIZE-1]);
 
 	switch (sg_chirp->datatype) {
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:

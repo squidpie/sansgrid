@@ -30,18 +30,6 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	if (sg_serial->payload[0] != SG_FLY)
 		syslog(LOG_INFO, "Sending packet over SPI");
-	/*
-	printf("sending");
-	printf(" %2x | ", sg_serial->control);
-	for (uint32_t i=0; i<IP_SIZE; i++) {
-		printf("%.2x", sg_serial->ip_addr[i]);
-	}
-	printf(" | ");
-	for (uint32_t i=0; i<PAYLOAD_SIZE; i++) {
-		printf("%.2x", sg_serial->payload[i]);
-	}
-	printf("\n");
-	*/
 
 	return -1;
 }
@@ -50,6 +38,8 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	sem_t blocker;
 	sem_init(&blocker, 0, 0);
+
+	syslog(LOG_INFO, "Generic serial Receive: Waiting forever");
 	sem_wait(&blocker);
 
 	sem_destroy(&blocker);
