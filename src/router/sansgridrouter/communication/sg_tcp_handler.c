@@ -429,6 +429,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	
 
 	if (!sg_serial || !sg_serial->payload) {
+		syslog(LOG_WARNING, "Router-->Server: container or payload is NULL!");
 		return -1;
 	}
 	payload[0] = '\0';
@@ -442,7 +443,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
 		// no match found: this really shouldn't happen
-		syslog(LOG_INFO, "No device found");
+		syslog(LOG_NOTICE, "No device found: last byte of ip: %x", sg_serial->ip_addr[IP_SIZE-1]);
 		return -1;
 	} else {
 		// match found; continue

@@ -35,11 +35,13 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 
 	if ((ip_addr[IP_SIZE-1] & ~1) == 0x0) {
 		// router or server. Don't free device
+		syslog(LOG_WARNING, "Can't free reserved devices!");
 		return -1;
 	}
 
 	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
 	memcpy(&sg_serial, &sg_chirp, sizeof(SansgridChirp));
+	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
 
 	// Signal to server disconnecting
 	sgTCPSend(&sg_serial, sizeof(SansgridSerial));

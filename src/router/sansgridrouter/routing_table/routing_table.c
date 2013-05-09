@@ -237,7 +237,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
-		syslog(LOG_NOTICE, "Allocating a device at %i", index);
+		syslog(LOG_INFO, "Allocating slot for new device at %i", index);
 		rdid_pool = table->rdid_pool;
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
 		if (!routingTableLookupRDID(table, index)) {
@@ -249,6 +249,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 			table->routing_table[index]->rdid = rdid_pool++;
 			table->rdid_pool = rdid_pool;
 		}
+		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
 
 		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
 		if (properties != NULL) {
