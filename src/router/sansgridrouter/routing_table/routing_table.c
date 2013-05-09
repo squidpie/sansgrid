@@ -587,7 +587,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	int last_was_zero = 0;
 	str[0] = '\0';
 	uint32_t rdid;
-	syslog(LOG_INFO, "Getting Routing Table Info");
+	syslog(LOG_DEBUG, "Getting Routing Table Info for device %i", devnum);
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {

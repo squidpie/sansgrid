@@ -183,8 +183,11 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	SANSGRID_UNION(SansgridEyeball, SansgridEyeballConv) sg_eyeball_union;
 	uint8_t ip_addr[IP_SIZE];
 
-	syslog(LOG_INFO, "Handling Eyeball packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	if (sg_serial->ip_addr[IP_SIZE-1])
+		syslog(LOG_INFO, "Handling Eyeball packet: device wants IP that ends with %u", 
+				sg_serial->ip_addr[IP_SIZE-1]);
+	else
+		syslog(LOG_INFO, "Handling Eyeball packet: device wants dynamic IP");
 	// Convert serial data to formatted data
 	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
@@ -214,7 +217,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		}
 
 		// Send packet to the server
-		syslog(LOG_DEBUG, "Sending Eyeball over SPI");
+		syslog(LOG_DEBUG, "Sending Eyeball to server");
 		sgTCPSend(sg_serial, sizeof(SansgridSerial));
 	} else {
 		syslog(LOG_DEBUG, "New device doesn't wish to mate");
