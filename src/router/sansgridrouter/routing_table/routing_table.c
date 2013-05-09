@@ -505,8 +505,11 @@ int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 	// Find the next device to send a heartbeat to, set ip_addr to the ip address of that device
 	int i;
 	tableAssertValid(table);
+	int table_alloc = table->table_alloc - 
+		(table->routing_table[0] != NULL) -
+		(table->routing_table[1] != NULL);
 
-	if (!table->table_alloc)
+	if (table_alloc <= 0)
 		return 0;
 	for (i=(table->hbptr+1)%ROUTING_ARRAYSIZE; 
 			!table->routing_table[i] || (i == 0) || (i == 1);
