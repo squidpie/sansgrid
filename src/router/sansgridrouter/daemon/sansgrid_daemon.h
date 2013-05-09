@@ -21,7 +21,6 @@
 
 
 int daemon_init(void);
-void getSansgridDir(char wd[150]);
 int isRunning(void);
 
 
