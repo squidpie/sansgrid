@@ -40,7 +40,7 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 	}
 
 	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
-	memcpy(&sg_serial, &sg_chirp, sizeof(SansgridChirp));
+	memcpy(&sg_serial.payload, &sg_chirp, sizeof(SansgridChirp));
 	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
 
 	// Signal to server disconnecting
