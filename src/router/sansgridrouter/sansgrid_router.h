@@ -39,6 +39,7 @@ typedef struct RouterOpts {
 	char essid[80];
 	char serverip[20];
 	char serverkey[512];
+	uint8_t netmask[IP_SIZE];
 	int hidden_network;		// whether or not to broadcast essid
 	int verbosity;			// how loud we should be
 } RouterOpts;

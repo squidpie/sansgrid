@@ -121,19 +121,6 @@ void *spiReaderRuntime(void *arg) {
 	pthread_exit(arg);
 }
 
-void *serverReaderRuntime(void *arg) {
-	// Read from the Server and queue data onto dispatch
-	uint32_t size;
-	SansgridSerial *sg_serial;
-	while (1) {
-		while (sgTCPReceive(&sg_serial, &size) == -1) {
-			sched_yield();
-		}
-		queueEnqueue(dispatch, sg_serial);
-	}
-	pthread_exit(arg);
-}
-
 
 void *heartbeatRuntime(void *arg) {
 	// handle pings
@@ -153,7 +140,6 @@ void *heartbeatRuntime(void *arg) {
 			// if count is 0, you'll get a divide-by-zero error below
 			count = 1;
 		}
-		// FIXME: check to see if interval is below 1 second
 		if (HEARTBEAT_INTERVAL/count == 0) {
 			// interval is < 1 second
 			// sleep in usecs
@@ -191,10 +177,6 @@ void *flyRuntime(void *arg) {
 	pthread_exit(arg);
 }
 	
-
-void fnExit(void) {
-	printf("Exiting\n");
-}
 
 
 int socketDoSend(int s, const char *str) {
@@ -578,7 +560,6 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch
-				server_read_thread,		// thread for reading from server
 				heartbeat_thread,		// thread for pinging sensors
 				fly_thread;				// thread for broadcasting ESSID
 
@@ -785,15 +766,14 @@ int main(int argc, char *argv[]) {
 		sgStorePID(getpid());
 	}
 
-	atexit(fnExit);
-
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
 	// TODO: Assign ESSID from config file
+	// TODO: Assign netmask from options
 	routing_table = routingTableInit(router_base, "Stock ESSID");
 	void *arg;
 
-	// TODO: set IP address correctly
+	// TODO: set IP address from netmask in options
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
@@ -808,7 +788,6 @@ int main(int argc, char *argv[]) {
 
 	// Spin off readers/writers
 	pthread_create(&serial_read_thread, NULL, spiReaderRuntime, dispatch);
-	pthread_create(&server_read_thread, NULL, serverReaderRuntime, dispatch);
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
@@ -818,13 +797,11 @@ int main(int argc, char *argv[]) {
 
 	// Finished. Shut system down
 	pthread_cancel(serial_read_thread);
-	pthread_cancel(server_read_thread);
 	pthread_cancel(dispatch_thread);
 	pthread_cancel(heartbeat_thread);
 	pthread_cancel(fly_thread);
 
 	pthread_join(serial_read_thread, &arg);
-	pthread_join(server_read_thread, &arg);
 	pthread_join(dispatch_thread, &arg);
 	pthread_join(heartbeat_thread, &arg);
 	pthread_join(fly_thread, &arg);
@@ -838,9 +815,9 @@ int main(int argc, char *argv[]) {
 
 void usage(int status) {
 	if (status != EXIT_SUCCESS)
-		printf("Try sansgrid -h\n");
+		printf("Try sansgridrouter -h\n");
 	else {
-		printf("Usage: sansgrid [OPTION]\n");
+		printf("Usage: sansgridrouter [OPTION]\n");
 		printf("\
   -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
