@@ -516,58 +516,51 @@ int sgStorePID(pid_t pid) {
 	return 0;
 }
 
-int parseIPv6(const char *ip_str, uint8_t ip_addr[16]) {
-	uint32_t i = 0;
-	int bchunk_index = 0;
-	uint32_t hexpiece = 0x0;
-	char bchunk[3];
-	uint8_t ip_left[16],
-			ip_right[16];
-	uint32_t leftindex = 0,
-			 rightindex = 0;
-	int use_right = 0;
-	int colons = 0;
-	uint32_t size = strlen(ip_str);
-	if (ip_str[size-1] == '\'')
-		size--;
-
-	memset(ip_addr, 0x0, 16);
-	memset(bchunk, 0x0, sizeof(bchunk));
-
-	for (i=0; i < size; i++) {
-		if (ip_str[i] == '\'') {
-			continue;
-		}
-		if (ip_str[i] == ':') {
-			// found a colon
-			if (++colons > 1) {
-				use_right = 1;
-			}
-			continue;
-		} 
-
-		bchunk[bchunk_index++] = ip_str[i];
-		printf("str = %c\n", ip_str[i]);
-		if (bchunk_index > 1) {
-			bchunk[bchunk_index] = '\0';
-			sscanf(bchunk, "%2x", &hexpiece);
-			printf("%x\n", hexpiece);
-			if (use_right)
-				ip_right[rightindex++] = (hexpiece & 0xff);
-			else
-				ip_left[leftindex++] = (hexpiece & 0xff);
-			bchunk_index = 0;
-			memset(bchunk, 0x0, sizeof(bchunk));
-		}
-		colons = 0;
+int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
+	uint8_t hexarray[16];
+	uint8_t ip_right[16];
+	char *divider;
+	uint32_t size;
+	uint32_t index,
+			 base = 0;
+	char *bounds;
+	char *moved_ip;
+	uint32_t right_size = 0;
+	if (ip_str[0] == '\'')
+		ip_str = &ip_str[1];
+	if ((divider = strstr(ip_str, "\'")) != NULL) {
+			divider[0] = '\0';
 	}
+	moved_ip = ip_str;
+	if ((divider = strstr(ip_str, "::")) != NULL) {
+		// found a divider
+		right_size = parseIPv6(&divider[2], ip_right);
+		divider[1] = '\0';
+	} 
+	bounds = &ip_str[strlen(ip_str)-1];
+	memset(ip_addr, 0x0, 16);
+	divider = moved_ip;
 
-	for (i=0; i<leftindex; i++)
-		ip_addr[i] = ip_left[i];
-	for (i=0; i<rightindex; i++)
-		ip_addr[15-rightindex+i] = ip_right[i];
+	while (divider < bounds) {
+		if ((divider = strstr(moved_ip, ":")) == NULL) {
+			divider = bounds;
+		}
+		if (divider[0] == ':')
+			divider[0] = '\0';
+		size = (strlen(moved_ip)+1)/2;
+		atox(hexarray, moved_ip, sizeof(hexarray));
+		for (index = base; index < base+size; index++) {
+			ip_addr[index] = hexarray[index-base];
+		}
+		base = index;
+		if (divider >= bounds)
+			break;
+		moved_ip = &divider[1];
+	}
+	for (index = 0; index < right_size; index++)
+		ip_addr[16-right_size+index] = ip_right[index];
 
-	return 0;
+	return base;
 }
 
 
@@ -626,7 +619,6 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			foundverbosity = 1;
 		} else if (strstr(buffer, "netmask")) {
 			sscanf(buffer, "netmask = %s", netmask_str);
-			printf("%s\n", netmask_str);
 			parseIPv6(netmask_str, netmask);
 			foundnetmask = 1;
 		}

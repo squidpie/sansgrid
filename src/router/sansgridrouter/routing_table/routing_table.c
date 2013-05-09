@@ -176,13 +176,28 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	
 	int i;
 	RoutingTable *table;
+	int unmasked_bits = ROUTING_UNIQUE_BITS;
+	int maskindex = IP_SIZE-1;
+	uint8_t mask;
 
 	table = (RoutingTable*)malloc(sizeof(RoutingTable));
 	table->rdid_pool = 1;
 	table->tableptr = 0;
 	table->table_alloc = 0;
 	table->hbptr = 0;
+	while (unmasked_bits > 0) {
+		if (unmasked_bits >= 8) {
+			mask = 0xff;
+			unmasked_bits -= 8;
+		} else {
+			mask = (1 << unmasked_bits)-1;
+			unmasked_bits = 0;
+		}
+		base[maskindex] = base[maskindex] & ~mask;
+		maskindex--;
+	}
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
+
 	memset(table->broadcast, 0xff, IP_SIZE*sizeof(uint8_t));
 	strncpy(table->essid, essid, sizeof(table->essid));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
@@ -602,11 +617,13 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 				for (j=0; j<IP_SIZE; j++) {
 					if (ip_addr[j] != 0x0) {
 						sprintf(str, "%s%.2x", str, ip_addr[j]);
-						last_was_zero = 0;
-						if (j+1 < IP_SIZE && last_was_zero < 2)
+						if (j+1 < IP_SIZE)
 							strcat(str, ":");
+						last_was_zero = 0;
 					} else if (!last_was_zero) {
-						strcat(str, "::");
+						strcat(str, ":");
+						if (j == 0)
+							strcat(str, ":");
 						last_was_zero = 1;
 					}
 
