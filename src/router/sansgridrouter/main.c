@@ -516,16 +516,73 @@ int sgStorePID(pid_t pid) {
 	return 0;
 }
 
+int parseIPv6(const char *ip_str, uint8_t ip_addr[16]) {
+	uint32_t i = 0;
+	int bchunk_index = 0;
+	uint32_t hexpiece = 0x0;
+	char bchunk[3];
+	uint8_t ip_left[16],
+			ip_right[16];
+	uint32_t leftindex = 0,
+			 rightindex = 0;
+	int use_right = 0;
+	int colons = 0;
+	uint32_t size = strlen(ip_str);
+	if (ip_str[size-1] == '\'')
+		size--;
+
+	memset(ip_addr, 0x0, 16);
+	memset(bchunk, 0x0, sizeof(bchunk));
+
+	for (i=0; i < size; i++) {
+		if (ip_str[i] == '\'') {
+			continue;
+		}
+		if (ip_str[i] == ':') {
+			// found a colon
+			if (++colons > 1) {
+				use_right = 1;
+			}
+			continue;
+		} 
+
+		bchunk[bchunk_index++] = ip_str[i];
+		printf("str = %c\n", ip_str[i]);
+		if (bchunk_index > 1) {
+			bchunk[bchunk_index] = '\0';
+			sscanf(bchunk, "%2x", &hexpiece);
+			printf("%x\n", hexpiece);
+			if (use_right)
+				ip_right[rightindex++] = (hexpiece & 0xff);
+			else
+				ip_left[leftindex++] = (hexpiece & 0xff);
+			bchunk_index = 0;
+			memset(bchunk, 0x0, sizeof(bchunk));
+		}
+		colons = 0;
+	}
+
+	for (i=0; i<leftindex; i++)
+		ip_addr[i] = ip_left[i];
+	for (i=0; i<rightindex; i++)
+		ip_addr[15-rightindex+i] = ip_right[i];
+
+	return 0;
+}
+
+
 int parseConfFile(const char *path, RouterOpts *ropts) {
 	// parse a config file
 	FILE *FPTR;
 	char *buffer = NULL;
 	size_t buff_alloc = 50;
+	uint8_t netmask[IP_SIZE];
 	char key[100],
 		 url[100],
 		 essid[100],
 		 hidden_str[10],
-		 verbosity_str[20];
+		 verbosity_str[20],
+		 netmask_str[50];
 	int hidden = 0;
 	int verbosity = 0;
 
@@ -533,7 +590,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundurl = 0,
 		foundessid = 0,
 		foundhidden = 0,
-		foundverbosity = 0;
+		foundverbosity = 0,
+		foundnetmask = 0;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -566,6 +624,11 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			sscanf(buffer, "verbosity = %s", verbosity_str);
 			verbosity = atoi(verbosity_str);
 			foundverbosity = 1;
+		} else if (strstr(buffer, "netmask")) {
+			sscanf(buffer, "netmask = %s", netmask_str);
+			printf("%s\n", netmask_str);
+			parseIPv6(netmask_str, netmask);
+			foundnetmask = 1;
 		}
 	}
 	fclose(FPTR);
@@ -580,6 +643,9 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	if (foundverbosity) {
 		ropts->verbosity = verbosity;
 		setlogmask(LOG_UPTO(verbosity));
+	}
+	if (foundnetmask) {
+		memcpy(ropts->netmask, netmask, IP_SIZE);
 	}
 		
 
@@ -798,7 +864,7 @@ int main(int argc, char *argv[]) {
 	dispatch = queueInit(200);
 	// TODO: Assign ESSID from config file
 	// TODO: Assign netmask from options
-	routing_table = routingTableInit(router_base, "Stock ESSID");
+	routing_table = routingTableInit(router_opts.netmask, "Stock ESSID");
 	void *arg;
 
 	// TODO: set IP address from netmask in options
@@ -850,7 +916,10 @@ void usage(int status) {
   -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
   -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
-  -v  --verbose              Be verbose (-vvvv for very verbose)\n\
+  -v  --verbose              Be verbose (warnings)\n\
+  -vv                        Be more verbose (notices)\n\
+  -vvv                       Be even more verbose (info)\n\
+  -vvvv                      Be very very verbose (debug)\n\
   -q  --quiet                Be less verbose\n\
   -h, --help                 display this help and exit\n\
       --version              output version information and exit\n\
@@ -861,11 +930,11 @@ void usage(int status) {
       devices                print number of devices tracked\n\
       hide-network           don't broadcast essid\n\
       show-network           broadcast essid\n\
-	  drop [DEVICE]          drop a device\n\
+      drop [DEVICE]          drop a device\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
-	  key=[SERVERKEY]        set the server key\n\
+      key=[SERVERKEY]        set the server key\n\
       pause                  don't send any packets\n\
       resume                 continue sending packets\n");
 	}
