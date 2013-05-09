@@ -35,6 +35,23 @@ function generateRandomHash ($length) {
 
 
 /* ************************************************************************** */
+// Since we take hex numbers and treat them as strings in the database, we have
+// to be ready for the fact that there may be leading zeroes in the number. 
+//   e.g.:  0d13 = d13
+function cleanZeroes ($str) {
+
+	// Strip all leading zeroes
+	$str = preg_replace ('/^0*/', '', $str); 
+
+	// Now if string was nothing but 0's then it's now empty. Let's fix that.
+	$str = $str == "" ? 0 : $str;
+
+	return $str;
+}
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
 // The php internal XOR function doesn't work with large values.  So we have
 // our own XOR function now.  This function takes in two hexadecimal numbers
 // and returns a binary string of those two numbers XOR'd.
@@ -120,6 +137,26 @@ function appendToPayload ($current_payload, $key, $value) {
 	$current_payload .= $key . $SG['kv_del'] . $value . $SG['ff_del'];
 
 	return $current_payload;
+}
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
+//
+function returnRefresh () {
+
+	$db = returnDatabaseConnection();
+
+	$query = "SELECT refresh_rate FROM server";
+	$result = mysqli_query($db, $query) or die ("Couldn't execute query rr1.");
+	$row = mysqli_fetch_assoc($result);
+	$refresh_rate = $row['refresh_rate'];
+
+	if ($refresh_rate == 0)
+		return "";
+	
+	return "<meta http-equiv=\"refresh\" content=\"$refresh_rate\">";
+
 }
 /* ************************************************************************** */
 

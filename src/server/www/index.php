@@ -27,9 +27,9 @@ $result = mysqli_query($db, $query) or die ("Couldn't execute query 1.");
 
 while ($row = mysqli_fetch_assoc($result)) {
 
-	$id_sensor 		= $row['id_sensor'];
+	$id_sensor 		= $row['id_sensor']; 
 	$status 		= $row['status'];
-	$manid 			= $row['manid'];
+	$manid 			= $row['manid'];		
 	$modnum	 		= $row['modnum'];
 	$sn 			= $row['sn'];
 	$sensor_name	= $row['name'];
