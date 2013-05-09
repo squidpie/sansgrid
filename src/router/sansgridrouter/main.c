@@ -41,6 +41,7 @@
 
 void usage(int status);
 
+static int dispatch_pause = 0;
 
 
 void *dispatchRuntime(void *arg) {
@@ -50,6 +51,9 @@ void *dispatchRuntime(void *arg) {
 		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) {
 			syslog(LOG_ERR, "Dispatch Queue Failed, Quitting");
 			exit(EXIT_FAILURE);
+		}
+		while (dispatch_pause) {
+			sleep(1);
 		}
 		// FIXME: Use sgPayloadGetType, defined in payload_handlers.c
 		switch (sg_serial->payload[0]) {
@@ -147,6 +151,9 @@ void *heartbeatRuntime(void *arg) {
 		} else {
 			sleep(HEARTBEAT_INTERVAL/count);
 		}
+		while (dispatch_pause) {
+			sleep(1);
+		}
 		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
 			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
@@ -169,6 +176,9 @@ void *flyRuntime(void *arg) {
 		memcpy(sg_serial.payload, &sg_fly, sizeof(SansgridFly));
 		sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
 		routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
+		while (dispatch_pause) {
+			sleep(1);
+		}	
 		if (!router_opts.hidden_network)
 			routerHandleFly(routing_table, &sg_serial);
 		sleep(1);
@@ -271,6 +281,7 @@ int sgSocketListen(void) {
 			// Kill the server
 			shutdown_server = 1;
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
+			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
@@ -298,7 +309,7 @@ int sgSocketListen(void) {
 				strcpy(str, "No device specified");
 			} else if (!strcmp(str, "drop all")) {
 				// drop all devices
-				routingTableFreeAllIPs(routing_table);
+				routerFreeAllDevices(routing_table);
 				strcpy(str, "All devices freed");
 			} else if ((device = atoi(&str[5])) != 0) {
 				// drop device
@@ -350,6 +361,20 @@ int sgSocketListen(void) {
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			int devnum = routingTableGetDeviceCount(routing_table);
+			do {
+				sprintf(str, "Routing Table Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				if (dispatch_pause)
+					sprintf(str, "\tDispatch Paused\n");
+				else
+					sprintf(str, "\tDispatch Running\n");
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "Dispatch Size: %i of %i\n", 
+						queueSize(dispatch), queueMaxSize(dispatch));
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "Devices:\n");
+				if (socketDoSend(s2, str) < 0) break;
+			} while (0);
 			for (int i=0; i<devnum; i++) {
 				routingTableGetStatus(routing_table, i, str);
 				syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
@@ -382,7 +407,21 @@ int sgSocketListen(void) {
 			router_opts.hidden_network = 0;
 			strcpy(str, "Showing Network");
 			socketDoSend(s2, str);
-		} 
+		} else if (!strcmp(str, "pause")) {
+			// pause packet sending
+			if (!dispatch_pause) {
+				strcpy(str, "Pausing payload handling");
+				socketDoSend(s2, str);
+			}
+			dispatch_pause = 1;
+		} else if (!strcmp(str, "resume")) {
+			// resume packet sending
+			if (dispatch_pause) {
+				strcpy(str, "Resuming payload handling");
+				socketDoSend(s2, str);
+			}
+			dispatch_pause = 0;
+		}
 		syslog(LOG_INFO, "sansgrid daemon: sending back: %s", str);
 
 		close(s2);
@@ -734,14 +773,14 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "change-server-ip")) {
-			// Change the server IP address for the running daemon
-			printf("Not implemented yet\n");
-			exit(EXIT_FAILURE);
-		} else if (!strcmp(option, "change-server-key")) {
-			// Change the server key for the running daemon
-			printf("Not implemented yet\n");
-			exit(EXIT_FAILURE);
+		} else if (!strcmp(option, "pause")) {
+			// pause sending packets
+			sgSocketSend("pause", 6);
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "resume")) {
+			// resume sending packets
+			sgSocketSend("resume", 7);
+			exit(EXIT_SUCCESS);
 		} else {
 			// bad option
 			printf("Unknown Arg: %s\n", option);
@@ -837,7 +876,9 @@ void usage(int status) {
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
-	  key=[SERVERKEY]        set the server key\n");
+	  key=[SERVERKEY]        set the server key\n\
+      pause                  don't send any packets\n\
+      resume                 continue sending packets\n");
 	}
 	exit(status);
 }

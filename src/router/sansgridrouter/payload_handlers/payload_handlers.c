@@ -54,6 +54,25 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 	return 0;
 }
 
+int32_t routerFreeAllDevices(RoutingTable *routing_table) {
+	// Transmit NETWORK_DISCONNECT_SENSOR to all devices on network
+	uint8_t ip_addr[IP_SIZE];
+	uint8_t router_ip[IP_SIZE];
+	routingTableGetRouterIP(routing_table, router_ip);
+	while (routingTableFindNextDevice(routing_table, ip_addr) == 1) {
+		// free all devices
+		if (memcmp(ip_addr, router_ip, IP_SIZE)) {
+			routerFreeDevice(routing_table, ip_addr);
+		}
+		if (routingTableGetDeviceCount(routing_table) < 2)
+			break;
+	}
+
+	return 0;
+}
+
+	
+
 
 enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 	// Return the generic data type of the payload
@@ -115,6 +134,7 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 			return SG_DEVSTATUS_CHIRPING;
 			break;
 		default:
+			syslog(LOG_DEBUG, "payload conversion: Don't know datatype %x", dt);
 			return SG_DEVSTATUS_NULL;
 			break;
 	}

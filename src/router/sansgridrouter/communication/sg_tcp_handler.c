@@ -512,6 +512,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		default:
 			// error
+			syslog(LOG_WARNING, "Router-->Server: Unknown datatype: %u", datatype);
 			return -1;
 	}
 	strcat(payload, DELIM_KEY);

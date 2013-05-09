@@ -31,6 +31,7 @@ Queue *queueInit(uint32_t size);
 Queue *queueDestroy(Queue*);
 // Queue State
 int queueSize(Queue*);
+int queueMaxSize(Queue*);
 // Queuing Operations
 int queueTryEnqueue(Queue *queue, void *serial_data);
 int queueEnqueue(Queue *queue, void *serial_data);
