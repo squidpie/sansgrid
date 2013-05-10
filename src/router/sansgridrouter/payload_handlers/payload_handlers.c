@@ -59,14 +59,15 @@ int32_t routerFreeAllDevices(RoutingTable *routing_table) {
 	uint8_t ip_addr[IP_SIZE];
 	uint8_t router_ip[IP_SIZE];
 	routingTableGetRouterIP(routing_table, router_ip);
-	while (routingTableFindNextDevice(routing_table, ip_addr) == 1) {
+	routingTableForEachDevice(routing_table, ip_addr);
+	do {
 		// free all devices
 		if (memcmp(ip_addr, router_ip, IP_SIZE)) {
 			routerFreeDevice(routing_table, ip_addr);
 		}
 		if (routingTableGetDeviceCount(routing_table) < 2)
 			break;
-	}
+	} while (routingTableStepNextDevice(routing_table, ip_addr));
 
 	return 0;
 }
@@ -255,11 +256,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peck data type
 	// Send SansgridPeck from server to sensor
-	SansgridEyeball sg_eyeball;
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
-	DeviceProperties dev_prop;
-	uint8_t ip_addr[IP_SIZE];
 
 	syslog(LOG_INFO, "Handling Peck packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
@@ -267,18 +265,6 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
-
-	memcpy(&sg_eyeball.manid, sg_peck->manid, 4);
-	memcpy(&sg_eyeball.modnum, sg_peck->modnum, 4);
-	memcpy(&sg_eyeball.serial_number, sg_peck->serial_number, 8);
-
-	memcpy(&dev_prop.dev_attr, &sg_eyeball, sizeof(SansgridEyeball));
-	if (routingTableFindByAttr(routing_table, &dev_prop, ip_addr) != 1) {
-		// error
-		return -1;
-	}
-	memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
-	//routingTableGetRouterIP(routing_table, sg_serial->origin_ip);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
@@ -507,14 +493,12 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			// Heartbeat from router to sensor
-			routingTableSetHeartbeatStatus(routing_table, sg_serial->ip_addr,
-					SG_DEVICE_PINGING);
+			routingTableHeartbeatDevice(routing_table, sg_serial->ip_addr);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
-			routingTableSetHeartbeatStatus(routing_table, sg_serial->ip_addr,
-					SG_DEVICE_PRESENT);
+			routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->ip_addr);

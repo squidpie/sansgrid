@@ -19,6 +19,7 @@
  *
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include "routing_table/heartbeat.h"
 
 #include <stdio.h>
@@ -134,6 +135,7 @@ void *heartbeatRuntime(void *arg) {
 	SansgridSerial sg_serial;
 	SansgridHeartbeat sg_hb;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
+	struct timespec req, rem;
 
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
@@ -147,18 +149,22 @@ void *heartbeatRuntime(void *arg) {
 		if (HEARTBEAT_INTERVAL/count == 0) {
 			// interval is < 1 second
 			// sleep in usecs
-			sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
+			req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
+			req.tv_sec = 0;
+			nanosleep(&req, &rem);
+			//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
 		} else {
 			sleep(HEARTBEAT_INTERVAL/count);
 		}
 		while (dispatch_pause) {
 			sleep(1);
 		}
-		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
+		routingTableForEachDevice(routing_table, ip_addr);
+		do {
 			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 			sgSerialSend(&sg_serial, sizeof(SansgridSerial));
-		}
+		} while (routingTableStepNextDevice(routing_table, ip_addr));
 	}
 
 	pthread_exit(arg);
@@ -371,6 +377,8 @@ int sgSocketListen(void) {
 						queueSize(dispatch), queueMaxSize(dispatch));
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, "Devices:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, " rdid   IP address            auth\n");
 				if (socketDoSend(s2, str) < 0) break;
 			} while (0);
 			for (int i=0; i<devnum; i++) {

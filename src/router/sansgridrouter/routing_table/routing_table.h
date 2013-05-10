@@ -37,12 +37,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-//#include "../../../include/payloads.h"
 #include <payloads.h>
 #include "heartbeat.h"
 
 
-//typedef struct DeviceIP DeviceIP;
 typedef struct RoutingTable RoutingTable;
 typedef struct DeviceProperties DeviceProperties;
 
@@ -50,7 +48,6 @@ typedef struct DeviceProperties DeviceProperties;
 struct DeviceProperties {
 	// A device's general properties
 	SansgridEyeball dev_attr;
-	enum SansgridHeartbeatStatusEnum heartbeat_status;
 	enum SansgridDeviceStatusEnum dev_status;
 	enum SansgridDeviceStatusEnum next_expected_packet;
 };
@@ -74,13 +71,15 @@ int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]);
 void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
-int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
-int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
-int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status);
-enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableHeardDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableIsDeviceLost(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableIsDeviceStale(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableGetDeviceCount(RoutingTable *table);
 int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str);
+int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int routingTableForEachDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 
 
 #endif
