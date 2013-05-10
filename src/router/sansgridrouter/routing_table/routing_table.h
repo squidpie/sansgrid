@@ -44,18 +44,6 @@
 typedef struct RoutingTable RoutingTable;
 
 
-/*
-struct DeviceProperties {
-	// A device's general properties
-	SansgridEyeball dev_attr;
-	enum SansgridDeviceStatusEnum dev_status;
-	enum SansgridDeviceStatusEnum next_expected_packet;
-};
-*/
-
-
-
-//int32_t littleEndian(void);
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize);
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]);
@@ -71,6 +59,7 @@ uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]);
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]);
 void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDataTypeEnum dt);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
 int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);

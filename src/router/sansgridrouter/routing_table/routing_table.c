@@ -444,6 +444,21 @@ void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
+		enum SansgridDataTypeEnum dt) {
+	// check to see if this datatype is valid
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
+		return SG_DEVSTATUS_NULL;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
+}
+
+	
 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,

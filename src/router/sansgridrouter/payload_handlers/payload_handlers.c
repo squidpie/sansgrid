@@ -28,6 +28,19 @@
 #include "../communication/sg_tcp.h"
 
 
+static int32_t chkValidCTRLPath(RoutingTable *routing_table, 
+		uint8_t ip_addr[IP_SIZE], uint8_t dt, const char *pktname) {
+	// check to see if this is a valid control path for this device
+	if (!routingTableCheckValidPacket(routing_table, ip_addr, dt)) {
+		// Not a valid control path
+		syslog(LOG_NOTICE, "%s is not a valid payload for this device: %x", 
+				pktname, ip_addr[IP_SIZE-1]);
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
 int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 	// Something went wrong. Transmit NETWORK_DISCONNECT_SENSOR to ip_addr
 	SansgridSerial sg_serial;
@@ -246,6 +259,9 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_peck->datatype, "Peck") == -1)
+		return -1;
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
@@ -292,6 +308,10 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	syslog(LOG_INFO, "Handling Sing packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_sing->datatype, "Sing") == -1)
+		return -1;
+
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_MOCKING);
 
@@ -325,6 +345,10 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	syslog(LOG_INFO, "Handling Mock packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
+
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_mock->datatype, "Mock") == -1)
+		return -1;
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
 
@@ -358,6 +382,9 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 
 	syslog(LOG_INFO, "Handling Peacock packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_peacock->datatype, "Peacock") == -1)
+		return -1;
 	if (sg_peacock->additional_IO_needed == 1) {
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
@@ -376,6 +403,9 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Send a SansgridNest from server to sensor
 	syslog(LOG_INFO, "Handling Nest packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_serial->payload[0], "Nest") == -1)
+		return -1;
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
@@ -397,6 +427,10 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	syslog(LOG_INFO, "Handling Squawk packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
+
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_squawk->datatype, "Squawk") == -1)
+		return -1;
 
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
@@ -502,6 +536,10 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
+	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+				sg_chirp->datatype, "Chirp") == -1)
+		return -1;
+
 	syslog(LOG_INFO, "Handling Chirp packet: device IP ends with %u", 
 			sg_serial->ip_addr[IP_SIZE-1]);
 
