@@ -268,7 +268,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
 
 		table->routing_table[index]->hb = hbInitDefault();
-		table->routing_table[index]->auth = deviceAuthInit(1);
+		table->routing_table[index]->auth = deviceAuthInit(0);
 		table->table_alloc++;
 		return 0;
 	} else {
@@ -495,6 +495,38 @@ int32_t routingTableSetNextExpectedPacket(
 			nextstatus);
 }
 
+int32_t routingTableSetCurrentPacket(
+		RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE],
+		enum SansgridDeviceStatusEnum thisstatus) {
+	// Set what packet we just got from this IP address
+	
+	tableAssertValid(table);
+
+	if (!table->table_alloc)
+		return -1;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return deviceAuthSetCurrentGeneralPayload(table->routing_table[index]->auth,
+			thisstatus);
+}
+
+
+uint32_t routingTableGetCurrentPacket(
+		RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE]) {
+	// Get what general payload type we're on
+	
+	tableAssertValid(table);
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return deviceAuthGetCurrentGeneralPayload(table->routing_table[index]->auth);
+}
+
 
 
 int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
@@ -603,6 +635,8 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 					// device is active
 					strcat(str, "\tactive");
 				}
+				sprintf(str, "%s\t%u", 
+						str, routingTableGetCurrentPacket(table, ip_addr));
 				sprintf(str, "%s\n", str);
 				break;
 			} else {

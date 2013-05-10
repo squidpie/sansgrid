@@ -231,6 +231,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 			}
 		}
+		routingTableSetCurrentPacket(routing_table, 
+				sg_serial->ip_addr, SG_DEVSTATUS_EYEBALLING);
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
 
 		// Send packet to the server
@@ -254,8 +256,8 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
 
-	syslog(LOG_INFO, "Handling Peck packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Peck packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
@@ -263,6 +265,8 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_peck->datatype, "Peck") == -1)
 		return -1;
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
@@ -307,12 +311,14 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_sing_union.serialdata = sg_serial->payload;
 	sg_sing = sg_sing_union.formdata;
 
-	syslog(LOG_INFO, "Handling Sing packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Sing packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_sing->datatype, "Sing") == -1)
 		return -1;
 
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_SINGING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_MOCKING);
 
@@ -344,12 +350,14 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_mock_union.serialdata = sg_serial->payload;
 	sg_mock = sg_mock_union.formdata;
 
-	syslog(LOG_INFO, "Handling Mock packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Mock packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_mock->datatype, "Mock") == -1)
 		return -1;
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_MOCKING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
 
@@ -381,11 +389,13 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_peacock_union.serialdata = sg_serial->payload;
 	sg_peacock = sg_peacock_union.formdata;
 
-	syslog(LOG_INFO, "Handling Peacock packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Peacock packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_peacock->datatype, "Peacock") == -1)
 		return -1;
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_PEACOCKING);
 	if (sg_peacock->additional_IO_needed == 1) {
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
@@ -402,11 +412,13 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	// Send a SansgridNest from server to sensor
-	syslog(LOG_INFO, "Handling Nest packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Nest packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_serial->payload[0], "Nest") == -1)
 		return -1;
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_NESTING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
@@ -426,12 +438,15 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_squawk_union.serialdata = sg_serial->payload;
 	sg_squawk = sg_squawk_union.formdata;
 
-	syslog(LOG_INFO, "Handling Squawk packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Squawk packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_squawk->datatype, "Squawk") == -1)
 		return -1;
+
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_SQUAWKING);
 
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
@@ -503,8 +518,10 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
-	syslog(LOG_INFO, "Handling Heartbeat packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_HEARTBEAT);
+	syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
@@ -541,8 +558,10 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 				sg_chirp->datatype, "Chirp") == -1)
 		return -1;
 
-	syslog(LOG_INFO, "Handling Chirp packet: device IP ends with %u", 
-			sg_serial->ip_addr[IP_SIZE-1]);
+	syslog(LOG_INFO, "Handling Chirp packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_CHIRPING);
 
 	switch (sg_chirp->datatype) {
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:

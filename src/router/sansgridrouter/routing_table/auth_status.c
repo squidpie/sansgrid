@@ -135,5 +135,27 @@ uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
 }
 
 
+uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
+	// Get the current general payload
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthGetCurrentGeneralPayload");
+		return -1;
+	}
+	return dev_auth->auth_place;
+}
+
+
+int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
+	// Set the current general payload
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthGetCurrentGeneralPayload");
+		return -1;
+	}
+	dev_auth->auth_place = gdt;
+
+	return 0;
+}
+	
+
 
 // vim: ft=c ts=4 noet sw=4:

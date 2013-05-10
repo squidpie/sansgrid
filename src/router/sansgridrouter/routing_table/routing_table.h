@@ -62,6 +62,8 @@ void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDataTypeEnum dt);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
+int32_t routingTableSetCurrentPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum thisstatus);
+uint32_t routingTableGetCurrentPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableHeardDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableIsDeviceLost(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);

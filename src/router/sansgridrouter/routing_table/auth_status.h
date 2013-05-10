@@ -32,6 +32,8 @@ void deviceAuthDestroy(DeviceAuth *dev_auth);
 int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt);
 int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt);
 uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth);
+uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth);
+int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt);
 
 
 
