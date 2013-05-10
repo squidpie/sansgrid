@@ -73,7 +73,7 @@ int32_t hbIsDeviceLost(HeartbeatStatus *hb) {
 		return -1;
 	}
 
-	return hb->device_health > 0;
+	return hb->device_health <= 0;
 }
 
 HeartbeatStatus *hbInit(int32_t ping_thres, int32_t stale_thres) {
@@ -117,12 +117,12 @@ int32_t hbDecrement(HeartbeatStatus *hb) {
 		syslog(LOG_INFO, "NULL in hbDecrement");
 		return -1;
 	}
-	device_before = hbIsDeviceStale(hb);
-	device_before = (hbIsDeviceLost(hb) << 1);
+	device_before =  hbIsDeviceStale(hb);
+	device_before |= (hbIsDeviceLost(hb) << 1);
 	if (hb->device_health > 0)
 		hb->device_health--;
-	device_after = hbIsDeviceStale(hb);
-	device_after = (hbIsDeviceLost(hb) << 1);
+	device_after =  hbIsDeviceStale(hb);
+	device_after |= (hbIsDeviceLost(hb) << 1);
 
 	return (device_before ^ device_after);
 }

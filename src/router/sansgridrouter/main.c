@@ -134,9 +134,12 @@ void *heartbeatRuntime(void *arg) {
 	uint8_t ip_addr[IP_SIZE];
 	SansgridSerial sg_serial;
 	SansgridHeartbeat sg_hb;
+	SansgridChirp sg_chirp;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 	struct timespec req, rem;
+	int hb_status = 0;
 
+	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 	routingTableForEachDevice(routing_table, ip_addr);
@@ -161,6 +164,19 @@ void *heartbeatRuntime(void *arg) {
 		syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
 		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
+			// device status changed... either went stale or was lost
+			// TODO: Do something here
+			if (routingTableIsDeviceLost(routing_table, ip_addr)) {
+				// Device was just lost
+				// TODO: inform server that device was lost
+				syslog(LOG_NOTICE, "Device %i has just been lost", routingTableIPToRDID(routing_table, ip_addr));
+			} else if (routingTableIsDeviceStale(routing_table, ip_addr)) {
+				// Device just went stale
+				// TODO: inform server that device went stale
+				syslog(LOG_NOTICE, "Device %i has just gone stale", routingTableIPToRDID(routing_table, ip_addr));
+			}
+		}
 		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
 			routingTableForEachDevice(routing_table, ip_addr);
 		}
