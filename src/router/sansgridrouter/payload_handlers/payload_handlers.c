@@ -157,6 +157,54 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 }
 
 
+int32_t sgPayloadGetPayloadName(enum SansgridDeviceStatusEnum devstatus, char *name) {
+	// Get the name of a payload
+	switch(devstatus) {
+		case SG_DEVSTATUS_NULL:
+			strcpy(name, "Unknown");
+			break;
+		case SG_DEVSTATUS_HATCHING:
+			strcpy(name, "Hatching");
+			break;
+		case SG_DEVSTATUS_FLYING:
+			strcpy(name, "Flying");
+			break;
+		case SG_DEVSTATUS_EYEBALLING:
+			strcpy(name, "Eyeballing");
+			break;
+		case SG_DEVSTATUS_PECKING:
+			strcpy(name, "Pecking");
+			break;
+		case SG_DEVSTATUS_SINGING:
+			strcpy(name, "Singing");
+			break;
+		case SG_DEVSTATUS_MOCKING:
+			strcpy(name, "Mocking");
+			break;
+		case SG_DEVSTATUS_PEACOCKING:
+			strcpy(name, "Peacocking");
+			break;
+		case SG_DEVSTATUS_NESTING:
+			strcpy(name, "Nesting");
+			break;
+		case SG_DEVSTATUS_SQUAWKING:
+			strcpy(name, "Squawking");
+			break;
+		case SG_DEVSTATUS_HEARTBEAT:
+			strcpy(name, "Heartbeating");
+			break;
+		case SG_DEVSTATUS_CHIRPING:
+			strcpy(name, "Chirping");
+			break;
+		default:
+			strcpy(name, "Bad Datatype");
+			return -1;
+			break;
+	}
+	return 0;
+}
+
+
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address

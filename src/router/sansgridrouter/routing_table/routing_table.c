@@ -34,6 +34,7 @@
 #include "routing_table.h"
 #include "auth_status.h"
 #include "heartbeat.h"
+#include "../payload_handlers/payload_handlers.h"
 
 
 
@@ -603,6 +604,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	int last_was_zero = 0;
 	str[0] = '\0';
 	uint32_t rdid;
+	char payload_name[50];
 	syslog(LOG_DEBUG, "Getting Routing Table Info for device %i", devnum);
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
@@ -635,8 +637,11 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 					// device is active
 					strcat(str, "\tactive");
 				}
-				sprintf(str, "%s\t%u", 
-						str, routingTableGetCurrentPacket(table, ip_addr));
+				sgPayloadGetPayloadName(
+						routingTableGetCurrentPacket(table, ip_addr),
+						payload_name);
+				sprintf(str, "%s\t%s", str, payload_name);
+
 				sprintf(str, "%s\n", str);
 				break;
 			} else {
