@@ -592,7 +592,16 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 							strcat(str, ":");
 						last_was_zero = 1;
 					}
-
+				}
+				if (routingTableIsDeviceLost(table, ip_addr)) {
+					// device has been lost
+					strcat(str, "\tlost");
+				} else if (routingTableIsDeviceStale(table, ip_addr)) {
+					// device is stale
+					strcat(str, "\tstale");
+				} else {
+					// device is active
+					strcat(str, "\tactive");
 				}
 				sprintf(str, "%s\n", str);
 				break;

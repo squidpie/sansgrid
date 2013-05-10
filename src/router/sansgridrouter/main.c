@@ -395,14 +395,14 @@ int sgSocketListen(void) {
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, " rdid   IP address            auth\n");
 				if (socketDoSend(s2, str) < 0) break;
-			} while (0);
-			for (int i=0; i<devnum; i++) {
-				routingTableGetStatus(routing_table, i, str);
-				syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
-				if (socketDoSend(s2, str) < 0) {
-					break;
+				for (int i=0; i<devnum; i++) {
+					routingTableGetStatus(routing_table, i, str);
+					syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
+					if (socketDoSend(s2, str) < 0) {
+						break;
+					}
 				}
-			}
+			} while (0);
 		} else if (!strcmp(str, "devices")) {
 			// Get the number of devices
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
