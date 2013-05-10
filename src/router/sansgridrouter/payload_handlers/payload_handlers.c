@@ -226,7 +226,7 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		syslog(LOG_DEBUG, "New device doesn't wish to mate");
 		syslog(LOG_WARNING, "Eyeball-nomate path not implemented yet");
 		// TODO: Not implemented yet
-		// Have to send a refusal back to sensor
+		// Do we have to send a refusal back to sensor
 		return 1;
 	}
 

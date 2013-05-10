@@ -89,7 +89,6 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Handled with status: %i\n", exit_code);
 #endif
-	fail_if((sg_serial_read == NULL), "Got back a NULL serial packet!");
 
 #if TESTS_DEBUG_LEVEL > 1
 	printf("Sent: ");
@@ -97,9 +96,13 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 		printf("%.2x", sg_serial->payload[i]);
 	printf("\n");
 	printf("Read: ");
-	for (int i=0; i<PAYLOAD_SIZE; i++)
-		printf("%.2x", sg_serial_read->payload[i]);
-	printf("\n");
+	if (sg_serial_read) {
+		for (int i=0; i<PAYLOAD_SIZE; i++)
+			printf("%.2x", sg_serial_read->payload[i]);
+		printf("\n");
+	} else {
+		printf("Nothing\n");
+	}
 #endif
 	mark_point();
 	if (test_node->expected_exit_code != exit_code) {
@@ -107,7 +110,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 				\n\tExpected: %i \
 				\n\tGot: 	  %i", message, test_node->expected_exit_code, exit_code);
 	}
-	if (!exit_code) {
+	if (!exit_code && sg_serial_read) {
 		if (memcmp(sg_serial_read->payload, &sg_serial_orig.payload, sizeof(SansgridMock)))
 			fail("Packet Mismatch with %s", message);
 		int orig = routingTableLookupNextExpectedPacket(routing_table, sg_serial_read->ip_addr);
