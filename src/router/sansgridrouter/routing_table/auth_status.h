@@ -1,4 +1,4 @@
-/* Daemon initialization
+/* Device Authentication status
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -18,12 +18,25 @@
  *
  *
  */
+#ifndef __SG_AUTH_STATUS_H__
+#define __SG_AUTH_STATUS_H__
+
+#include <stdint.h>
+typedef struct DeviceAuth DeviceAuth;
 
 
-int daemon_init(void);
-int isRunning(void);
+int deviceAuthDisable(void);
+int deviceAuthEnable(void);
+DeviceAuth *deviceAuthInit(int strictness);
+void deviceAuthDestroy(DeviceAuth *dev_auth);
+int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt);
+int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt);
+uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth);
 
 
 
+
+#endif // __SG_AUTH_STATUS_H__
 
 // vim: ft=c ts=4 noet sw=4:
+

@@ -6,7 +6,8 @@ SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
 		communication/sg_tcp_handler.c \
 		routing_table/routing_table.c \
-		routing_table/heartbeat.c
+		routing_table/heartbeat.c \
+		routing_table/auth_status.c
 SANSGRID_TEST = \
 		test/communication/sg_communication_stubs.c \
 		test/communication/sg_communication_stubs_eeprom.c \

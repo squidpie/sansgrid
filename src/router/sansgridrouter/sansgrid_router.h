@@ -52,6 +52,8 @@ uint8_t router_base[IP_SIZE];
 
 
 int sgStorePID(pid_t pid);
+void getSansgridConfDir(char wd[150]);
+void getSansgridControlDir(char wd[150]);
 
 
 #endif

@@ -35,6 +35,7 @@
  * Link with -lpthread
  */
 
+#define _POSIX_C_SOURCE 200809L
 
 
 #include <stdio.h>					// I/O operations
@@ -103,11 +104,14 @@ static void *heartbeatFunc(void *arg) {
 	const uint32_t USLEEP_TIME = 1000;
 	int oldtype;		// old thread cancellation state
 	Queue *queue;
+	struct timespec req, rem;
 
 	queue = (Queue*)arg;
 
 	for (i=0;; i++) {
-		sleepMicro(USLEEP_TIME);
+		req.tv_sec = 0;
+		req.tv_nsec = 1000L*USLEEP_TIME;
+		nanosleep(&req, &rem);
 
 		// Critical Action: Don't cancel the thread here
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldtype);

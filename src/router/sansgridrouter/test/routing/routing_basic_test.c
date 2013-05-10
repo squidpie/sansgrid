@@ -60,7 +60,6 @@ START_TEST (testRoutingTableAdd) {
 	uint8_t ip_addr[IP_SIZE];
 	uint8_t base[IP_SIZE];
 	RoutingTable *table;
-	DeviceProperties dev_prop;
 	
 	for (i=0; i<IP_SIZE; i++)
 		base[i] = 0x0;
@@ -69,7 +68,7 @@ START_TEST (testRoutingTableAdd) {
 
 
 	for (i=0; i<32; i++) {
-		routingTableAssignIP(table, ip_addr, &dev_prop);
+		routingTableAssignIP(table, ip_addr);
 #if TESTS_DEBUG_LEVEL > 0
 		routingTablePrint(ip_addr);
 #endif
@@ -86,17 +85,15 @@ START_TEST (testRoutingTableLookup) {
 	uint8_t ip_addr[IP_SIZE];
 	uint8_t base[IP_SIZE];
 	RoutingTable *table;
-	DeviceProperties dev_prop;
 
 	for (i=0; i<IP_SIZE; i++)
 		base[i] = 0x0;
 
 	table = routingTableInit(base, "Testing ESSID");
 
-	dev_prop.dev_attr.manid[0] = 0x5;
 
 	for (i=0; i<32; i++) {
-		routingTableAssignIP(table, ip_addr, &dev_prop);
+		routingTableAssignIP(table, ip_addr);
 #if TESTS_DEBUG_LEVEL > 0
 		routingTablePrint(ip_addr);
 #endif

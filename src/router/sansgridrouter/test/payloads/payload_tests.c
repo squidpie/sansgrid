@@ -169,6 +169,8 @@ int32_t payloadStateCommit(SansgridSerial **sg_serial_read, int packets) {
 		fail_if((queueSize(dispatch) > (packets-1)), "Too much data went on the dispatch: %i", queueSize(dispatch));
 
 		fail_if((sg_serial_read == NULL), "payload lost");
+	} else {
+		*sg_serial_read = NULL;
 	}
 
 	mark_point();
