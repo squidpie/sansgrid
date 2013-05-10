@@ -139,32 +139,31 @@ void *heartbeatRuntime(void *arg) {
 
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+	routingTableForEachDevice(routing_table, ip_addr);
+	count = routingTableGetDeviceCount(routing_table);
 	while (1) {
-		count = routingTableGetDeviceCount(routing_table);
-		if (count == 0) {
-			// check for possible floating point exceptions
-			// if count is 0, you'll get a divide-by-zero error below
-			count = 1;
-		}
-		if (HEARTBEAT_INTERVAL/count == 0) {
-			// interval is < 1 second
-			// sleep in usecs
-			req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
-			req.tv_sec = 0;
-			nanosleep(&req, &rem);
-			//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
-		} else {
-			sleep(HEARTBEAT_INTERVAL/count);
-		}
+		do {
+			if (HEARTBEAT_INTERVAL/count == 0) {
+				// interval is < 1 second
+				// sleep in usecs
+				req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
+				req.tv_sec = 0;
+				nanosleep(&req, &rem);
+				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
+			} else {
+				sleep(HEARTBEAT_INTERVAL/count);
+			}
+		} while ((count = routingTableGetDeviceCount(routing_table)) < 2);
+
 		while (dispatch_pause) {
 			sleep(1);
 		}
-		routingTableForEachDevice(routing_table, ip_addr);
-		do {
-			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
-			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-			sgSerialSend(&sg_serial, sizeof(SansgridSerial));
-		} while (routingTableStepNextDevice(routing_table, ip_addr));
+		syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
+		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
+		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
+			routingTableForEachDevice(routing_table, ip_addr);
+		}
 	}
 
 	pthread_exit(arg);
@@ -820,6 +819,10 @@ int main(int argc, char *argv[]) {
 				sgSocketSend(doDrop, strlen(doDrop));
 				exit(EXIT_SUCCESS);
 			}
+		} else if (strstr(option, "packet=")) {
+			sprintf(payload, "packet: %s", &option[7]);
+			sgSocketSend(payload, strlen(payload));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -862,12 +865,9 @@ int main(int argc, char *argv[]) {
 
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
-	// TODO: Assign ESSID from config file
-	// TODO: Assign netmask from options
 	routing_table = routingTableInit(router_opts.netmask, "Stock ESSID");
 	void *arg;
 
-	// TODO: set IP address from netmask in options
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
@@ -912,10 +912,12 @@ void usage(int status) {
 		printf("Try sansgridrouter -h\n");
 	else {
 		printf("Usage: sansgridrouter [OPTION]\n");
-		printf("\
+		printf("\n\
+Startup Options\n\
   -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
   -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
+                             This arg is deprecated. Use the command instead.\n\
   -v  --verbose              Be verbose (warnings)\n\
   -vv                        Be more verbose (notices)\n\
   -vvv                       Be even more verbose (info)\n\
@@ -924,19 +926,29 @@ void usage(int status) {
   -h, --help                 display this help and exit\n\
       --version              output version information and exit\n\
 \n\
-      status                 show status of devices\n\
-      kill                   shutdown the router daemon\n\
+Daemon Querying\n\
       running                check to see if router daemon is running\n\
       devices                print number of devices tracked\n\
+      status                 show status of devices\n\
+\n\
+Daemon Commands\n\
+      packet=[PACKET]        Send a sansgrid payload to the server\n\
+      start                  start the router daemon\n\
+      restart                restart the router daemon\n\
+      kill                   shutdown the router daemon\n\
       hide-network           don't broadcast essid\n\
       show-network           broadcast essid\n\
       drop [DEVICE]          drop a device\n\
+      drop all               drop all devices\n\
+      pause                  don't send any packets\n\
+      resume                 continue sending packets\n\
+\n\
+Daemon Configuration\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
       key=[SERVERKEY]        set the server key\n\
-      pause                  don't send any packets\n\
-      resume                 continue sending packets\n");
+");
 	}
 	exit(status);
 }

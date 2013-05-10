@@ -606,9 +606,14 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 
 int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	tableAssertValid(table);
-	while (++table->feach_index < ROUTING_ARRAYSIZE) {
-		if (table->routing_table[table->feach_index]) {
-			maskip(ip_addr, table->base, table->feach_index);
+
+	int feach_index = locationToTablePtr(ip_addr, table->base);
+	while (++feach_index < ROUTING_ARRAYSIZE) {
+		if (feach_index < 2)
+			continue;
+		if (table->routing_table[feach_index]) {
+			maskip(ip_addr, table->base, feach_index);
+			table->feach_index = feach_index;
 			return 1;
 		}
 	}
@@ -618,7 +623,10 @@ int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 
 int routingTableForEachDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// setup a loop through all the devices in the table
+	tableAssertValid(table);
+
 	table->feach_index = 1;
+	maskip(ip_addr, table->base, table->feach_index);
 	return routingTableStepNextDevice(table, ip_addr);
 }
 	
