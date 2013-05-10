@@ -65,16 +65,20 @@ START_TEST(testEyeballConversion) {
 	PayloadTestNode eyeball = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_PECKING, 0 };
 	test_struct.eyeball = &eyeball;
 	test_struct.eyeball_mode = SG_EYEBALL_MATE;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkEyeball(&sg_eyeball, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
+	mark_point();
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Eyeball: Size of payload is: %i\n", strlen(payload));
@@ -108,17 +112,22 @@ START_TEST(testPeckConversion) {
 	mark_point();
 	testStructInit(&test_struct);
 	test_struct.peck_mode = SG_PECK_MATE;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkPeck(&sg_peck, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 	mark_point();
 #if TESTS_DEBUG_LEVEL > 0
@@ -155,13 +164,17 @@ START_TEST(testSingConversion) {
 	PayloadTestNode sing = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
 	test_struct.sing = &sing;
 	test_struct.sing_mode = SG_SING_WITH_KEY;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkSing(&sg_sing, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_sing, sizeof(SansgridSing));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
@@ -204,14 +217,18 @@ START_TEST(testMockConversion) {
 	payloadMkSerial(&sg_serial);
 	payloadMkMock(&sg_mock, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_mock, sizeof(SansgridMock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Mock: Size of payload is: %i\n", strlen(payload));
@@ -219,6 +236,7 @@ START_TEST(testMockConversion) {
 #endif
 	mark_point();
 	rdid = sgServerToRouterConvert(payload, &sg_serial);
+	mark_point();
 	routingTableDestroy(routing_table);
 
 	mark_point();
@@ -249,17 +267,22 @@ START_TEST(testPeacockConversion) {
 	PayloadTestNode peacock = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_NESTING, 0 };
 	test_struct.peacock = &peacock;
 	test_struct.peacock_mode = SG_PEACOCK;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkPeacock(&sg_peacock, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_peacock, sizeof(SansgridPeacock));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
@@ -297,17 +320,22 @@ START_TEST(testNestConversion) {
 	PayloadTestNode nest = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
 	test_struct.nest = &nest;
 	test_struct.nest_mode = SG_NEST;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkNest(&sg_nest, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_nest, sizeof(SansgridNest));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Nest: Size of payload is: %i\n", strlen(payload));
@@ -344,17 +372,22 @@ START_TEST(testSquawkConversion) {
 	PayloadTestNode squawk = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_MOCKING, 0 };
 	test_struct.squawk_sensor = &squawk;
 	test_struct.squawk_sensor_mode = SG_SQUAWK_SERVER_RESPOND;
+	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkSquawkSensor(&sg_squawk, &test_struct);
 
+	mark_point();
 	memcpy(sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr, NULL);
+	mark_point();
+	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	mark_point();
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
+	mark_point();
 	fail_if((exit_code != 0), "sgRouterToServer Failed! Expected: 0\tGot: %i", exit_code);
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Squawk: Size of payload is: %i\n", strlen(payload));

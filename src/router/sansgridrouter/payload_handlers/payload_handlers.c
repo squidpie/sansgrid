@@ -148,24 +148,11 @@ int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial)
 	// 1. Set radio IP address
 	SANSGRID_UNION(SansgridHatching, SansgridHatchingConv) sg_hatching_union;
 	SansgridHatching *sg_hatching;
-	DeviceProperties *dev_prop;
-	SansgridEyeball *sg_eyeball;
 
 	sg_hatching_union.serialdata = sg_serial->payload;
 	sg_hatching = sg_hatching_union.formdata;
-
-	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
-	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
-	sg_eyeball = &dev_prop->dev_attr;
-	memset(sg_eyeball->manid, 0x0, sizeof(sg_eyeball->manid));
-	memset(sg_eyeball->modnum, 0x0, sizeof(sg_eyeball->modnum));
-	memset(sg_eyeball->serial_number, 0x0, sizeof(sg_eyeball->serial_number));
-	sg_eyeball->datatype = SG_EYEBALL;
-
-	sg_eyeball->profile = 0x0;
-	sg_eyeball->mode = SG_EYEBALL_MATE;
 	
-	routingTableAssignIPStatic(routing_table, sg_hatching->ip, dev_prop);
+	routingTableAssignIPStatic(routing_table, sg_hatching->ip);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
@@ -200,7 +187,6 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Assign tentative IP Address 
 	// Send SansgridEyeball from sensor to server
 	SansgridEyeball *sg_eyeball;
-	DeviceProperties *dev_prop;
 	SANSGRID_UNION(SansgridEyeball, SansgridEyeballConv) sg_eyeball_union;
 	uint8_t ip_addr[IP_SIZE];
 
@@ -213,11 +199,6 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
 
-	dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
-	dev_prop->dev_status = SG_DEVSTATUS_EYEBALLING;
-	dev_prop->next_expected_packet = SG_DEVSTATUS_PECKING;
-	memcpy(&dev_prop->dev_attr, sg_eyeball, sizeof(SansgridEyeball));
-
 	memset(ip_addr, 0x0, sizeof(ip_addr));
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
@@ -226,16 +207,17 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 			// no IP address given
 			// Assign an IP address
 			syslog(LOG_INFO, "Assigning IP dynamically for new device");
-			routingTableAssignIP(routing_table, ip_addr, dev_prop);
+			routingTableAssignIP(routing_table, ip_addr);
 			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 		} else {
 			// IP address given
-			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr, dev_prop) == 1) {
+			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr) == 1) {
 				syslog(LOG_INFO, "Couldn't statically assign IP for new device");
-				routingTableAssignIP(routing_table, ip_addr, dev_prop);
+				routingTableAssignIP(routing_table, ip_addr);
 				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
 			}
 		}
+		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
 
 		// Send packet to the server
 		syslog(LOG_DEBUG, "Sending Eyeball to server");
@@ -248,7 +230,6 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return 1;
 	}
 
-	free(dev_prop);
 	return 0;
 }
 

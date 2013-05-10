@@ -32,6 +32,7 @@
 #include <time.h>
 
 #include "routing_table.h"
+#include "auth_status.h"
 #include "heartbeat.h"
 
 
@@ -43,9 +44,8 @@ typedef struct RoutingNode {
 	// Later, it may be combined with DeviceProperties
 	//struct DeviceProperties properties;
 	uint32_t rdid;
-	int32_t __attribute__((deprecated))lost_pings;
 	HeartbeatStatus *hb;
-	DeviceProperties __attribute__((deprecated))*properties;
+	DeviceAuth *auth;
 } RoutingNode;
 	
 
@@ -238,13 +238,11 @@ void routingTableGetEssid(RoutingTable *table, char essid[80]) {
 	return;
 }
 
-int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
-	   DeviceProperties *properties) {
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Statically assign IP Address if possible
 	// return 0 if success, -1 if failure
 	
 	uint32_t rdid_pool;
-	DeviceProperties *dev_prop;
 	int32_t index;
 
 	tableAssertValid(table);
@@ -269,15 +267,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		}
 		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
 
-		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
-		if (properties != NULL) {
-			memcpy(dev_prop, properties, sizeof(DeviceProperties));
-		} else {
-			memset(dev_prop, 0x0, sizeof(DeviceProperties));
-		}
-		//table->routing_table[index]->properties = dev_prop;
-		//table->routing_table[index]->lost_pings = 0;
 		table->routing_table[index]->hb = hbInitDefault();
+		table->routing_table[index]->auth = deviceAuthInit(1);
 		table->table_alloc++;
 		return 0;
 	} else {
@@ -288,8 +279,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 
 
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], 
-		DeviceProperties *properties) {
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
 	uint32_t tableptr;
@@ -309,7 +299,7 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	return routingTableAssignIPStatic(table, ip_addr, properties);
+	return routingTableAssignIPStatic(table, ip_addr);
 }
 
 
@@ -461,8 +451,6 @@ enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 	// Check to see what packet we're expecting next from this IP address
 
 	tableAssertValid(table);
-	return SG_DEVSTATUS_NULL;
-	/*
 
 	if (!table->table_alloc)
 		return SG_DEVSTATUS_NULL;
@@ -470,8 +458,7 @@ enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return SG_DEVSTATUS_NULL;
-	return table->routing_table[index]->properties->next_expected_packet;
-	*/
+	return deviceAuthGetNextGeneralPayload(table->routing_table[index]->auth);
 }
 
 
@@ -482,18 +469,15 @@ int32_t routingTableSetNextExpectedPacket(
 	// Set what packet we're expecting next from this IP address
 
 	tableAssertValid(table);
-	return SG_DEVSTATUS_NULL;
 
-	/*
 	if (!table->table_alloc)
 		return -1;
 
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
-	table->routing_table[index]->properties->next_expected_packet = nextstatus;
-	return 0;
-	*/
+	return deviceAuthSetNextGeneralPayload(table->routing_table[index]->auth,
+			nextstatus);
 }
 
 

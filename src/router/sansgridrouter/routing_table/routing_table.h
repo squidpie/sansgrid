@@ -42,15 +42,16 @@
 
 
 typedef struct RoutingTable RoutingTable;
-typedef struct DeviceProperties DeviceProperties;
 
 
+/*
 struct DeviceProperties {
 	// A device's general properties
 	SansgridEyeball dev_attr;
 	enum SansgridDeviceStatusEnum dev_status;
 	enum SansgridDeviceStatusEnum next_expected_packet;
 };
+*/
 
 
 
@@ -60,8 +61,8 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize);
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]);
 RoutingTable *routingTableDestroy(RoutingTable *table);
 void routingTableGetEssid(RoutingTable *table, char essid[80]);
-int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], DeviceProperties *properties);
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableFreeAllIPs(RoutingTable *table);
 int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid);

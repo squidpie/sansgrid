@@ -89,6 +89,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 #if TESTS_DEBUG_LEVEL > 0
 	printf("Handled with status: %i\n", exit_code);
 #endif
+	fail_if((sg_serial_read == NULL), "Got back a NULL serial packet!");
 
 #if TESTS_DEBUG_LEVEL > 1
 	printf("Sent: ");
