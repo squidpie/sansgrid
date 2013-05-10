@@ -21,6 +21,7 @@
 #include <check.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <syslog.h>
 
 #include "tests.h"
 #include "../routing_table/routing_table.h"
@@ -76,6 +77,7 @@ int main(void) {
 	srunner_add_suite(sr, intraRouterTestConversion());
 
 	num_devices = 0;
+	setlogmask(LOG_ERR);
 
 	// Uncomment to better debug segfaults
 	//srunner_set_fork_status(sr, CK_NOFORK);
