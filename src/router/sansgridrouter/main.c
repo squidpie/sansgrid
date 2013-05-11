@@ -302,6 +302,16 @@ int sgSocketListen(void) {
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
+		} else if (!strcmp(str, "strict-auth")) {
+			// require strict adherence to authentication protocol
+			routingTableRequireStrictAuth(routing_table);
+			strcpy(str, "Auth is strictly enforced");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "loose-auth")) {
+			// don't require strict adherence to authentication protocol
+			routingTableAllowLooseAuth(routing_table);
+			strcpy(str, "Auth is loosely enforced");
+			socketDoSend(s2, str);
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
 			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
@@ -387,6 +397,12 @@ int sgSocketListen(void) {
 					sprintf(str, "\tDispatch Paused\n");
 				else
 					sprintf(str, "\tDispatch Running\n");
+				if (socketDoSend(s2, str) < 0) break;
+				if (routingTableIsAuthStrict(routing_table)) {
+					sprintf(str, "\tStrict Authentication\n");
+				} else {
+					sprintf(str, "\tLoose Authentication\n");
+				}
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, "Dispatch Size: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
@@ -827,6 +843,12 @@ int main(int argc, char *argv[]) {
 		} else if (strstr(option, "key=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "strict-auth")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "loose-auth")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
 			if (optind < argc) {
@@ -960,6 +982,8 @@ Daemon Commands\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
+      strict-auth            require strict adherence to authentication protocol\n\
+      loose-auth             as long as eyeball comes first, don't care about packet order\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\

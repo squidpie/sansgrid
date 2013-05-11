@@ -60,6 +60,9 @@ int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]);
 void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDataTypeEnum dt);
+int32_t routingTableRequireStrictAuth(RoutingTable *table);
+int32_t routingTableAllowLooseAuth(RoutingTable *table);
+int32_t routingTableIsAuthStrict(RoutingTable *table);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);
 int32_t routingTableSetCurrentPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum thisstatus);

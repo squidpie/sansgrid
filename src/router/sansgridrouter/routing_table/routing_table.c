@@ -56,6 +56,7 @@ struct RoutingTable {
 	uint32_t rdid_pool;			// identifier pool
 	uint32_t table_alloc;
 	RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+	int default_strictness;	
 
 	char essid[80];				// network name
 	uint8_t base[IP_SIZE];
@@ -189,6 +190,7 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	table->tableptr = 0;
 	table->table_alloc = 0;
 	table->hbptr = 0;
+	table->default_strictness = 1;
 	while (unmasked_bits > 0) {
 		if (unmasked_bits >= 8) {
 			mask = 0xff;
@@ -269,7 +271,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
 
 		table->routing_table[index]->hb = hbInitDefault();
-		table->routing_table[index]->auth = deviceAuthInit(0);
+		table->routing_table[index]->auth = deviceAuthInit(table->default_strictness);
 		table->table_alloc++;
 		return 0;
 	} else {
@@ -459,7 +461,37 @@ int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZ
 	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
 }
 
-	
+int32_t routingTableRequireStrictAuth(RoutingTable *table) {
+	// require strict adherence to routing protocol
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthEnable(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = 1;
+	return 1;
+}
+
+
+int32_t routingTableAllowLooseAuth(RoutingTable *table) {
+	// allow loose adherence to routing protocol
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthDisable(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = 0;
+	return 0;
+}
+
+int32_t routingTableIsAuthStrict(RoutingTable *table) {
+	// check to see if authentication is strict
+	tableAssertValid(table);
+
+	return table->default_strictness;
+}
 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,

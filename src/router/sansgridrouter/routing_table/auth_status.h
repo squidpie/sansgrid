@@ -25,8 +25,9 @@
 typedef struct DeviceAuth DeviceAuth;
 
 
-int deviceAuthDisable(void);
-int deviceAuthEnable(void);
+int deviceAuthDisable(DeviceAuth *dev_auth);
+int deviceAuthEnable(DeviceAuth *dev_auth);
+int deviceAuthIsEnabled(DeviceAuth *dev_auth);
 DeviceAuth *deviceAuthInit(int strictness);
 void deviceAuthDestroy(DeviceAuth *dev_auth);
 int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt);

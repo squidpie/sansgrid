@@ -45,18 +45,35 @@ static int devauthAssertValid(DeviceAuth *dev_auth) {
 	}
 }
 
-int deviceAuthDisable(void) {
+int deviceAuthDisable(DeviceAuth *dev_auth) {
 	// don't authenticate devices
-	int old_global_strictness = global_strictness;
-	global_strictness = 0;
-	return old_global_strictness;
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthDisable");
+		return -1;
+	}
+	int old_strictness = dev_auth->strictness;
+	dev_auth->strictness = 0;
+	return old_strictness;
 }
 
-int deviceAuthEnable(void) {
+int deviceAuthEnable(DeviceAuth *dev_auth) {
 	// authenticate devices
-	int old_global_strictness = global_strictness;
-	global_strictness = 1;
-	return old_global_strictness;
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthEnable");
+		return -1;
+	}
+	int old_strictness = dev_auth->strictness;
+	dev_auth->strictness = 1;
+	return old_strictness;
+}
+
+int deviceAuthIsEnabled(DeviceAuth *dev_auth) {
+	// check to see if strict authentication is enabled
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthIsEnabled");
+		return -1;
+	}
+	return dev_auth->strictness;
 }
 
 DeviceAuth *deviceAuthInit(int strictness) {
