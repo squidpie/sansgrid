@@ -661,7 +661,10 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 					}
 				}
 				sprintf(str, "%s%35s", str, ip_str);
-				if (routingTableIsDeviceLost(table, ip_addr)) {
+				if (i == 1) {
+					// router
+					strcat(str, "\trouter");
+				} else if (routingTableIsDeviceLost(table, ip_addr)) {
 					// device has been lost
 					strcat(str, "\tlost");
 				} else if (routingTableIsDeviceStale(table, ip_addr)) {
@@ -674,7 +677,11 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 				sgPayloadGetPayloadName(
 						routingTableGetCurrentPacket(table, ip_addr),
 						payload_name);
-				sprintf(str, "%s\t%s", str, payload_name);
+				if (i == 1) {
+					// router
+				} else {
+					sprintf(str, "%s\t%s", str, payload_name);
+				}
 
 				sprintf(str, "%s\n", str);
 				break;
