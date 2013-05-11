@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
-#include <SerialDebug.h>
+//#include <SerialDebug.h>
 #include <SPI.h>
 #include <sgSerial.h>
 #include "sgRadio.h"
@@ -19,9 +19,7 @@ SansgridSerial SpiData;
 SnIpTable RouteTable;
 HardwareSerial * test;
 
-SansgridRadio * Radio;
-
-uint8_t packet_buffer[SG_PACKET_SZ];
+SansgridRadio sgRadio;
 
 // SPI Setup 
 #define SLAVE_READY 7
@@ -33,7 +31,7 @@ volatile boolean process_flag;
 volatile boolean spi_active;
 
 void setup() {
-	#if DEBUG 
+	/*#if DEBUG 
 		//SerialDebugger.begin(115200);
 		switch(DEBUG_LEVEL) {
 			case 1:
@@ -49,10 +47,10 @@ void setup() {
 		delay(50);
 		sgDebugInit(&SerialDebugger);
 		//SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
-	#else
+	#else*/
 	Serial.begin(115200);
-	#endif
-  pinMode(ledPin, OUTPUT);
+  //Serial.println("Setup starts here");
+	pinMode(ledPin, OUTPUT);
   pinMode(ROUTER_MODE_PIN, INPUT);
   digitalWrite(ROUTER_MODE_PIN, HIGH);
   pinMode(SPI_IRQ_PIN, INPUT);
@@ -65,13 +63,12 @@ void setup() {
 	pinMode(SLAVE_READY, OUTPUT);
 	digitalWrite(SLAVE_READY, HIGH);
 	SPI.attachInterrupt();
-
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
-	Radio = new SansgridRadio;
-	Radio->init(&Serial, &SpiData, &RouteTable);
+	//sgRadio = new SansgridRadio;
+	sgRadio.init(&Serial, &SpiData, &RouteTable);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
-  	Radio->set_mode(ROUTER);
+  	sgRadio.set_mode(ROUTER);
 	}
 	Serial.println("Setup Complete");
 }
@@ -91,12 +88,12 @@ void loop() {
 		pos = 0;
 		process_flag = false;
 		spi_active = false;
-		Radio->processSpi();
+		sgRadio.processSpi();
 		digitalWrite(SLAVE_READY, HIGH);
-		Radio->loadFrame(0);
-		Radio->write();
-		Radio->loadFrame(1);
-		Radio->write();
+		sgRadio.loadFrame(0);
+		sgRadio.write();
+		sgRadio.loadFrame(1);
+		sgRadio.write();
 		Serial.println("Packet written");
 	}
 	if (!spi_active) {
@@ -106,15 +103,16 @@ void loop() {
 			//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
 		 // Serial.flush();
 			//readPacket();
-	readPacket();
-	/*
-			Radio.read();
-			Radio.processPacket();
-			if(Radio.rxComplete()) {
+	//readPacket();
+	
+			sgRadio.read();
+			if(sgRadio.defrag()) {
+				sgRadio.processPacket();
 				memcpy(rx,&SpiData,sizeof(SpiData)); 
-				spi_active = true;
-				digitalWrite(SLAVE_READY, LOW);
-			}*/
+				//spi_active = true;
+				Serial.write((const uint8_t *)rx,sizeof(SpiData));
+				//digitalWrite(SLAVE_READY, LOW);
+			}
 		}
 	}
     
@@ -122,6 +120,7 @@ void loop() {
 // assert slave interrupt pin 7 to initate SPI tansfer
 
 void readPacket() {
+uint8_t packet_buffer[SG_PACKET_SZ];
 	int i = 0;
 	while(Serial.available() > 0 && i < SG_PACKET_SZ) {
 		delay(2);
