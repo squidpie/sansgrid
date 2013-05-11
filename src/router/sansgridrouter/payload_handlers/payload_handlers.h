@@ -44,6 +44,7 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial);
+int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_serial);
 
 
 #endif

@@ -651,4 +651,24 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_serial) {
+	// Handle a server<-->router status command
+	SansgridIRStatus *sg_irstatus;
+	SANSGRID_UNION(SansgridIRStatus, SGIR_un) sg_ir_union;
+	sg_ir_union.serialdata = sg_serial->payload; 
+	sg_irstatus = sg_ir_union.formdata;
+	syslog(LOG_INFO, "Handling Router<-->Sserver packet: device %u",
+			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
+	// FIXME: Get rid of magic payload type number 0xfd
+	if (sg_irstatus->datatype == 0xfd) {
+		sgTCPSend(sg_serial, sizeof(SansgridSerial));
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+
+
 // vim: ft=c ts=4 noet sw=4:
