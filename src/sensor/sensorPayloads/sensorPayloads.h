@@ -47,6 +47,7 @@
 #define IP_ADDRESS 16
 #define CONTROL 1
 #define SENSOR_A 39
+#define DELAY 60
 
 typedef struct SansgridSensor{
 	uint8_t id[ SENSOR_ID ];

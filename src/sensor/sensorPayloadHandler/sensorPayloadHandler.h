@@ -39,6 +39,14 @@ void payloadHandler( SensorConfig *sg_config ){
 	SansgridSerial payload;
 	sgSerialReceive( &payload, 1 );
 	uint8_t command = payload.payload[0];
+	Serial.println( "payload" );
+	for( int i = 0 ; i < CONTROL ; i++ )
+		Serial.println( payload.control[i] );
+	for( int i = 0 ; i < IP_ADDRESS ; i++ )
+		Serial.println( payload.ip_addr[i] );
+	for( int i = 0 ; i < PAYLOAD ; i++ )
+		Serial.println( payload.payload[i] );
+		
 	switch ( command ){
 		case 0x00 :	// Eyeball - Sensor entering network.
 			break;
@@ -67,15 +75,16 @@ void payloadHandler( SensorConfig *sg_config ){
 			SansgridNest sg_nest;
 			parseNest( &payload , &sg_nest );
 			sg_config->connected = true;
+			Serial.println( "Nest" );
 			break;
 		case 0x11 :	// Squawk - Server challenge
 		case 0x12 :	// Squawk - Server doesn't need challenge
 		case 0x15 :	// Squawk - Sensor response to server challenge, sensor challenge coming.
 			SansgridSquawk sg_squawk;
 			if( sg_config->connected == false )
-				sg_squawk.dt = { 0x27 };
+				sg_squawk.dt[0] = (uint8_t) 0x27 ;
 			else
-				sg_squawk.dt = { 0x15 };
+				sg_squawk.dt[0] = (uint8_t) 0x15 ;
 			authenticateKey( sg_config , &sg_squawk);
 			parseSquawk( &payload , &sg_squawk );
 			//transmitSquawk ( &payload , &sg_squawk );
@@ -110,7 +119,21 @@ void payloadHandler( SensorConfig *sg_config ){
 		case 0xF0 :	// Flying - Broadcast from router identifying the network
 			SansgridFly sg_fly;
 			parseFly( &payload , &sg_fly );
+			for( int i = 0 ; i < DT ; i++ )
+				Serial.println( sg_fly.dt[i] );
+			//Serial.println( sg_fly.network_name );
 			SansgridEyeball sg_eyeball;
+			/*for( int i = 0 ; i < DT ; i++ )
+				Serial.println( sg_eyeball.dt[i] );
+			for( int i = 0 ; i < MANID ; i++ )
+				Serial.println( sg_eyeball.manid[i] );
+			for( int i = 0 ; i < MODNUM ; i++ )
+				Serial.println( sg_eyeball.modnum [i]);
+			Serial.println( sg_eyeball.sn );
+			for( int i = 0 ; i < PROFILE ; i++ )
+				Serial.println( sg_eyeball.profile[i] );
+			for( int i = 0 ; i < MODE ; i++ )
+				Serial.println( sg_eyeball.mode[i] );*/
 			//transmitEyeball( &payload , &sg_eyeball );
 			break;
 		case 0xFE :	// - Reserved for future expansion

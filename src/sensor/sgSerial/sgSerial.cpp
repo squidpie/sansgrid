@@ -59,7 +59,7 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 	memcpy( data_out + 17 , sg_serial->payload , PAYLOAD );
     for( int i = 0 ; i < NUM_BYTES ; i++){
         SPI.transfer( data_out[i] );
-        delayMicroseconds(12);
+        delayMicroseconds( DELAY );
     }
 	return 0;
 }
@@ -69,10 +69,10 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
 	uint8_t data_in[NUM_BYTES];
 	uint8_t rec = 0xFD;
 	SPI.transfer( rec );
-    delayMicroseconds(12);
-    for( int i = 0 ; i < NUM_BYTES ; i++){
+    delayMicroseconds( DELAY );
+	for( int i = 0 ; i < NUM_BYTES ; i++){
         data_in[i] = SPI.transfer( rec );
-        delayMicroseconds(12);
+        delayMicroseconds( DELAY );
     }
 	memcpy( sg_serial->control , data_in , CONTROL );
 	memcpy( sg_serial->ip_addr , data_in + 1 , IP_ADDRESS );

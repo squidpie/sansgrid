@@ -6,10 +6,10 @@
 
 #define SLAVE_READY 7
 #define NUM_BYTES 98
-
+byte command = 0x00;
 byte rx [ NUM_BYTES ];
 // Fly
-byte tx [ NUM_BYTES ] = { 0xAD,// Control Byte 1 BYTE
+byte tx [ NUM_BYTES ] = { 0x10,// Control Byte 1 BYTE
         0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xA8,
         0x00,0x01, // IP Address 16 BYTES
         0x10, // Payload (Data Type) 1 BYTE
@@ -98,40 +98,44 @@ void setup (void){
 
 void loop (void){
     digitalWrite(SLAVE_READY , LOW );
-    delayMicroseconds(12);
+    delayMicroseconds(20);
     digitalWrite(SLAVE_READY , HIGH );
+    //delay(1000);
     if ( process_it ){
+        command = 0x00;
         pos = 0;
         pos2 = 0;
         process_it = false;
     }
+    //delay();
 }
 
 // SPI interrupt routine
 ISR (SPI_STC_vect){
     // Read byte sent from Master SPI  
-    //byte c = SPDR;  
-    // Send byte to Master SPI
-    if ( pos2 < NUM_BYTES ){
-            
-            // Put Slave Data On SPDR
-            SPDR=tx[ pos2++ ];
-
-            // Wait for transmission complete
-            while(!(SPSR & (1<<SPIF)));
-
-            // If buffer is full process it
-            if ( pos2 == NUM_BYTES-1  )               
-                process_it = true;  
+    byte c = SPDR; 
+    switch (command){
+    case 0x00:
+        // Store initial Command
+        command = c;
+        SPDR = 0;
+        break;
+    case 0xAD:
+        // Store byte read from Master
+        rx[ pos++ ] = c;
+        // If buffer is full process it
+        if ( pos == NUM_BYTES - 1 )
+            process_it = true;
+        break;
+    case 0xFD:
+        // Put Slave Data On SPDR
+        SPDR=tx[ pos2++ ];
+        // If buffer is full process it
+        if ( pos2 == NUM_BYTES - 1  )               
+            process_it = true; 
+        break;
+    default:
+        break;
     }
-    // Store byte sent from Master SPI
-    /*else{
-        if ( pos < NUM_BYTES ){
-            rx[ pos++ ] = c;
-            // If buffer is full process it
-            if ( pos == NUM_BYTES - 1 )
-                process_it = true;
-        }
-    }*/  
 }  
 
