@@ -641,6 +641,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundverbosity = 0,
 		foundnetmask = 0,
 		foundstrictness = 0;
+	char *str = NULL;
+	char *saveptr = NULL;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -676,7 +678,14 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			else
 				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
-			sscanf(buffer, "essid = %s", essid);
+			str = strtok_r(buffer, "'", &saveptr);
+			str = strtok_r(NULL, "'", &saveptr);
+			if (str == NULL) {
+				syslog(LOG_WARNING, "Couldn't parse config file");
+				return -1;
+			}
+			strcpy(essid, str);
+			//sscanf(buffer, "essid = '%s'", essid);
 			foundessid = 1;
 		} else if (strstr(buffer, "verbosity")) {
 			sscanf(buffer, "verbosity = %s", verbosity_str);
