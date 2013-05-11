@@ -393,11 +393,6 @@ int sgSocketListen(void) {
 			do {
 				sprintf(str, "Routing Table Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
-				if (dispatch_pause)
-					sprintf(str, "\tDispatch Paused\n");
-				else
-					sprintf(str, "\tDispatch Running\n");
-				if (socketDoSend(s2, str) < 0) break;
 				if (routingTableIsAuthStrict(routing_table)) {
 					sprintf(str, "\tStrict Authentication\n");
 				} else {
@@ -408,6 +403,11 @@ int sgSocketListen(void) {
 					   HEARTBEAT_INTERVAL);
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, "\nDispatch Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				if (dispatch_pause)
+					sprintf(str, "\tDispatch Paused\n");
+				else
+					sprintf(str, "\tDispatch Running\n");
 				if (socketDoSend(s2, str) < 0) break;
 			    sprintf(str, "\tQueued: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
@@ -620,16 +620,19 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		 essid[100],
 		 hidden_str[10],
 		 verbosity_str[20],
-		 netmask_str[50];
+		 netmask_str[50],
+		 strictness_str[10];
 	int hidden = 0;
 	int verbosity = 0;
+	int strictness = 0;
 
 	int foundkey = 0,
 		foundurl = 0,
 		foundessid = 0,
 		foundhidden = 0,
 		foundverbosity = 0,
-		foundnetmask = 0;
+		foundnetmask = 0,
+		foundstrictness = 0;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -655,6 +658,15 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 				hidden = 0;
 			else
 				foundhidden = 0;
+		} else if (strstr(buffer, "strictness")) {
+			sscanf(buffer, "strictness = %s", strictness_str);
+			foundstrictness = 1;
+			if (strstr(strictness_str, "1"))
+				strictness = 1;
+			else if (strstr(strictness_str, "0"))
+				strictness = 0;
+			else
+				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
 			sscanf(buffer, "essid = %s", essid);
 			foundessid = 1;
@@ -681,10 +693,11 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		ropts->verbosity = verbosity;
 		setlogmask(LOG_UPTO(verbosity));
 	}
-	if (foundnetmask) {
+	if (foundnetmask)
 		memcpy(ropts->netmask, netmask, IP_SIZE);
+	if (foundstrictness) {
+		ropts->strictness = strictness;
 	}
-		
 
 	return 0;
 }	
@@ -911,6 +924,12 @@ int main(int argc, char *argv[]) {
 	dispatch = queueInit(200);
 	routing_table = routingTableInit(router_opts.netmask, "Stock ESSID");
 	void *arg;
+
+	if (router_opts.strictness == 1) {
+		routingTableRequireStrictAuth(routing_table);
+	} else if (router_opts.strictness == 0) {
+		routingTableAllowLooseAuth(routing_table);
+	}
 
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
