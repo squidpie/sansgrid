@@ -632,6 +632,7 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	// Print table status
 	uint32_t i, j;
 	uint8_t ip_addr[IP_SIZE];
+	char ip_str[50] = "\0";
 	int index = 0;
 	int last_was_zero = 0;
 	str[0] = '\0';
@@ -645,20 +646,21 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 				syslog(LOG_DEBUG, "found one!");
 				maskip(ip_addr, table->base, i);
 				rdid = routingTableIPToRDID(table, ip_addr);
-				sprintf(str, "%4i\t", rdid);
+				sprintf(str, "%4i    ", rdid);
 				for (j=0; j<IP_SIZE; j++) {
 					if (ip_addr[j] != 0x0) {
-						sprintf(str, "%s%.2x", str, ip_addr[j]);
+						sprintf(ip_str, "%s%.2x", ip_str, ip_addr[j]);
 						if (j+1 < IP_SIZE)
-							strcat(str, ":");
+							strcat(ip_str, ":");
 						last_was_zero = 0;
 					} else if (!last_was_zero) {
-						strcat(str, ":");
+						strcat(ip_str, ":");
 						if (j == 0)
-							strcat(str, ":");
+							strcat(ip_str, ":");
 						last_was_zero = 1;
 					}
 				}
+				sprintf(str, "%s%35s", str, ip_str);
 				if (routingTableIsDeviceLost(table, ip_addr)) {
 					// device has been lost
 					strcat(str, "\tlost");

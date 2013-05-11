@@ -404,12 +404,18 @@ int sgSocketListen(void) {
 					sprintf(str, "\tLoose Authentication\n");
 				}
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "Dispatch Size: %i of %i\n", 
+				sprintf(str, "\tHeartbeat Period: %i seconds\n",
+					   HEARTBEAT_INTERVAL);
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\nDispatch Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
+			    sprintf(str, "\tQueued: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "Devices:\n");
+				sprintf(str, "\nDevices:\n");
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, " rdid   IP address            auth\n");
+				sprintf(str, " \
+rdid                IP address                 status  Last Packet\n");
 				if (socketDoSend(s2, str) < 0) break;
 				for (int i=0; i<devnum; i++) {
 					routingTableGetStatus(routing_table, i, str);
