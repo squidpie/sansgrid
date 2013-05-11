@@ -27,6 +27,8 @@ $SG['maxtime']['Sing']  	=  3 * 60;		// Sing - 5 minutes
 $SG['maxtime']['Mock']  	=  3 * 60;		// Mock - 5 minutes
 $SG['maxtime']['Peacock1']  =  3 * 60;		// Peacock, more coming - 3 minutes
 $SG['maxtime']['Squawk1']   =  3 * 60;		// Squawk sent, no key - 3 minutes
+$SG['maxtime']['Squawk2']   =  3 * 60;		// Squawk -- need to comment
+$SG['maxtime']['Squawk3']   =  3 * 60;		// Squawk -- need to comment
 #$SG['maxtime']['FailedMate']= 10 * 60;		// A mating which never completed
 										    // could leave residual data in places
 											// other than the pipeline. 

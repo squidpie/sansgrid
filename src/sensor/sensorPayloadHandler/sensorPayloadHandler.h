@@ -23,111 +23,148 @@
 #define __SENSOR_PAYLOAD_HANDLER_H__
 
 #include <Arduino.h>
-#include <sensorConnect.h>
 #include <sensorParse.h>
 #include <sensorPayloads.h>
-#include <spiMaster.h>
-#include <sgSerial.h>
+//#include <sgSerial.h>
+
+#define DEBUG 1
 
 void payloadHandler( SensorConfig *sg_config );
-void receivePayload( SensorConfig *sg_config , SansgridSerial * rx );
 void peck( SensorConfig *sg_config , SansgridPeck *sg_peck );
 void sing( SensorConfig *sg_config , SansgridSing *sg_sing );
+void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
 
 // Payload Handler
 void payloadHandler( SensorConfig *sg_config ){
 	SansgridSerial payload;
-	receivePayload( sg_config , &payload );
-	byte command = payload.payload[0];
+	sgSerialReceive( &payload, 1 );
+	uint8_t command = payload.payload[0];
+	Serial.println( "payload" );
+	for( int i = 0 ; i < CONTROL ; i++ )
+		Serial.println( payload.control[i] );
+	for( int i = 0 ; i < IP_ADDRESS ; i++ )
+		Serial.println( payload.ip_addr[i] );
+	for( int i = 0 ; i < PAYLOAD ; i++ )
+		Serial.println( payload.payload[i] );
+		
 	switch ( command ){
 		case 0x00 :	// Eyeball - Sensor entering network.
-					break;
+			break;
 		case 0x01 :	// Peck - Initial server response
-					SansgridPeck sg_peck;
-					parsePeck( &payload , &sg_peck );
-					peck( sg_config , &sg_peck );
-					break;		
+			SansgridPeck sg_peck;
+			parsePeck( &payload , &sg_peck );
+			peck( sg_config , &sg_peck );
+			break;		
 		case 0x02 :	// Sing - The server has a public key to share with the sensor for future authentication challenges.		
 		case 0x03 :	// Sing - Server does not require authentication, ready to accept sensor key if needed.
-					SansgridSing sg_sing;
-					parseSing( &payload , &sg_sing );
-					sing( sg_config , &sg_sing );
-					SansgridMock sg_mock;
-					transmitMock( sg_config , &sg_mock );
-					// TBD 
-					// Need to determine wait time, testing with one second between mock and peacock
-					delay(1000);
-					SansgridPeacock sg_peacock;
-					transmitPeacock( sg_config , &sg_peacock );
-					break;
-		case 0x07 :	// Mock - The sensor has a public key to  with the sensor for future authentication challenges.
-					break;
+			SansgridSing sg_sing;
+			parseSing( &payload , &sg_sing );
+			sing( sg_config , &sg_sing );
+			SansgridMock sg_mock;
+			//transmitMock( &payload , &sg_mock );
+			SansgridPeacock sg_peacock;
+			//transmitPeacock( &payload , &sg_peacock );
+			break;
+		case 0x07 :	// Mock - The sensor has a public key to share with the sensor for future authentication challenges.
+			break;
 		case 0x08 :	// Mock - Sensor does not require authentication, ready to accept sensor key if needed.
-					break;
+			break;
 		case 0x0C :	// Peacock - Sensor share's capabilities with server.
-					break;
-		case 0x10 :	// Nest - Server accepts sensor into network.
-					SansgridNest sg_nest;
-					parseNest( &payload , &sg_nest );
-					sg_config->connected = true;
-					break;
+			break;
+		case 0x10 :	// Nest - Server accepts sensor uint8_to network.
+			SansgridNest sg_nest;
+			parseNest( &payload , &sg_nest );
+			sg_config->connected = true;
+			Serial.println( "Nest" );
+			break;
 		case 0x11 :	// Squawk - Server challenge
 		case 0x12 :	// Squawk - Server doesn't need challenge
 		case 0x15 :	// Squawk - Sensor response to server challenge, sensor challenge coming.
+			SansgridSquawk sg_squawk;
+			if( sg_config->connected == false )
+				sg_squawk.dt[0] = (uint8_t) 0x27 ;
+			else
+				sg_squawk.dt[0] = (uint8_t) 0x15 ;
+			authenticateKey( sg_config , &sg_squawk);
+			parseSquawk( &payload , &sg_squawk );
+			//transmitSquawk ( &payload , &sg_squawk );
+			break;
 		case 0x17 :	// Squawk - Sensor challenge.
+			break;
 		case 0x1b :	// Squawk - Server denies sensor's challenge response.
+			sg_config->connected = false;
+			break;
 		case 0x1c :	// Squawk - Server response to challenge.
 		case 0x1d :	// Squawk - Sensor accepts server's response
-					break;
+			break;
 		case 0x1e :	// Heartbeat - Router pulse to sensor
-					break;
+			break;
 		case 0x1f :	// Heartbeat - Sensor's response to router's pulse
-					break;
+			break;
 		case 0x20 :	// Chirp - Command sent from server to sensor.
 		case 0x21 :	// Chirp - Chirp sent from sensor to server.
-					break;
+			break;
 		case 0x22 :	// Chirp - Start of data stream.
-					break;
+			break;
 		case 0x23 :	// Chirp - Continued stream of data.
-					break;
+			break;
 		case 0x24 :	// Chirp - End of data stream.
-					break;
+			break;
 		case 0x25 :	// Chirp - Network is disconnecting sensor.
 		case 0x26 :	// Chirp - Sensor is disconnecting from the network.
-					break;
+			sg_config->connected = false;
+			break;
+		case 0x27 :	// Squawk - Sensor has forgotten Server, Server please forget Sensor.
+			break;
 		case 0xF0 :	// Flying - Broadcast from router identifying the network
-					SansgridFly sg_fly;
-					parseFly( &payload , &sg_fly );
-					SansgridEyeball sg_eyeball;
-					transmitEyeball( sg_config , &sg_eyeball );
-					break;
+			SansgridFly sg_fly;
+			parseFly( &payload , &sg_fly );
+			for( int i = 0 ; i < DT ; i++ )
+				Serial.println( sg_fly.dt[i] );
+			//Serial.println( sg_fly.network_name );
+			SansgridEyeball sg_eyeball;
+			/*for( int i = 0 ; i < DT ; i++ )
+				Serial.println( sg_eyeball.dt[i] );
+			for( int i = 0 ; i < MANID ; i++ )
+				Serial.println( sg_eyeball.manid[i] );
+			for( int i = 0 ; i < MODNUM ; i++ )
+				Serial.println( sg_eyeball.modnum [i]);
+			Serial.println( sg_eyeball.sn );
+			for( int i = 0 ; i < PROFILE ; i++ )
+				Serial.println( sg_eyeball.profile[i] );
+			for( int i = 0 ; i < MODE ; i++ )
+				Serial.println( sg_eyeball.mode[i] );*/
+			//transmitEyeball( &payload , &sg_eyeball );
+			break;
 		case 0xFE :	// - Reserved for future expansion
-					break;
+			break;
 		case 0xFF :	// - Reserved for future expansion
-					break;
+			break;
 		default : 
-					break;
+			break;
 	}		 
-}
-
-void receivePayload( SensorConfig *sg_config , SansgridSerial * rx ){
-	spiMasterTransmit( sg_config->control , CONTROL , SLAVE_SELECT );
-	spiMasterReceive( sg_config->control[0] , rx->control , CONTROL , SLAVE_SELECT );
-	spiMasterReceive( sg_config->control[0] , rx->ip_addr , IP_ADDRESS , SLAVE_SELECT );
-	spiMasterReceive( sg_config->control[0] , rx->payload , PAYLOAD , SLAVE_SELECT );
 }
 
 void peck( SensorConfig *sg_config , SansgridPeck *sg_peck ){
 	memcpy( sg_config->router_ip , sg_peck->router_ip , IP_ADDRESS );
 	memcpy( sg_config->ip_address , sg_peck->ip_address , IP_ADDRESS );
-	// TBD
-	// Disconnect start again if sg->recognition == 0x02 or 0x03
+	if( sg_peck->recognition == 0x00 || 0x02 || 0x03 )
+		sg_config->connected = false;
 }
 
 void sing( SensorConfig *sg_config , SansgridSing *sg_sing ){
 	memcpy( sg_config->server_public_key , sg_sing->server_public_key , SERVER_KEY );
-	// TBD
-	// Server doesn't require a key for authentication
+}
+
+void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
+	uint16_t count = 0;
+	for( int i = 0 ; i < DATA ; i++ ){
+		if( sg_config->server_public_key[i] ^ sg_config->sensor_public_key[i] )
+			count++;
+	}
+	uint8_t hi_lo[2] = { (uint8_t)( count >> 8 ), (uint8_t)count };
+	sg_squawk->data[78] = hi_lo[1];
+	sg_squawk->data[79] = hi_lo[2];
 }
 
 #endif // __SENSOR_PAYLOAD_HANDLER_H__

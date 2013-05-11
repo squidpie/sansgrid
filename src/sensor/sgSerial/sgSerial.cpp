@@ -26,65 +26,63 @@
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
-int sgSerialOpen(void){
-    spiMasterInit( SLAVE_SELECT , SLAVE_READY );
+uint8_t sgSerialOpen(void){
+    // Initialize Sensor SPI communication
+    SPI.begin();
+    // Set order bits are shifted onto the SPI bus
+    SPI.setBitOrder( MSBFIRST ); 
+    // Set SPI Baud Rate to 500 KHz
+    // 84 MHz / 252 = 500 KHz
+    SPI.setClockDivider( 168 );
+    // Set SPI Mode 0-3
+    SPI.setDataMode( SPI_MODE0 );
 	return 0;
 }
 
 // Configure radio as a router radio
 // Radio will be configured as a sensor radio by default.
-int sgSerialSetAsRouter(void){
+uint8_t sgSerialSetAsRouter(void){
     // TBD
 	return -1;
 }
 
-int sgSerialSetAsSensor(void){
+uint8_t sgSerialSetAsSensor(void){
 	//TBD
 	return -1;
 }
 
-// Send size bytes of serialdata serially
-int sgSerialSend(SansgridSerial *sg_serial, int size ){
-	byte padding = 0x00;
-	spiMasterTransmit( sg_serial->control ,  CONTROL , SLAVE_SELECT );
-	spiMasterTransmit( sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
-	spiMasterTransmit( sg_serial->payload ,  PAYLOAD , SLAVE_SELECT );
-	// Pad Packet to necessary size
-	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
-	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-            if( i == ( size - 1 ) )
-		        SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-			else
-				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
-			delayMicroseconds( DELAY );
-		}
-	}
+// Send size uint8_ts of serialdata serially
+uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
+	uint8_t data_out[ NUM_BYTES ];
+	memcpy( data_out , sg_serial->control , CONTROL );
+	memcpy( data_out + 1 , sg_serial->ip_addr , IP_ADDRESS );
+	memcpy( data_out + 17 , sg_serial->payload , PAYLOAD );
+    for( int i = 0 ; i < NUM_BYTES ; i++){
+        SPI.transfer( data_out[i] );
+        delayMicroseconds( DELAY );
+    }
 	return 0;
 }
 
 // Get data from serial in. Data size will be in size.
-int sgSerialReceive(SansgridSerial *sg_serial, int size){
-	byte padding = 0x00;
-	SPI.transfer( SLAVE_SELECT , RECEIVE , SPI_LAST  );
-	spiMasterReceive( RECEIVE , sg_serial->control , CONTROL , SLAVE_SELECT );
-	spiMasterReceive( RECEIVE , sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
-	spiMasterReceive( RECEIVE , sg_serial->payload , PAYLOAD , SLAVE_SELECT );
-	// Pad Packet to necessary size
-	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
-	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-			if( i == ( size - 1 ) )
-		        SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-			else
-				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
-			delayMicroseconds( DELAY );
-		}
-	}
+uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
+	uint8_t data_in[NUM_BYTES];
+	uint8_t rec = 0xFD;
+	SPI.transfer( rec );
+    delayMicroseconds( DELAY );
+	for( int i = 0 ; i < NUM_BYTES ; i++){
+        data_in[i] = SPI.transfer( rec );
+        delayMicroseconds( DELAY );
+    }
+	memcpy( sg_serial->control , data_in , CONTROL );
+	memcpy( sg_serial->ip_addr , data_in + 1 , IP_ADDRESS );
+	memcpy( sg_serial->payload , data_in + 17 , PAYLOAD );
 	return 0;
 }
 
 // Function is called when all SPI input and output is completed. Stops SPI 
 // from being transmitted and received. 
-int sgSerialClose(void){
+uint8_t sgSerialClose(void){
 	SPI.end();
 	return 0;
 }

@@ -7,6 +7,7 @@ include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 <head>
 <title><? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
+<? print returnRefresh(); ?>
 </head>
 
 <body>

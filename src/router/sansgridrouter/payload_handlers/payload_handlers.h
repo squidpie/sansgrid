@@ -23,15 +23,16 @@
 
 #include <stdint.h>
 #include "../routing_table/routing_table.h"
-//#include "../../../include/sgSerial.h"
-//#include "../../../include/payloads.h"
 #include <sgSerial.h>
 #include <payloads.h>
 
 
 
 
+int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]);
+int32_t routerFreeAllDevices(RoutingTable *routing_table);
 enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt);
+int32_t sgPayloadGetPayloadName(enum SansgridDeviceStatusEnum devstatus, char *name);
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial);
 int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial);

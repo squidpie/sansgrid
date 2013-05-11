@@ -65,6 +65,7 @@ if ( $row['count'] == 0 ) {
 <head>
 <title><? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
+<? print returnRefresh(); ?>
 </head>
 
 <body>

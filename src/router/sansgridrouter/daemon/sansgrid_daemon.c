@@ -23,7 +23,6 @@
 #include <stdlib.h>			// exit()
 #include <unistd.h>			// fork(), setsid(), chdir(), close(), sleep()
 #include <syslog.h>
-//#include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -37,47 +36,15 @@
 #include "../routing_table/routing_table.h"
 #include "../sansgrid_router.h"
 
-#if defined(SYSLOG) && defined(LOG_FILE)
-#undef LOG_FILE
-#endif
 
-#if defined(LOG_DAEMON) && !defined(LOG_CRON)
-#define LOG_CRON LOG_DAEMON
-#endif
 
-#ifndef FACILITY
-#define FACILITY LOG_CRON
-#endif
-
-#if defined(SYSLOG)
-static int syslog_open = FALSE;
-#endif
-	
-void getSansgridDir(char wd[150]) {
-	// Get the .sansgrid directory path
-	// Return success or failure
-	// pass the path back in wd
-	char *home_path = getenv("HOME");
-
-	if (!home_path) {
-		//syslog(LOG_DEBUG, "Can't find home directory");
-		syslog(LOG_DEBUG, "Didn't get home directory");
-		//printf("ERROR: Can't find home directory\n");
-		sprintf(wd, "/home/pi/.sansgrid");
-	} else {
-		snprintf(wd, 120, "%s/.sansgrid", home_path);
-	}
-	// FIXME: check to see if dir exists
-	// 			if not, get config from /etc/sansgrid
-
-}
 
 int isRunning(void) {
 	// Check to see if the sansgrid daemon is running
 	pid_t sgpid;
 	FILE *FPTR = NULL;
 	char config_path[150];
-	getSansgridDir(config_path);
+	getSansgridControlDir(config_path);
 	strncat(config_path, "/sansgridrouter.pid", 150);
 
 	if (!(FPTR = fopen(config_path, "r"))) {
@@ -111,12 +78,15 @@ int daemon_init(void) {
 	pid = fork();
 
 	// exit if fork failed
-	if (pid < 0)
+	if (pid < 0) {
+		syslog(LOG_ERR, "Fork failed");
 		exit(EXIT_FAILURE);
+	}
 
 	// kill parent process
 	if (pid > 0) {
 		sgStorePID(pid);
+		syslog(LOG_INFO, "Daemon fork successful. Killing parent");
 		exit(EXIT_SUCCESS);
 	}
 
@@ -128,13 +98,13 @@ int daemon_init(void) {
 	// create new sid for child process
 	sid = setsid();
 	if (sid < 0) {
-		// log any failure
+		syslog(LOG_ERR, "Couldn't set sid for daemon");
 		exit(EXIT_FAILURE);
 	}
 
 	// move working directory to root
 	if ((chdir("/")) < 0) {
-		// log any failure here
+		syslog(LOG_ERR, "Couldn't move working directory to root");
 		exit(EXIT_FAILURE);
 	}
 
@@ -142,8 +112,7 @@ int daemon_init(void) {
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
-
-	// daemon-specific initialization goes here
+	syslog(LOG_INFO, "Closed standard unix file descriptors");
 
 	return 0;
 }

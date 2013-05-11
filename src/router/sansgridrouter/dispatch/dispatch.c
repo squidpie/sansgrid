@@ -161,6 +161,15 @@ int queueSize(Queue *queue) {
 
 
 
+int queueMaxSize(Queue *queue) {
+	// Get the max number of elements we can enqueue
+	
+	return queue->size;
+}
+
+
+
+
 int queueTryEnqueue(Queue *queue, void *serial_data) {
 	// try to put data onto the queue
 	// If the queue is full, return an error

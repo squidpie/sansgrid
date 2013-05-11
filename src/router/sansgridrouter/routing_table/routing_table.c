@@ -32,6 +32,9 @@
 #include <time.h>
 
 #include "routing_table.h"
+#include "auth_status.h"
+#include "heartbeat.h"
+#include "../payload_handlers/payload_handlers.h"
 
 
 
@@ -41,18 +44,25 @@ typedef struct RoutingNode {
 	// For now, this is separate from properties.
 	// Later, it may be combined with DeviceProperties
 	//struct DeviceProperties properties;
-	int32_t lost_pings;
-	DeviceProperties *properties;
+	uint32_t rdid;
+	HeartbeatStatus *hb;
+	DeviceAuth *auth;
 } RoutingNode;
 	
 
 struct RoutingTable {
 	uint32_t tableptr;			// index, used for alloc
+	uint32_t feach_index;
+	uint32_t rdid_pool;			// identifier pool
 	uint32_t table_alloc;
+	RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+	int default_strictness;	
+
+	char essid[80];				// network name
 	uint8_t base[IP_SIZE];
 	uint8_t broadcast[IP_SIZE];
+
 	uint32_t hbptr;				// index, used for heartbeat
-	struct RoutingNode *routing_table[ROUTING_ARRAYSIZE];
 };
 
 
@@ -69,7 +79,7 @@ static int tableAssertValid(RoutingTable *table) {
 
 static int tableChkFull(RoutingTable *table) {
 	if (table->table_alloc >= ROUTING_ARRAYSIZE) {
-		syslog(LOG_DEBUG, "routing table full");
+		syslog(LOG_WARNING, "routing table full");
 		return 1;
 	}
 	return 0;
@@ -78,7 +88,7 @@ static int tableChkFull(RoutingTable *table) {
 
 static int tableChkEmpty(RoutingTable *table) {
 	if (table->table_alloc == 0) {
-		syslog(LOG_DEBUG, "routing table empty");
+		syslog(LOG_NOTICE, "routing table empty");
 		return 1;
 	}
 	return 0;
@@ -111,12 +121,15 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
 	int32_t i;
 	uint8_t offset[IP_SIZE];
 	uint32_t location[IP_SIZE/4];
+	uint32_t index;
 
 	for (i=0; i<IP_SIZE; i++)
 		offset[i] = ip_addr[i] - base[i];
 	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
 
-	return location[IP_SIZE/4-1];
+	index = location[IP_SIZE/4-1] % ROUTING_ARRAYSIZE;
+
+	return index;
 }
 
 
@@ -163,18 +176,36 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 
 
 
-RoutingTable *routingTableInit(uint8_t base[IP_SIZE]) {
+RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	// Initialize the routing table
 	
 	int i;
 	RoutingTable *table;
+	int unmasked_bits = ROUTING_UNIQUE_BITS;
+	int maskindex = IP_SIZE-1;
+	uint8_t mask;
 
 	table = (RoutingTable*)malloc(sizeof(RoutingTable));
+	table->rdid_pool = 1;
 	table->tableptr = 0;
 	table->table_alloc = 0;
 	table->hbptr = 0;
+	table->default_strictness = 1;
+	while (unmasked_bits > 0) {
+		if (unmasked_bits >= 8) {
+			mask = 0xff;
+			unmasked_bits -= 8;
+		} else {
+			mask = (1 << unmasked_bits)-1;
+			unmasked_bits = 0;
+		}
+		base[maskindex] = base[maskindex] & ~mask;
+		maskindex--;
+	}
 	memcpy(table->base, base, IP_SIZE*sizeof(uint8_t));
+
 	memset(table->broadcast, 0xff, IP_SIZE*sizeof(uint8_t));
+	strncpy(table->essid, essid, sizeof(table->essid));
 	// TODO: Check to make sure lowest ROUTING_UNIQUE_BITS are 0
 	
 
@@ -203,39 +234,55 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 	return table;
 }
 
+void routingTableGetEssid(RoutingTable *table, char essid[80]) {
 
-int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
-	   DeviceProperties *properties) {
+	tableAssertValid(table);
+	strncpy(essid, table->essid, sizeof(table->essid));
+	return;
+}
+
+int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Statically assign IP Address if possible
 	// return 0 if success, -1 if failure
 	
-	DeviceProperties *dev_prop;
+	uint32_t rdid_pool;
 	int32_t index;
 
 	tableAssertValid(table);
 	if (tableChkFull(table))
 		return 1;
 
-	index = locationToTablePtr(ip_addr, table->base);
+	index = locationToTablePtr(ip_addr, table->base) % ROUTING_ARRAYSIZE;
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
-		syslog(LOG_INFO, "Allocating a device at %i", index);
+		syslog(LOG_INFO, "Allocating slot for new device at %i", index);
+		rdid_pool = table->rdid_pool;
 		table->routing_table[index] = (RoutingNode*)malloc(sizeof(RoutingNode));
-		dev_prop = (DeviceProperties*)malloc(sizeof(DeviceProperties));
-		memcpy(dev_prop, properties, sizeof(DeviceProperties));
-		table->routing_table[index]->properties = dev_prop;
-		table->routing_table[index]->lost_pings = 0;
+		if (!routingTableLookupRDID(table, index)) {
+			table->routing_table[index]->rdid = index;
+		} else {
+			while (routingTableLookupRDID(table, rdid_pool)) {
+				rdid_pool++;
+			}
+			table->routing_table[index]->rdid = rdid_pool++;
+			table->rdid_pool = rdid_pool;
+		}
+		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
+
+		table->routing_table[index]->hb = hbInitDefault();
+		table->routing_table[index]->auth = deviceAuthInit(table->default_strictness);
 		table->table_alloc++;
 		return 0;
-	} else
+	} else {
+		syslog(LOG_INFO, "Device already exists at %i", index);
 		return 1;
+	}
 }
 
 
 
-int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE], 
-		DeviceProperties *properties) {
+int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
 	uint32_t tableptr;
@@ -255,7 +302,7 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 	table->tableptr = tableptr;
 
 	// Allocate space for the device
-	return routingTableAssignIPStatic(table, ip_addr, properties);
+	return routingTableAssignIPStatic(table, ip_addr);
 }
 
 
@@ -273,16 +320,61 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// table lookup
 	index = locationToTablePtr(ip_addr, table->base);
 
-	if (index >= ROUTING_ARRAYSIZE)
+	if (index >= ROUTING_ARRAYSIZE || index < 2)
 		return -1;
 	if (table->routing_table[index] == NULL)
 		return -1;
 
 	// Release slot
-	free(table->routing_table[index]->properties);
+	//free(table->routing_table[index]->properties);
 	free(table->routing_table[index]);
 	table->routing_table[index] = NULL;
 	table->table_alloc--;
+
+	return 0;
+}
+
+
+int32_t routingTableFreeAllIPs(RoutingTable *table) {
+	// Release all IP addresses
+	
+	uint32_t i;
+	uint8_t ip_addr[IP_SIZE];
+
+	tableAssertValid(table);
+
+	for (i=2; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			maskip(ip_addr, table->base, i);
+			routingTableFreeIP(table, ip_addr);
+		}
+	}
+
+	return 0;
+}
+
+	
+	
+
+
+int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid) {
+	// Lookup an RDID in the table
+	// return true if found, false if not found
+	
+	uint32_t i;
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return 0;
+
+	// table lookup
+	
+	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			if (table->routing_table[i]->rdid == rdid) {
+				return 1;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -318,18 +410,28 @@ uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// return a unique identifier if found,
 	// return 0 if false
 	
+	int index;
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// device not found
 		return 0;
 	}
-	// For now, just use the index as a unique identifier
-	return locationToTablePtr(ip_addr, table->base);
+
+	index = locationToTablePtr(ip_addr, table->base);
+	return table->routing_table[index]->rdid;
 }
 
 int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]) {
 	// convert an rdid to an IP address
-	maskip(ip_addr, table->base, rdid);
-	return 0;
+	for (uint32_t i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			if (table->routing_table[i]->rdid == rdid) {
+				maskip(ip_addr, table->base, i);
+				return 0;
+			}
+		}
+	}
+	maskip(ip_addr, table->base, rdid&0xff);
+	return -1;
 }
 
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]) {
@@ -345,34 +447,50 @@ void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
-int32_t routingTableFindByAttr(RoutingTable *table, DeviceProperties *dev_prop, uint8_t ip_addr[IP_SIZE]) {
-	// Find a device from the table based on device's properties
-	// return 1 if device found with device's IP address stored in ip_addr
-	// return 0 if device is not found
-
-	DeviceProperties *table_dprop;
-
+int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
+		enum SansgridDataTypeEnum dt) {
+	// check to see if this datatype is valid
 	tableAssertValid(table);
-	if (!table->table_alloc)
-		return 0;
 
+	if (!table->table_alloc)
+		return SG_DEVSTATUS_NULL;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
+}
+
+int32_t routingTableRequireStrictAuth(RoutingTable *table) {
+	// require strict adherence to routing protocol
+	tableAssertValid(table);
 	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
-		if (!table->routing_table[i])
-			continue;
-		table_dprop = table->routing_table[i]->properties;
-		if (memcmp(dev_prop->dev_attr.manid, table_dprop->dev_attr.manid, 4))
-			continue;
-		else if (memcmp(dev_prop->dev_attr.modnum, table_dprop->dev_attr.modnum, 4))
-			continue;
-		else if (memcmp(dev_prop->dev_attr.serial_number, table_dprop->dev_attr.serial_number, 8))
-			continue;
-		else {
-			// found the device
-			maskip(ip_addr, table->base, i);
-			return 1;
+		if (table->routing_table[i]) {
+			deviceAuthEnable(table->routing_table[i]->auth);
 		}
 	}
+	table->default_strictness = 1;
+	return 1;
+}
+
+
+int32_t routingTableAllowLooseAuth(RoutingTable *table) {
+	// allow loose adherence to routing protocol
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthDisable(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = 0;
 	return 0;
+}
+
+int32_t routingTableIsAuthStrict(RoutingTable *table) {
+	// check to see if authentication is strict
+	tableAssertValid(table);
+
+	return table->default_strictness;
 }
 
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
@@ -388,7 +506,7 @@ enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return SG_DEVSTATUS_NULL;
-	return table->routing_table[index]->properties->next_expected_packet;
+	return deviceAuthGetNextGeneralPayload(table->routing_table[index]->auth);
 }
 
 
@@ -406,31 +524,16 @@ int32_t routingTableSetNextExpectedPacket(
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
-	table->routing_table[index]->properties->next_expected_packet = nextstatus;
-	return 0;
+	return deviceAuthSetNextGeneralPayload(table->routing_table[index]->auth,
+			nextstatus);
 }
 
-
-int32_t routingTableFindNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
-	// Find the next device to send a heartbeat to, set ip_addr to the ip address of that device
-	int i;
-	tableAssertValid(table);
-
-	if (!table->table_alloc)
-		return 0;
-	for (i=(table->hbptr+1)%ROUTING_ARRAYSIZE; 
-			!table->routing_table[i] || (i == 0) || (i == 1);
-			i = (i+1)%ROUTING_ARRAYSIZE) {
-	}
-	table->hbptr = i;
-	maskip(ip_addr, table->base, i);
-
-	return 1;
-}
-
-int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridHeartbeatStatusEnum hb_status) {
-	// Set the heartbeat status of a device
-	// A ping is a special case where it's handled based on the device's attributes
+int32_t routingTableSetCurrentPacket(
+		RoutingTable *table,
+		uint8_t ip_addr[IP_SIZE],
+		enum SansgridDeviceStatusEnum thisstatus) {
+	// Set what packet we just got from this IP address
+	
 	tableAssertValid(table);
 
 	if (!table->table_alloc)
@@ -439,48 +542,84 @@ int32_t routingTableSetHeartbeatStatus(RoutingTable *table, uint8_t ip_addr[IP_S
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
-	enum SansgridHeartbeatStatusEnum device_status = table->routing_table[index]->properties->heartbeat_status;
-	if (hb_status != SG_DEVICE_PINGING) {
-		table->routing_table[index]->properties->heartbeat_status = hb_status;
-		// FIXME: set lost_pings based on hb_status?
-		table->routing_table[index]->lost_pings = 0;
-		return 0;
-	}
-	switch (device_status) {
-		case SG_DEVICE_NOT_PRESENT:
-			return -1;
-			break;
-		case SG_DEVICE_PINGING:
-		case SG_DEVICE_STALE:
-			// Haven't received the last ping
-			table->routing_table[index]->lost_pings++;
-			// TODO: Add "device lost" code here
-			break;
-		case SG_DEVICE_PRESENT:
-			table->routing_table[index]->properties->heartbeat_status = SG_DEVICE_PINGING;
-			break;
-		default:
-			return -1;
-	}
-	return 0;
+	return deviceAuthSetCurrentGeneralPayload(table->routing_table[index]->auth,
+			thisstatus);
 }
 
-enum SansgridHeartbeatStatusEnum routingTableGetHeartbeatStatus(RoutingTable *table,
+
+uint32_t routingTableGetCurrentPacket(
+		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
-	// Get the current state (active, stale, lost) of this IP address
-
+	// Get what general payload type we're on
+	
 	tableAssertValid(table);
-
-	if (!table->table_alloc)
-		return SG_DEVICE_NOT_PRESENT;
 
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
-		return SG_DEVICE_NOT_PRESENT;
-	return table->routing_table[index]->properties->heartbeat_status;
+		return -1;
+	return deviceAuthGetCurrentGeneralPayload(table->routing_table[index]->auth);
+}
+
+
+
+int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Device is being heartbeat'd
+	// This function doesn't actually handle packets, only the heartbeat status
+	
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return -1;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return hbDecrement(table->routing_table[index]->hb);
+}
+
+int32_t routingTableHeardDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Heard from device
+	// Refresh device health
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return -1;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return hbRefresh(table->routing_table[index]->hb);
 }
 	
+
+
+int32_t routingTableIsDeviceLost(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Check to see if device at ip address has been lost
 	
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return -1;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return hbIsDeviceLost(table->routing_table[index]->hb);
+}
+
+
+
+int32_t routingTableIsDeviceStale(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// Check to see if device at ip address is stale
+	
+	tableAssertValid(table);
+	if (!table->table_alloc)
+		return -1;
+
+	uint32_t index = locationToTablePtr(ip_addr, table->base);
+	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
+		return -1;
+	return hbIsDeviceStale(table->routing_table[index]->hb);
+}
+
+
 
 int32_t routingTableGetDeviceCount(RoutingTable *table) {
 	// Return the number of devices that are authenticated
@@ -489,22 +628,89 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
-int32_t routingTableGetStatus(RoutingTable *table, char *str) {
+int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	// Print table status
 	uint32_t i, j;
 	uint8_t ip_addr[IP_SIZE];
+	char ip_str[50] = "\0";
+	int index = 0;
+	int last_was_zero = 0;
 	str[0] = '\0';
+	uint32_t rdid;
+	char payload_name[50];
+	syslog(LOG_DEBUG, "Getting Routing Table Info for device %i", devnum);
 	syslog(LOG_DEBUG, "table alloc = %i", table->table_alloc);
 	for (i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {
-			syslog(LOG_DEBUG, "found one!");
-			maskip(ip_addr, table->base, i);
-			for (j=0; j<IP_SIZE; j++)
-				sprintf(str, "%s%x:", str, ip_addr[j]);
-			sprintf(str, "%s\n", str);
+			if (index == devnum) {
+				syslog(LOG_DEBUG, "found one!");
+				maskip(ip_addr, table->base, i);
+				rdid = routingTableIPToRDID(table, ip_addr);
+				sprintf(str, "%4i    ", rdid);
+				for (j=0; j<IP_SIZE; j++) {
+					if (ip_addr[j] != 0x0) {
+						sprintf(ip_str, "%s%.2x", ip_str, ip_addr[j]);
+						if (j+1 < IP_SIZE)
+							strcat(ip_str, ":");
+						last_was_zero = 0;
+					} else if (!last_was_zero) {
+						strcat(ip_str, ":");
+						if (j == 0)
+							strcat(ip_str, ":");
+						last_was_zero = 1;
+					}
+				}
+				sprintf(str, "%s%35s", str, ip_str);
+				if (routingTableIsDeviceLost(table, ip_addr)) {
+					// device has been lost
+					strcat(str, "\tlost");
+				} else if (routingTableIsDeviceStale(table, ip_addr)) {
+					// device is stale
+					strcat(str, "\tstale");
+				} else {
+					// device is active
+					strcat(str, "\tactive");
+				}
+				sgPayloadGetPayloadName(
+						routingTableGetCurrentPacket(table, ip_addr),
+						payload_name);
+				sprintf(str, "%s\t%s", str, payload_name);
+
+				sprintf(str, "%s\n", str);
+				break;
+			} else {
+				index++;
+			}
 		}
 	}
 	return 0;
 }
+
+int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	tableAssertValid(table);
+
+	int feach_index = locationToTablePtr(ip_addr, table->base);
+	while (++feach_index < ROUTING_ARRAYSIZE) {
+		if (feach_index < 2)
+			continue;
+		if (table->routing_table[feach_index]) {
+			maskip(ip_addr, table->base, feach_index);
+			table->feach_index = feach_index;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+int routingTableForEachDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
+	// setup a loop through all the devices in the table
+	tableAssertValid(table);
+
+	table->feach_index = 1;
+	maskip(ip_addr, table->base, table->feach_index);
+	return routingTableStepNextDevice(table, ip_addr);
+}
+	
 
 // vim: ft=c ts=4 noet sw=4:

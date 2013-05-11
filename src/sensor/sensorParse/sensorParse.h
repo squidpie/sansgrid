@@ -27,6 +27,16 @@
 #include <sgSerial.h>
 #include <sensorPayloads.h>
 
+// Paloads sent to Router from Sensor
+void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball );
+void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock );
+void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
+void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk );
+void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat);
+void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp );
+void parseSensorA( SansgridSerial *tx , SansgridSensor *sg_sensor );
+void parseSensorB( SansgridSerial *tx , SansgridSensor *sg_sensor );
+
 // Payloads sent to Sensor from Router 
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly );
 void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck );

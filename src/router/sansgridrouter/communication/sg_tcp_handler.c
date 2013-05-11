@@ -203,36 +203,36 @@ static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_ser
 
 	atox(&sg_peacock.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
 
-	atox(&sg_peacock.IO_A_id,		match(dict, size, "id_a"),		1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_class,	match(dict, size, "class_a"),	1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_direc,	match(dict, size, "dir_a"),		1*sizeof(uint8_t));
-	if ((label = match(dict, size, "label_a")) == NULL) {
+	atox(&sg_peacock.IO_A_id,		match(dict, size, "sida"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_class,	match(dict, size, "classa"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_direc,	match(dict, size, "dira"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "labela")) == NULL) {
 		memset(sg_peacock.IO_A_label, 0x0,							30*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_A_label, label, 30);
 	}
-	if ((label = match(dict, size, "units_a")) == NULL) {
+	if ((label = match(dict, size, "unitsa")) == NULL) {
 		memset(sg_peacock.IO_A_units, 0x0,							6*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_A_units, label, 6);
 	}
 	
 
-	atox(&sg_peacock.IO_B_id,		match(dict, size, "id_b"),		1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_class,	match(dict, size, "class_b"),	1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_direc,	match(dict, size, "dir_b"),		1*sizeof(uint8_t));
-	if ((label = match(dict, size, "label_b")) == NULL) {
+	atox(&sg_peacock.IO_B_id,		match(dict, size, "sidb"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_class,	match(dict, size, "classb"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_direc,	match(dict, size, "dirb"),		1*sizeof(uint8_t));
+	if ((label = match(dict, size, "labelb")) == NULL) {
 		memset(sg_peacock.IO_B_label, 0x0,							30*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_B_label, label, 30);
 	}
-	if ((label = match(dict, size, "units_b")) == NULL) {
+	if ((label = match(dict, size, "unitsb")) == NULL) {
 		memset(sg_peacock.IO_B_units, 0x0,							6*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_B_units, label, 6);
 	}
 
-	atox(&sg_peacock.additional_IO_needed, match(dict, size, "more_io"), 1*sizeof(uint8_t));
+	atox(&sg_peacock.additional_IO_needed, match(dict, size, "additional"), 1*sizeof(uint8_t));
 	sg_peacock.padding = 0x0;
 
 	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
@@ -291,11 +291,13 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	int32_t size = 0;
 	int8_t exit_code = 0;
 	uint8_t rdid[4];
+	int rdid_size;
 	uint32_t rdid_32;
 	char *saved 	= NULL,
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	memset(sg_serial->ip_addr, 0x0, sizeof(sg_serial->ip_addr));
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
@@ -314,10 +316,13 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	if (datatype == ~0x0) {
 		return -1;
 	}
-	memcpy(&rdid_32, rdid, 4*sizeof(uint8_t));
+	rdid_size = (strlen(match(dict, size, "rdid"))+1)/2;
+	byteToWord(&rdid_32, rdid, 4*sizeof(uint8_t));
+	rdid_32 = rdid_32 >> ((4-rdid_size)*8);
+	//printf("rdid = %u\n", rdid_32);
 	if (!rdid_32) {
 		// broadcast
-		routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
+		//routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
 	} else {
 		routingTableRDIDToIP(routing_table, rdid_32, sg_serial->ip_addr);
 	}
@@ -357,11 +362,40 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
+	int i;
+	int cap = 0;
+	int field_not_zero = 0;
+	int first_byte = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
+
 	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
-	for (uint32_t i=0; i<size; i++) {
-		sprintf(payload, "%s%.2x", payload, value[i]);
+	if (size == 0) {
+		field_not_zero = 0;
+	} else {
+		for (i=size-1; i>=0; i--) {
+			if (value[i] != 0x0) {
+				field_not_zero = 1;
+				cap = i+1;
+				break;
+			}
+		}
+	}
+	if (field_not_zero) {
+		for (i=0; i<cap; i++) {
+			if (value[i] == 0x0)
+				continue;
+			else {
+				first_byte = i;
+				break;
+			}
+		}
+		sprintf(payload, "%s%x", payload, value[i]);
+		for (i=first_byte+1; i<cap; i++) {
+			sprintf(payload, "%s%.2x", payload, value[i]);
+		}
+	} else {
+		sprintf(payload, "%s%x", payload, 0x0);
 	}
 	return 0;
 }
@@ -395,19 +429,21 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	
 
 	if (!sg_serial || !sg_serial->payload) {
+		syslog(LOG_WARNING, "Router-->Server: container or payload is NULL!");
 		return -1;
 	}
 	payload[0] = '\0';
 	uint8_t payload_type = sg_serial->payload[0];
 	uint8_t datatype = sgPayloadGetType(payload_type);
 
-	memset(rdid, 0x0, 4*sizeof(uint8_t));
+	memset(rdid, 0x0, sizeof(rdid));
 	routingTableGetBroadcast(routing_table, broadcast);
 	if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
 		// broadcast address
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
 		// no match found: this really shouldn't happen
+		syslog(LOG_NOTICE, "No device found: last byte of ip: %x", sg_serial->ip_addr[IP_SIZE-1]);
 		return -1;
 	} else {
 		// match found; continue
@@ -445,19 +481,19 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		case SG_DEVSTATUS_PEACOCKING:
 			memcpy(&sg_peacock, sg_serial->payload, sizeof(SansgridPeacock));
-			addHexField("id_a",		&sg_peacock.IO_A_id,1, payload);
-			addHexField("class_a",	&sg_peacock.IO_A_class,1, payload);
-			addHexField("dir_a",	&sg_peacock.IO_A_direc,1, payload);
-			addCharField("label_a", sg_peacock.IO_A_label, 30, payload);
-			addCharField("units_a", sg_peacock.IO_A_units, 6, payload);
+			addHexField("sida",		&sg_peacock.IO_A_id,1, payload);
+			addHexField("classa",	&sg_peacock.IO_A_class,1, payload);
+			addHexField("dira",	&sg_peacock.IO_A_direc,1, payload);
+			addCharField("labela", sg_peacock.IO_A_label, 30, payload);
+			addCharField("unitsa", sg_peacock.IO_A_units, 6, payload);
 
-			addHexField("id_b",		&sg_peacock.IO_B_id,1, payload);
-			addHexField("class_b",	&sg_peacock.IO_B_class,1, payload);
-			addHexField("dir_b",	&sg_peacock.IO_B_direc,1, payload);
-			addCharField("label_b", sg_peacock.IO_B_label, 30, payload);
-			addCharField("units_b", sg_peacock.IO_B_units, 6, payload);
+			addHexField("sidb",		&sg_peacock.IO_B_id,1, payload);
+			addHexField("classb",	&sg_peacock.IO_B_class,1, payload);
+			addHexField("dirb",	&sg_peacock.IO_B_direc,1, payload);
+			addCharField("labelb", sg_peacock.IO_B_label, 30, payload);
+			addCharField("unitsb", sg_peacock.IO_B_units, 6, payload);
 
-			addHexField("more_io",	&sg_peacock.additional_IO_needed, 1, payload);
+			addHexField("additional",	&sg_peacock.additional_IO_needed, 1, payload);
 			break;
 		case SG_DEVSTATUS_NESTING:
 			memcpy(&sg_nest, sg_serial->payload, sizeof(SansgridNest));
@@ -476,6 +512,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		default:
 			// error
+			syslog(LOG_WARNING, "Router-->Server: Unknown datatype: %u", datatype);
 			return -1;
 	}
 	strcat(payload, DELIM_KEY);

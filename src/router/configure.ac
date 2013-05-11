@@ -37,9 +37,8 @@ AC_CONFIG_FILES([Makefile \
                  #test/Makefile
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
-echo $host
-case $host in
-	raspberrypi)		SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
+case $(uname -m) in
+	*arm*)		SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
 	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)' ;;
 esac
 AC_SUBST([SANSGRIDROUTER_SYSTEM])

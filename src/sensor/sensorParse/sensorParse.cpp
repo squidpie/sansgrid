@@ -23,6 +23,72 @@
 #include <Arduino.h>
 #include "sensorParse.h"
 
+// Payloads transmitted to Router from Sensor
+void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
+	memcpy( tx->payload , sg_eyeball->dt , DT );
+	memcpy( tx->payload + DT , sg_eyeball->manid , MANID );
+	memcpy( tx->payload + DT + MANID , sg_eyeball->modnum , MODNUM );
+	memcpy( tx->payload + DT + MANID + MODNUM , sg_eyeball->sn , SN );
+	memcpy( tx->payload + DT + MANID + MODNUM + SN , sg_eyeball->profile , PROFILE ); 
+	memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE , sg_eyeball->mode , MODE);
+	for( int i = DT + MANID + MODNUM + SN + PROFILE + MODE ; i < PAYLOAD ; i++ )
+		tx->payload[i] = 0x00;
+	sgSerialSend( tx , 1 );
+}
+
+void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
+	memcpy( tx->payload , sg_mock->dt , DT );
+	memcpy( tx->payload + DT , sg_mock->sensor_public_key , MANID );
+	for( int i = DT + SENSOR_KEY ; i < PAYLOAD ; i++)
+		tx->payload[i] = 0x00;
+	sgSerialSend( tx , 1 );
+}
+
+void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
+	memcpy( tx->payload , sg_peacock->dt , DT );
+	parseSensorA( tx , &sg_peacock->a );
+	parseSensorB( tx , &sg_peacock->b );
+	memcpy( tx->payload + DATA , sg_peacock->additional , ADDITIONAL );
+	for( int i = DT + SENSOR_A + SENSOR_A ; i < PAYLOAD ; i++)
+		tx->payload[i] = 0x00;
+	sgSerialSend( tx , 1 );
+}
+
+void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
+	memcpy( tx->payload , sg_squawk->dt , DT );
+	memcpy( tx->payload + DT , sg_squawk->data , DATA );
+	sgSerialSend( tx , 1 );
+}
+
+void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
+	memcpy( tx->payload , sg_chirp->dt , DT );
+	memcpy( tx->payload + DT , sg_chirp->data , DATA );
+	sgSerialSend( tx , 1 );
+}
+
+void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
+	memcpy( tx->payload , sg_heartbeat->dt , DT );
+	for( int i = DT ; i < PAYLOAD ; i++)
+		tx->payload[i] = 0x00;
+	sgSerialSend( tx , 1 );
+}
+
+void parseSensorA( SansgridSerial *tx , SansgridSensor *sg_sensor){
+	memcpy( tx->payload + DT , sg_sensor->id , SENSOR_ID );
+	memcpy( tx->payload + DT + SENSOR_ID , sg_sensor->classification , CLASSIFICATION );
+	memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION , sg_sensor->direction , DIRECTION );
+	memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_sensor->label , LABEL );
+	memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_sensor->units , UNITS );
+}
+
+void parseSensorB( SansgridSerial *tx , SansgridSensor *sg_sensor){
+	memcpy( tx->payload + DT + SENSOR_A , sg_sensor->id , SENSOR_ID );
+	memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID , sg_sensor->classification , CLASSIFICATION );
+	memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION , sg_sensor->direction , DIRECTION );
+	memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_sensor->label , LABEL );
+	memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_sensor->units , UNITS );
+}
+
 // Payloads recieved at Sensor from Router
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
 	memcpy( sg_fly->dt , rx->payload , DT );

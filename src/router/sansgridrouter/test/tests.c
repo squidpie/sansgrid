@@ -21,10 +21,14 @@
 #include <check.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <syslog.h>
+#include <getopt.h>
 
 #include "tests.h"
 #include "../routing_table/routing_table.h"
 #include "communication/sg_communication_stubs.h"
+
+int usage(int exit_code);
 
 
 void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
@@ -50,9 +54,10 @@ Suite *makeMasterSuite (void) {
 
 
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	int number_failed;
-
+	int c;
+	int verbosity = LOG_ERR;
 
 	SRunner *sr;
    	sr = srunner_create(makeMasterSuite());
@@ -77,8 +82,51 @@ int main(void) {
 
 	num_devices = 0;
 
+	while (1) {
+		const struct option long_options[] = {
+			{"nofork",    no_argument,     0,        'n'},
+			{"verbose",   no_argument,     0,        'v'},
+			{"help",      no_argument,     0,        'h'},
+			{0, 0, 0, 0}
+		};
+		int option_index = 0;
+
+		c = getopt_long(argc, argv, "nvh", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+			case '0':
+				if (long_options[option_index].flag != 0)
+					break;
+				printf("option %s ", long_options[option_index].name);
+				if (optarg)
+					printf("With arg %s", optarg);
+				printf("\n");
+				break;
+			case 'n':
+				// Don't fork off
+				srunner_set_fork_status(sr, CK_NOFORK);
+				break;
+			case 'v':
+				verbosity++;
+				break;
+			case 'h':
+				usage(EXIT_SUCCESS);
+				break;
+			case '?':
+				// getopt_long already printed an error message
+				exit(EXIT_FAILURE);
+				break;
+			default: 
+				abort();
+		}
+	}
+
+
+
+	setlogmask(LOG_UPTO(verbosity));
+
 	// Uncomment to better debug segfaults
-	//srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);
@@ -86,6 +134,21 @@ int main(void) {
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+int usage(int status) {
+	if (status != EXIT_SUCCESS)
+		printf("Try sgtest -h\n");
+	else {
+		printf("Usage: sgtest [OPTION]\n");
+		printf("\
+  -n  --nofork               don't fork off (good for debugging segfaults\n\
+  -v  --verbose              Be verbose (warnings)\n\
+  -vv                        Be more verbose (notices)\n\
+  -vvv                       Be even more verbose (info)\n\
+  -vvvv                      Be very very verbose (debug)\n\
+  -h, --help                 display this help and exit\n");
+	}
+	exit(status);
+}
 
 
 // vim: ft=c ts=4 noet sw=4:

@@ -97,6 +97,8 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	int fd;
 	char buffer[size+1];
 
+	syslog(LOG_INFO, "Sending data over Serial");
+
 	if ((fd = spiSetup()) == -1) {
 		return -1;
 	}
@@ -119,7 +121,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
 	int fd;
 	char buffer[sizeof(SansgridSerial)+1];
-	/*
+	syslog(LOG_INFO, "Waiting for data over serial");
 	if (wiringPiSetupSys() == -1) {
 		syslog(LOG_ERR, "Couldn't setup wiringPi system!");
 		exit(EXIT_FAILURE);
@@ -129,7 +131,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
 		exit(EXIT_FAILURE);
 	}
-	*/
 	if (!sem_initd) {
 		sem_init(&wait_on_slave, 0, 0);
 		sem_initd = 1;
@@ -141,7 +142,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	sem_wait(&wait_on_slave);
 
 	// Slave wants to send data
-	/*
 	if ((fd = spiSetup()) == -1) {
 		syslog(LOG_ERR, "setting up SPI failed");
 		exit(EXIT_FAILURE);
@@ -152,7 +152,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
-	*/
 
 	return 0;
 }

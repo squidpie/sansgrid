@@ -34,7 +34,7 @@ if ($db->connect_errno) {
 }
 
 // Table: server
-$query = "CREATE TABLE server (id_server int NOT NULL UNIQUE AUTO_INCREMENT, server_key VARCHAR(250), verify_mating int(1) )";
+$query = "CREATE TABLE server (id_server int NOT NULL UNIQUE AUTO_INCREMENT, server_key VARCHAR(250), verify_mating INT(1), refresh_rate INT )";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'server', quitting.<br>$query");
 
 // Table: router
@@ -69,7 +69,7 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'cos', quitti
 // Generate and save server_id and set other system defaults
 $server_key = generateRandomHash(128);	// 128 characters = 64 bytes
 $server_id  = generateRandomHash(32);	// 32 characters = 16 bytes
-$query = "INSERT INTO server (server_id, server_key, verify_mating) VALUES ('$server_id', '$server_key', 0)";
+$query = "INSERT INTO server (server_id, server_key, verify_mating, auto_refresh) VALUES ('$server_id', '$server_key', 0, 0)";
 $result = mysqli_query($db, $query) or die ("Couldn't initialize new server.");
 
 

@@ -6,7 +6,8 @@ SANSGRID_BASE = dispatch/dispatch.c \
 		payload_handlers/payload_handlers.c \
 		communication/sg_tcp_handler.c \
 		routing_table/routing_table.c \
-		routing_table/heartbeat.c
+		routing_table/heartbeat.c \
+		routing_table/auth_status.c
 SANSGRID_TEST = \
 		test/communication/sg_communication_stubs.c \
 		test/communication/sg_communication_stubs_eeprom.c \
@@ -29,27 +30,21 @@ SANSGRID_TEST = \
 		test/communication/sg_intrarouter_test_atox.c \
 		test/communication/sg_intrarouter_test_conversion.c
 
-#noinst_LIBRARIES = libSgPayloads.a libSgSerial.a
-
-#libSgSerial_a_SOURCES = ../../sg_serial.h
-#libSgPayloads_a_SOURCES = ../../lib/payloads.h
 
 #SANSGRID_COMM = communication/sg_serial_rpi.c
+SANSGRID_COMM = communication/sg_serial_generic.c
 
 sansgridrouter_SOURCES = $(SANSGRID_BASE) \
-			  $(SANSGRID_COMM) \
 			  daemon/sansgrid_daemon.c \
 			  communication/sg_tcp.c \
 			  main.c
 EXTRA_sansgridrouter_SOURCES = 	communication/sg_serial_rpi.c \
-				communication/sg_serial_generic.c
-#sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM) libSgPayloads.a libSgSerial.a
-#sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM) libSgPayloads.a libSgSerial.a
-#sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM) 
-#sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM) 
-#sgtest_LDADD = libSgPayloads.a libSgSerial.a
+								communication/sg_serial_generic.c
+sansgridrouter_LDADD = $(SANSGRIDROUTER_SYSTEM) 
+sansgridrouter_DEPENDENCIES = $(SANSGRIDROUTER_SYSTEM) 
+
 sgtest_SOURCES = $(SANSGRID_BASE) \
-		 $(SANSGRID_TEST) \
-		 test/tests.c
+		 		$(SANSGRID_TEST) \
+				 test/tests.c
 
 AM_CFLAGS += -DDATADIR=\"$(pkgdatadir)\" 
