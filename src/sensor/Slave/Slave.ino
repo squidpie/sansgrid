@@ -6,10 +6,10 @@
 
 #define SLAVE_READY 7
 #define NUM_BYTES 98
-byte command = 0x00;
+byte command;
 byte rx [ NUM_BYTES ];
 // Fly
-byte tx [ NUM_BYTES ] = { 0xF0,// Control Byte 1 BYTE
+/*byte tx [ NUM_BYTES ] = { 0xF0,// Control Byte 1 BYTE
         0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xA8,
         0x00,0x01, // IP Address 16 BYTES
         0x10, // Payload (Data Type) 1 BYTE
@@ -68,7 +68,7 @@ byte tx [ NUM_BYTES ] = { 0xAD,// Control Byte 1 BYTE
         // Payload 81 BYTES
 */
 volatile byte pos;
-volatile byte pos2;
+//volatile byte pos2;
 boolean process_it;
 
 void setup (void){
@@ -87,7 +87,8 @@ void setup (void){
   
     // Set buffer Counters to Zero 
     pos = 0;   // rxfer empty
-    pos2 = 0;  // txfer empty
+    //pos2 = 0;  // txfer empty
+    command = (uint8_t) 0x00;
     
     // Set Process flag to default
     process_it = false;
@@ -99,8 +100,8 @@ void setup (void){
 void loop (void){
     //delay(5000);
     // Assert Slave Ready Low, transfer buffer ready to send
-    if ( command == 0x00 )
-        digitalWrite(SLAVE_READY , LOW );
+    //if ( command == 0x00 )
+    //digitalWrite(SLAVE_READY , LOW );
     // Delay to allow Master to process interrupt
     //delayMicroseconds(60);
     // Assert Slave Ready back to High
@@ -113,9 +114,8 @@ void loop (void){
         for( int i = 0 ; i < NUM_BYTES ; i++ )
             Serial.println( rx[i] );
         Serial.println( "Packet End");
-        Serial.println( pos );
         // Reset Command from Control Byte
-        command = 0x00;
+        command = (uint8_t) 0x00;
         // Reset Buffer Position to Zero
         pos = 0;
         //pos2 = 0;
@@ -129,18 +129,19 @@ void loop (void){
 ISR (SPI_STC_vect){
     // Read byte sent from Master SPI  
     byte c = SPDR; 
+    
     // Command to store SPI data either in
     // Transfer or Receive Buffer
     switch (command){
     case 0x00:
         digitalWrite(SLAVE_READY , HIGH );
         // Store initial Command
-        command = c; 
+        command = (uint8_t) c; 
         SPDR = 0;
         break;
     case 0xAD:
         // Store byte read from Master in receive buffer
-        if (pos < sizeof rx ){
+        if ( pos < sizeof rx ){
             rx[ pos++ ] = c;
             // If buffer is full process it
             if ( pos == NUM_BYTES - 1 )
@@ -149,10 +150,10 @@ ISR (SPI_STC_vect){
         break;
     case 0xFD:
         // Send Slave Data in transfer buffer to Master 
-        SPDR=tx[ pos2++ ];
+        //SPDR=tx[ pos2++ ];
         // If buffer is full process it
-        if ( pos2 == NUM_BYTES - 1  )               
-            process_it = true; 
+        //if ( pos2 == NUM_BYTES - 1  )               
+            //process_it = true; 
         break;
     default:
         break;
