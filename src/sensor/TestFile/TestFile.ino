@@ -28,47 +28,40 @@
 #include <sensorParse.h>
 #include <SPI.h>
 
-#define LED 13
-#define NUM_BYTES 98
-#define SLAVE_READY 8
+//#define PUSH_BUTTON 1
+#define DUE 1
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
 
-byte data_in[NUM_BYTES];
-byte rec = 0xFD;
-
 void setup(){
     Serial.begin(9600);
-    // Initialize Sensor SPI communication
-    SPI.begin();
-    // Set order bits are shifted onto the SPI bus
-    SPI.setBitOrder( MSBFIRST ); 
-    // Set SPI Baud Rate to 500 KHz
-    // 84 MHz / 252 = 500 KHz
-    SPI.setClockDivider( 168 );
-    // Set SPI Mode 0-3
-    SPI.setDataMode( SPI_MODE0 );
     // Initialize Slave ready pin as input
     pinMode( SLAVE_READY, INPUT );
     // Initialize interrupt for Slave Ready pin
     attachInterrupt( SLAVE_READY , receive , LOW );
+    // Set Mate, true is automatic, false is push button based
+    sg_config.mate = true; 
 }
 
-void loop(){    
+void loop(){
+    while( !sg_config.nest ){
+        // Received a Squawk packet, now send a Squawk back
+        sensorConnect( &sg_config , &sg_serial );
+    }
+    // Sensor Module Code goes here
+    
+    if( sg_config.nest ){
+        // Send Chirp with data to sensor
+        SansgridChirp sg_chirp;
+        transmitChirp( &sg_serial , &sg_chirp );
+    } 
 }
 
 void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, call Payload Handler to receive
     // SPI packet from radio MCU, and process packet
-    /*SPI.transfer( rec );
-    delayMicroseconds(60);
-    for( int i = 0 ; i < NUM_BYTES ; i++){
-        data_in[i] = SPI.transfer( rec );
-        delayMicroseconds(60);
-    }
-    for( int i = 0 ; i < NUM_BYTES ; i++)
-        Serial.println( data_in[i] );*/
-    payloadHandler( &sg_config );
+    sgSerialReceive( &sg_serial, 1 );
+    payloadHandler( &sg_config , &sg_serial );
 }

@@ -31,11 +31,11 @@
 #define MODNUM 4
 #define SN 8
 #define PROFILE 1
-#define MODE 4
+#define MODE 1
 #define SERVER_ID 16
 #define RECOGNITION 1
-#define SERVER_KEY 64
-#define SENSOR_KEY 64
+#define SERVER_KEY 80
+#define SENSOR_KEY 80
 #define SENSOR_ID 1
 #define CLASSIFICATION 1
 #define DIRECTION 1
@@ -47,90 +47,104 @@
 #define IP_ADDRESS 16
 #define CONTROL 1
 #define SENSOR_A 39
-#define DELAY 60
+#define DELAY 6
+#define EYEBALL_PADDING 62
+#define PECK_PADDING 15
+#define PEACOCK_PADDING 1
+#define NEST_PADDING 80
+#define HEARTBEAT_PADDING 80
+
 
 typedef struct SansgridSensor{
-	uint8_t id[ SENSOR_ID ];
-	uint8_t classification[ CLASSIFICATION ];
-	uint8_t direction[ DIRECTION ];
-	char label[ LABEL + 1 ];
-	char units[ UNITS + 1 ];
+    uint8_t id[ SENSOR_ID ];
+    uint8_t classification[ CLASSIFICATION ];
+    uint8_t direction[ DIRECTION ];
+    int8_t label[ LABEL ];
+    int8_t units[ UNITS ];
 } SansgridSensor;
 
 typedef struct SensorConfig{
-	static bool connected;
-	static uint8_t manid[ MANID ];
-	static uint8_t modnum[ MODNUM ];
-	static char sn[ SN + 1 ];
-	static char network_name[ DATA + 1 ];
-	static uint8_t ip_address[ IP_ADDRESS ];
-	static uint8_t router_ip[ IP_ADDRESS ];
-	static uint8_t server_public_key[ SERVER_KEY ];
-	static uint8_t sensor_public_key[ SENSOR_KEY ]; 
-	static uint8_t control[ CONTROL ];
-	static uint8_t padding[ CONTROL ];
-	SansgridSensor a;
-	SansgridSensor b;
+    static bool mate;
+    static bool fly;
+    static bool sing;
+    static bool mock;
+	static bool squawk;
+    static bool nest;
+    static uint8_t manid[ MANID ];
+    static uint8_t modnum[ MODNUM ];
+    static int8_t sn[ SN ];
+    static int8_t network_name[ DATA ];
+    static uint8_t ip_address[ IP_ADDRESS ];
+    static uint8_t router_ip[ IP_ADDRESS ];
+    static uint8_t server_public_key[ SERVER_KEY ];
+    static uint8_t sensor_public_key[ SENSOR_KEY ]; 
+    SansgridSensor a;
+    SansgridSensor b;
 } SensorConfig;
 
 typedef struct SansgridFly{
-	uint8_t dt[ DT ];
-	char network_name[ DATA + 1 ];
+    uint8_t dt[ DT ];
+    int8_t network_name[ DATA ];
 } SansgridFly;
 	
 typedef struct SansgridEyeball{
     static uint8_t dt[ DT ];
-	static uint8_t manid[ MANID ];
-	static uint8_t modnum[ MODNUM ];
-	static char sn[ SN + 1 ];
-	static uint8_t profile[ PROFILE ];
-	static uint8_t mode[ MODE ];
+    static uint8_t manid[ MANID ];
+    static uint8_t modnum[ MODNUM ];
+    static int8_t sn[ SN ];
+    static uint8_t profile[ PROFILE ];
+    static uint8_t mode[ MODE ];
+    static uint8_t padding[ EYEBALL_PADDING ];
 } SansgridEyeball;
 
 typedef struct SansgridPeck{
     uint8_t dt[ DT ];
-	uint8_t router_ip[ IP_ADDRESS ];
-	uint8_t ip_address[ IP_ADDRESS ];
-	uint8_t server_id[ SERVER_ID ];
-	uint8_t recognition[ RECOGNITION ];
-	uint8_t manid[ MANID ];
-	uint8_t modnum[ MODNUM ];
-	char sn[ SN + 1 ];
+    uint8_t router_ip[ IP_ADDRESS ];
+    uint8_t ip_address[ IP_ADDRESS ];
+    uint8_t server_id[ SERVER_ID ];
+    uint8_t recognition[ RECOGNITION ];
+    uint8_t manid[ MANID ];
+    uint8_t modnum[ MODNUM ];
+    int8_t sn[ SN ];
+    uint8_t padding[ PECK_PADDING ];
 } SansgridPeck;
 
 typedef struct SansgridSing{
-	uint8_t dt[ DT ];
-	uint8_t server_public_key[ SERVER_KEY ];
+    uint8_t dt[ DT ];
+    uint8_t server_public_key[ SERVER_KEY ];
 } SansgridSing;
 
 typedef struct SansgridMock{
-	static uint8_t dt[ DT ];
-	static uint8_t sensor_public_key[ SENSOR_KEY ];
+    static uint8_t dt[ DT ];
+    static uint8_t sensor_public_key[ SENSOR_KEY ];
 } SansgridMock;
 
 typedef struct SansgridPeacock{
-	static uint8_t dt[ DT ];
-	SansgridSensor a;
-	SansgridSensor b;
-	static uint8_t additional[ ADDITIONAL ];
+    static uint8_t dt[ DT ];
+    SansgridSensor a;
+    SansgridSensor b;
+    static uint8_t additional[ ADDITIONAL ];
+    static uint8_t padding[ PEACOCK_PADDING ];
 } SansgridPeacock;
 
 typedef struct SansgridNest{
-	uint8_t dt[ DT ];
+    uint8_t dt[ DT ];
+    uint8_t padding[ NEST_PADDING ];
 } SansgridNest;
 
 typedef struct SansgridSquawk{
-	uint8_t dt[ DT ];
-	uint8_t data[ DATA ];
+    uint8_t dt[ DT ];
+    uint8_t data[ DATA ];
 } SansgridSquawk;
 
 typedef struct SansgridHeartbeat{
-	static uint8_t dt[ DT ];
+    uint8_t dt[ DT ];
+    uint8_t padding[ HEARTBEAT_PADDING ];
 } SansgridHeartbeat;
 
 typedef struct SansgridChirp{
-	uint8_t dt[ DT ];
-	uint8_t data[ DATA];
+    uint8_t dt[ DT ];
+    uint8_t data[ DATA];
 } SansgridChirp;
 
 #endif // __SENSOR_PAYLOADS_H__
