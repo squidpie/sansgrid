@@ -28,47 +28,84 @@
 #include <sensorParse.h>
 #include <SPI.h>
 
-#define LED 13
-#define NUM_BYTES 98
-#define SLAVE_READY 8
+//#define PUSH_BUTTON 1
+#define DUE 1
 
 SensorConfig sg_config;
-SansgridSerial sg_serial;
-
-byte data_in[NUM_BYTES];
-byte rec = 0xFD;
+SansgridSerial sg_data_in;
+SansgridSerial sg_data_out;
 
 void setup(){
     Serial.begin(9600);
-    // Initialize Sensor SPI communication
-    SPI.begin();
-    // Set order bits are shifted onto the SPI bus
-    SPI.setBitOrder( MSBFIRST ); 
-    // Set SPI Baud Rate to 500 KHz
-    // 84 MHz / 252 = 500 KHz
-    SPI.setClockDivider( 168 );
-    // Set SPI Mode 0-3
-    SPI.setDataMode( SPI_MODE0 );
     // Initialize Slave ready pin as input
-    pinMode( SLAVE_READY, INPUT );
+    //pinMode( SLAVE_READY, INPUT );
     // Initialize interrupt for Slave Ready pin
-    attachInterrupt( SLAVE_READY , receive , LOW );
+    //attachInterrupt( SLAVE_READY , receive , LOW );
+    // Set Mate, true is automatic, false is push button based
+    sg_config.mate = true; 
+    // Set SansgridSerial data_out and data_in control byte
+    sg_data_in.control[0] = 0xFD;
+    sg_data_out.control[0] = 0xAD;
+    // Setup Sensor Module Configurations
+    // Sensor A
+    sg_config.a.id = { 0x01 };
+    // Classification : 0x00 = digital, 0x01 = analog
+    sg_config.a.classification = { 0x01 };
+    // Direction: 0x00 from Sensor to Server (example: Temperature reading)
+    // 0x01 from Server to Sensor (example: Turn light on and off)
+    sg_config.a.direction = { 0x00 };
+    // Sensor label 30 characters or less
+    // Change only value in the array char label[] = "<value>"
+    char label[] = "Temperature";
+    for( int i = 0 ; i < LABEL - sizeof(label) + 1 ; i++ )
+        sg_config.a.label[i] = (int8_t) 0x00;
+    memcpy( sg_config.a.label + sizeof(label) - 1 , label , sizeof(label));
+    // Sensor units 6 characters or less
+    // Change only value in the array char units[] = "<value>"
+    char units[] = "deg F";
+    for( int i = 0 ; i < LABEL - sizeof(units) + 1 ; i++ )
+        sg_config.a.units[i] = (uint8_t) 0x00;
+    memcpy( sg_config.a.units + sizeof(units) - 1 , units , sizeof(units));
+    // Sensor B
+    sg_config.b.id = { 0x00 };
+    sg_config.b.classification = { 0x00 };
+    sg_config.b.direction = { 0x00 };
+    sg_config.b.label = { 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    sg_config.b.units = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    
+    // Test Packets
+    sg_config.nest = false;
+    //sg_config.fly = true;
+    //sg_config.sing = true;
+    sg_config.mock = true;
+    //sg_config.squawk = true;
+    //sg_config.chirp = true;
+    //sg_config.challenge = true;
+    
 }
 
-void loop(){    
+void loop(){
+    while( sg_config.nest == false ){
+        // Received a Squawk packet, now send a Squawk back
+        Serial.println( "connect");
+        sensorConnect( &sg_config , &sg_data_out );
+    }
+    // Sensor Module Code goes here
+    
+    if( sg_config.nest ){
+        // Send Chirp with data to sensor
+        SansgridChirp sg_chirp;
+        transmitChirp( &sg_data_out , &sg_chirp );
+    } 
 }
 
 void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, call Payload Handler to receive
     // SPI packet from radio MCU, and process packet
-    /*SPI.transfer( rec );
-    delayMicroseconds(60);
-    for( int i = 0 ; i < NUM_BYTES ; i++){
-        data_in[i] = SPI.transfer( rec );
-        delayMicroseconds(60);
-    }
-    for( int i = 0 ; i < NUM_BYTES ; i++)
-        Serial.println( data_in[i] );*/
-    payloadHandler( &sg_config );
+    //sgSerialReceive( &sg_data_in, 1 );
+    //payloadHandler( &sg_config , &sg_data_in );
 }
