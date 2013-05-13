@@ -70,6 +70,8 @@ typedef struct SensorConfig{
     static bool mock;
 	static bool squawk;
     static bool nest;
+	static bool chirp;
+	static bool challenge;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];
@@ -133,8 +135,8 @@ typedef struct SansgridNest{
 } SansgridNest;
 
 typedef struct SansgridSquawk{
-    uint8_t dt[ DT ];
-    uint8_t data[ DATA ];
+    static uint8_t dt[ DT ];
+    static uint8_t data[ DATA ];
 } SansgridSquawk;
 
 typedef struct SansgridHeartbeat{

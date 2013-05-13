@@ -48,7 +48,7 @@ void setup(){
     sg_data_out.control[0] = 0xAD;
     // Setup Sensor Module Configurations
     // Sensor A
-    sg_config.a.id = { 0x01 };
+    /*sg_config.a.id = { 0x01 };
     // Classification : 0x00 = digital, 0x01 = analog
     sg_config.a.classification = { 0x01 };
     // Direction: 0x00 from Sensor to Server (example: Temperature reading)
@@ -75,12 +75,12 @@ void setup(){
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     sg_config.b.units = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    
+    */
     // Test Packets
     sg_config.nest = false;
-    //sg_config.fly = true;
+    sg_config.fly = true;
     //sg_config.sing = true;
-    sg_config.mock = true;
+    //sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.challenge = true;

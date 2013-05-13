@@ -34,8 +34,6 @@ void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk );
 void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat);
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp );
-void parseSensorA( SansgridSerial *tx , SansgridSensor *sg_sensor );
-void parseSensorB( SansgridSerial *tx , SansgridSensor *sg_sensor );
 
 // Payloads sent to Sensor from Router
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly );
@@ -44,6 +42,6 @@ void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk );
 void parseSing( SansgridSerial *rx , SansgridSing *sg_sing );
 void parseNest( SansgridSerial *rx , SansgridNest *sg_nest );
 void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat );
-void parseChirp( SansgridSerial *rx , SansgridHeartbeat *sg_chirp );
+void parseChirp( SansgridSerial *rx , SansgridChirp *sg_chirp );
 
 #endif // __SENSOR_PARSE_H__

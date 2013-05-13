@@ -34,10 +34,12 @@ void peck( SensorConfig *sg_config , SansgridPeck *sg_peck );
 void sing( SensorConfig *sg_config , SansgridSing *sg_sing );
 void peacock( SensorConfig *sg_config , SansgridPeacock *sg_sing);
 void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
+bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial );
 
 // Payload Handler
 void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
+    Serial.println( "payloadHandler");
     uint8_t command = sg_serial->payload[0];
     switch ( command ){ 
         case 0x00 :	// Eyeball - Sensor entering network.
@@ -46,6 +48,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
                 sg_eyeball.mode[0] = (uint8_t) 0x00;
 			else
 			    sg_eyeball.mode[0] = (uint8_t) 0x01;
+			Serial.println( "Sending Eyeball");
             transmitEyeball( sg_serial , &sg_eyeball );
 			sg_config->fly = false;
 			break;
@@ -54,32 +57,40 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             parsePeck( sg_serial , &sg_peck );
             peck( sg_config , &sg_peck );
             break;		
-        case 0x02 :	// Sing - The server has a public key to share with the sensor for future authentication challenges.		
-        case 0x03 :	// Sing - Server does not require authentication, ready to accept sensor key if needed.
+        case 0x02 :	// Sing - The server has a public key to share with 
+		    // the sensor for future authentication challenges.		
+        case 0x03 :	// Sing - Server does not require authentication, 
+		    // ready to accept sensor key if needed.
             SansgridSing sg_sing;
             parseSing( sg_serial , &sg_sing );
             sing( sg_config , &sg_sing );
 			sg_config->sing = true;
             break;
-        case 0x07 :	// Mock - The sensor has a public key to share with the sensor for future authentication challenges.
+        case 0x07 :	// Mock - The sensor has a public key to share with 
+		    // the sensor for future authentication challenges.
             SansgridMock sg_mock_key;
 			sg_mock_key.dt[0] = (uint8_t) 0x07;
-            delay(1000);
+			Serial.println( "Sending Mock 07" );
             transmitMock( sg_serial , &sg_mock_key );
             sg_config->mock = true;
 			sg_config->sing = false;
 			break;
-        case 0x08 :	// Mock - Sensor does not require authentication, ready to accept sensor key if needed.
-            SansgridMock sg_mock_nokey;
+        case 0x08 :	// Mock - Sensor does not require authentication, 
+		    // ready to accept sensor key if needed.
+			SansgridMock sg_mock_nokey;
 			sg_mock_key.dt[0] = (uint8_t) 0x08;
-            delay(1000);
+			Serial.println( "Sending Mock 08" );
             transmitMock( sg_serial , &sg_mock_nokey );
 			sg_config->mock = true;
 			sg_config->sing = false;
 			break;
         case 0x0C :	// Peacock - Sensor share's capabilities with server.
             SansgridPeacock sg_peacock;
-            transmitPeacock( sg_serial , &sg_peacock );
+			Serial.println( "Sending Peacock" );
+			memcpy( &sg_peacock.a , &sg_config->a , sizeof(SansgridSensor));
+			memcpy( &sg_peacock.a , &sg_config->b , sizeof(SansgridSensor));
+			sg_peacock.additional[0] = (uint8_t) 0x00;
+			transmitPeacock( sg_serial , &sg_peacock );
 			if( sg_peacock.additional[0] == 0x01 ){
 			    SansgridPeacock sg_peacock_add;
                 peacock( sg_config , &sg_peacock_add );
@@ -94,39 +105,85 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             #endif // PUSH_BUTTON
             break;
         case 0x11 :	// Squawk - Server challenge
+			SansgridSquawk sg_squawk_noauth;
+            parseSquawk( sg_serial , &sg_squawk_noauth );
+			if( sg_config->challenge )
+			    sg_serial->payload[0] = (uint8_t) 0x16;
+			else
+			    sg_serial->payload[0] = (uint8_t) 0x15;
+			sg_config->squawk = true;
+			break;
         case 0x12 :	// Squawk - Server doesn't need challenge
-        case 0x15 :	// Squawk - Sensor response to server challenge, sensor challenge coming.
-            SansgridSquawk sg_squawk;
-            parseSquawk( sg_serial , &sg_squawk );
-            authenticateKey( sg_config , &sg_squawk);
-            transmitSquawk ( sg_serial , &sg_squawk );
+			SansgridSquawk sg_squawk_auth;
+            parseSquawk( sg_serial , &sg_squawk_auth);
+            authenticateKey( sg_config , &sg_squawk_auth );
+			if( sg_config->challenge )
+			    sg_serial->payload[0] = (uint8_t) 0x16;
+			else
+			    sg_serial->payload[0] = (uint8_t) 0x15;
+			sg_config->squawk = true;
+			break;
+        case 0x15 :	// Squawk - Sensor response to server squawk no 
+		    // challenge needed.
+            SansgridSquawk sg_squawk_sensor_noauth;
+            parseSquawk( sg_serial , &sg_squawk_sensor_noauth );
+            transmitSquawk ( sg_serial , &sg_squawk_sensor_noauth );
+			sg_config->squawk = false;
             break;
-        case 0x17 :	// Squawk - Sensor challenge.
+        case 0x16 :	// Squawk - Sensor acknowledge.
+			SansgridSquawk sg_squawk_acknowledge;
+            parseSquawk( sg_serial , &sg_squawk_acknowledge );
+            transmitSquawk( sg_serial , &sg_squawk_acknowledge );
+			sg_serial->payload[0] = (uint8_t) 0x17;
+			break;
+		case 0x17 :	// Squawk - Sensor response to challenge.
+			SansgridSquawk sg_squawk_sensor_response;
+            parseSquawk( sg_serial , &sg_squawk_sensor_response );
+            transmitSquawk( sg_serial , &sg_squawk_sensor_response );
+			sg_config->squawk = false;
 			break;
 		case 0x1b :	// Squawk - Server denies sensor's challenge response.
-			sg_config->nest = false;
 			break;
 		case 0x1c :	// Squawk - Server response to challenge.
+			SansgridSquawk sg_squawk_response;
+            parseSquawk( sg_serial , &sg_squawk_response );
+            if( compareResponse( sg_config , &sg_squawk_response ) )
+			    sg_serial->payload[0] = (uint8_t) 0x1d;
+			break;
 		case 0x1d :	// Squawk - Sensor accepts server's response
+		    SansgridSquawk sg_squawk_accept;
+            parseSquawk( sg_serial , &sg_squawk_accept );
 			break;
 		case 0x1e :	// Heartbeat - Router pulse to sensor
 			break;
 		case 0x1f :	// Heartbeat - Sensor's response to router's pulse
 			break;
 		case 0x20 :	// Chirp - Command sent from server to sensor.
+		    SansgridChirp sg_chirp_in;
+			parseChirp( sg_serial , &sg_chirp_in );
+			sg_config->chirp = true;
+			break;
 		case 0x21 :	// Chirp - Chirp sent from sensor to server.
+		    SansgridChirp sg_chirp_out;
+			transmitChirp( sg_serial , &sg_chirp_out );
 			break;
 		case 0x22 :	// Chirp - Start of data stream.
-			break;
 		case 0x23 :	// Chirp - Continued stream of data.
-			break;
 		case 0x24 :	// Chirp - End of data stream.
 			break;
 		case 0x25 :	// Chirp - Network is disconnecting sensor.
 		case 0x26 :	// Chirp - Sensor is disconnecting from the network.
+			SansgridChirp sg_chirp_disconnect;
+			parseChirp( sg_serial , &sg_chirp_disconnect );
+			transmitChirp( sg_serial , &sg_chirp_disconnect );
 			sg_config->nest = false;
 			break;
-		case 0x27 :	// Squawk - Sensor has forgotten Server, Server please forget Sensor.
+		case 0x27 :	// Squawk - Sensor has forgotten Server, 
+		    // Server forget Sensor.
+			SansgridSquawk sg_squawk_forget;
+			sg_squawk_forget.dt[0] = (uint8_t) 0x27;
+			transmitSquawk( sg_serial , &sg_squawk_forget );
+			sg_config->fly = true;
 			break;
 		case 0xF0 :	// Flying - Broadcast from router identifying the network
             SansgridFly sg_fly;
@@ -170,38 +227,70 @@ void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
     }
     uint8_t hi_lo[2] = { (uint8_t)( count >> 8 ), (uint8_t)count };
 	for( int i = 0 ; i < DATA - 2 ; i++ )
-	    sg_squawk->data[i] = 0x00;
+	    sg_squawk->data[i] = (uint8_t) 0x00;
     sg_squawk->data[78] = hi_lo[1];
     sg_squawk->data[79] = hi_lo[2];
 }
 
+bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
+    bool correct = false;
+	uint16_t count = 0;
+    for( int i = 0 ; i < DATA ; i++ ){
+        if( sg_config->server_public_key[i] ^ sg_config->sensor_public_key[i] )
+            count++;
+    }
+    uint8_t hi_lo[2] = { (uint8_t)( count >> 8 ), (uint8_t)count };
+	if(( sg_squawk->data[78] == hi_lo[0] ) && ( sg_squawk->data[79] = hi_lo[1] ))
+	    correct = true;
+	return correct;
+}
+
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
-    // Received a Squawk packet, now send a Squawk back
-    if ( sg_config->squawk ){
-        //squawk 
-        SansgridSquawk sg_squawk;
+while( sg_config->nest == false ){    
+	// Received a Squawk packet, now send a Squawk back
+    if ( sg_config->squawk == true ){
+        // Squawk 
+        Serial.println( "Squawking" );
+		sg_serial->control[0] = (uint8_t) 0xAD;
+		memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+		payloadHandler( sg_config , sg_serial);
     }
 	// Sent a Mock packet, now send a Peacock packet
-	else if ( sg_config->mock ){
-		//peacock
-		sg_serial->payload[0] = 0x0C;
+	else if ( sg_config->mock == true ){
+		delay(5000);
+		// Peacock
+		Serial.println( "Peacocking" );
+		sg_serial->control[0] = (uint8_t) 0xAD;
+		memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+		sg_serial->payload[0] = (uint8_t) 0x0C;
+		payloadHandler( sg_config , sg_serial);
 	}
 	// Received a Sing packet, send a Mock packet
-	else if ( sg_config->sing ){
-		//mock
-		if( sg_config->sensor_public_key )
-			sg_serial->payload[0] = 0x08;
+	else if ( sg_config->sing == true ){
+		// Mock
+		Serial.println( "MOCKING" );
+		sg_serial->control[0] = (uint8_t) 0xAD;
+		memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+		if( sg_config->sensor_public_key > 0 )
+			sg_serial->payload[0] = (uint8_t) 0x07;
 		else
-			sg_serial->payload[0] = 0x07;            
+			sg_serial->payload[0] = (uint8_t) 0x08;   
+        payloadHandler( sg_config , sg_serial);			
 	}
 	// Received Fly packet, send an Eyeball packet
-	else if( sg_config->fly ){
-		//eyeball
-		sg_serial->payload[0] = 0x00;
+	else if( sg_config->fly == true ){
+		// Eyeball
+		Serial.println( "EYEBALLING");
+		sg_serial->control[0] = (uint8_t) 0xAD;
+		memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+		sg_serial->payload[0] = (uint8_t) 0x00;
+		payloadHandler( sg_config , sg_serial);
 	}
+	Serial.println("looping");
 	// Delay 1 second between packets
 	// during mating 
-	delay(1000);
+	delay(1000
+    }
 }
 
 #endif // __SENSOR_PAYLOAD_HANDLER_H__

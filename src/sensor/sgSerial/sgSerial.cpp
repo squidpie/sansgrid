@@ -68,7 +68,7 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 	// Delay to allow slave to process
     delayMicroseconds( DELAY );
 	// Send dummy byte to Set command on Slave
-    SPI.transfer( data_out[0] );
+    SPI.transfer( 0xAD );
 	// Delay to alow slave to process
     delayMicroseconds( DELAY );
 	// Loop through buffer sending one byte at a time over SPI
