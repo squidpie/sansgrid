@@ -104,6 +104,24 @@ void deviceAuthDestroy(DeviceAuth *dev_auth) {
 }
 
 
+int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
+		return -1;
+	}
+	if (dev_auth->strictness == 0) {
+		// always valid
+		return 1;
+	} else if ((dev_auth->next_expected_packet == SG_DEVSTATUS_LEASED) &&
+			(gdt == SG_DEVSTATUS_CHIRPING || gdt == SG_DEVSTATUS_HEARTBEAT)) {
+		return 1;
+	} else if (dev_auth->next_expected_packet == gdt) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 
 int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
 	// check a payload type against the next expected packet
@@ -119,17 +137,7 @@ int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
 		return -1;
 	}
 	gdt = sgPayloadGetType(dt);
-	if (dev_auth->strictness == 0) {
-		// always valid
-		return 1;
-	} else if ((dev_auth->next_expected_packet == SG_DEVSTATUS_LEASED) &&
-			(gdt == SG_DEVSTATUS_CHIRPING || gdt == SG_DEVSTATUS_HEARTBEAT)) {
-		return 1;
-	} else if (dev_auth->next_expected_packet == sgPayloadGetType(dt)) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return deviceAuthIsGeneralPayloadTypeValid(dev_auth, gdt);
 }
 
 int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {

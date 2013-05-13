@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
    	sr = srunner_create(makeMasterSuite());
 	// routing tests
 	srunner_add_suite(sr, routingBasicTestSuite());
+	srunner_add_suite(sr, routingAuthBasicTestSuite());
 	// dispatch tests
 	srunner_add_suite(sr, dispatchBasicTesting());
 	srunner_add_suite(sr, dispatchAdvancedTesting());

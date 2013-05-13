@@ -32,6 +32,7 @@ void routingTablePrint(uint8_t*);
 
 // Routing
 Suite *routingBasicTestSuite (void);
+Suite *routingAuthBasicTestSuite (void);
 // Dispatch
 Suite *dispatchBasicTesting (void);
 Suite *dispatchAdvancedTesting (void);

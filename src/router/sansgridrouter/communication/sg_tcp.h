@@ -29,6 +29,19 @@
 #define DELIM_VAL "α"
 #define DELIM_KEY "β"
 
+enum SansgridIRStatusEnum {
+	SG_IR_STATUS_ONLINE,
+	SG_IR_STATUS_STALE,
+	SG_IR_STATUS_ACK,
+};
+
+typedef struct SansgridIRStatus {
+	uint8_t datatype;
+	uint8_t rdid[4];
+	char status[76];
+} SansgridIRStatus;
+
+
 typedef struct Dictionary {
 	char *key;
 	char *value;

@@ -15,6 +15,7 @@ SANSGRID_TEST = \
 		test/dispatch/dispatch_basic.c \
 		test/dispatch/dispatch_advanced.c \
 		test/routing/routing_basic_test.c \
+		test/routing/auth_basic_test.c \
 		test/payloads/payload_tests.c \
 		test/payloads/payload_stub_handlers.c \
 		test/payloads/payload_size_test.c \
