@@ -22,10 +22,10 @@ HardwareSerial * test;
 SansgridRadio sgRadio;
 
 // SPI Setup 
-#define SLAVE_READY 7
+#define SLAVE_READY 8
 #define NUM_BYTES 98
 
-char rx[sizeof(SpiData)]; //NUM_BYTES + 1];
+char rx[sizeof(SpiData) + 1]; //NUM_BYTES + 1];
 volatile byte pos;
 volatile boolean process_flag;
 volatile boolean spi_active;
@@ -60,8 +60,6 @@ void setup() {
 	pos = 0;
 	process_flag = false;
 	spi_active = false;
-	pinMode(SLAVE_READY, OUTPUT);
-	digitalWrite(SLAVE_READY, HIGH);
 	SPI.attachInterrupt();
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
 	//sgRadio = new SansgridRadio;
@@ -70,14 +68,29 @@ void setup() {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
   	sgRadio.set_mode(ROUTER);
 	}
+	pinMode(SLAVE_READY, OUTPUT);
+	digitalWrite(SLAVE_READY, HIGH);
 	Serial.println("Setup Complete");
 }
 
 ISR(SPI_STC_vect) {
-	byte c = SPDR;
-	if (pos < NUM_BYTES) {
-		rx[pos++] = c;
-		if (pos == NUM_BYTES - 1) process_flag = true;
+	byte c;
+	if (digitalRead(SLAVE_READY) == LOW) {
+		if (pos < NUM_BYTES) {
+			SPDR = rx[pos++];
+			if (pos == NUM_BYTES - 1) {
+				spi_active = false;
+				digitalWrite(SLAVE_READY,HIGH);
+				pos = 0;
+		}
+		}
+	}
+	else {
+		c = SPDR;
+		if (pos < NUM_BYTES) {
+			rx[pos++] = c;
+			if (pos == NUM_BYTES - 1) process_flag = true;
+		}
 	}
 }
 
@@ -109,9 +122,10 @@ void loop() {
 			if(sgRadio.defrag()) {
 				sgRadio.processPacket();
 				memcpy(rx,&SpiData,sizeof(SpiData)); 
-				//spi_active = true;
+				spi_active = true;
 				Serial.write((const uint8_t *)rx,sizeof(SpiData));
-				//digitalWrite(SLAVE_READY, LOW);
+				delay(5000);
+				digitalWrite(SLAVE_READY, LOW);
 			}
 		}
 	}

@@ -241,7 +241,7 @@ void SansgridRadio::init(HardwareSerial * xbee_link, SansgridSerial * serial_lin
 
 	next = 0;
 
-	//memset(frag_buffer,0,FRAG_BUF_SZ * RADIO_PKT_SZ);
+	memset(frag_buffer,0,FRAG_BUF_SZ * RADIO_PKT_SZ);
 	
 	//Radio->write(pkt0_frag, MAX_XB_PYLD);
 	//Radio->write(pkt1_frag, MAX_XB_PYLD);
