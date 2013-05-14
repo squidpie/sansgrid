@@ -313,6 +313,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	memset(sg_serial->ip_addr, 0x0, sizeof(sg_serial->ip_addr));
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
