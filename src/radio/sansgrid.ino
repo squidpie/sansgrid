@@ -13,7 +13,7 @@ void __assert(const char *__func, const char *__file, int __lineno, const char *
 void readPacket();
 const int ledPin = 13;
 int length;
-
+byte spi_rw = 1;
 
 SansgridSerial SpiData;
 SnIpTable RouteTable;
@@ -25,7 +25,7 @@ SansgridRadio sgRadio;
 #define SLAVE_READY 8
 #define NUM_BYTES 98
 
-char rx[sizeof(SpiData) + 1]; //NUM_BYTES + 1];
+char rx[sizeof(SpiData)]; //NUM_BYTES + 1];
 volatile byte pos;
 volatile boolean process_flag;
 volatile boolean spi_active;
@@ -50,54 +50,72 @@ void setup() {
 	#else*/
 	Serial.begin(115200);
   //Serial.println("Setup starts here");
-	pinMode(ledPin, OUTPUT);
+	//pinMode(ledPin, OUTPUT);
   pinMode(ROUTER_MODE_PIN, INPUT);
-  digitalWrite(ROUTER_MODE_PIN, HIGH);
-  pinMode(SPI_IRQ_PIN, INPUT);
-  digitalWrite(SPI_IRQ_PIN, HIGH);
-	pinMode(MISO, OUTPUT);
-	SPCR |= _BV(SPE);
-	pos = 0;
-	process_flag = false;
-	spi_active = false;
-	SPI.attachInterrupt();
-	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
-	//sgRadio = new SansgridRadio;
+  digitalWrite(ROUTER_MODE_PIN, LOW);
+  
 	sgRadio.init(&Serial, &SpiData, &RouteTable);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
     //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
   	sgRadio.set_mode(ROUTER);
 	}
+
+	//pinMode(SPI_IRQ_PIN, INPUT);
+  //digitalWrite(SPI_IRQ_PIN, HIGH);
+  pinMode(MISO, OUTPUT);
 	pinMode(SLAVE_READY, OUTPUT);
 	digitalWrite(SLAVE_READY, HIGH);
+	SPCR |= _BV(SPE);
+	pos = 0;
+	process_flag = false;
+	spi_active = false;
+	SPCR |= _BV(SPIE);
+	
+	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
+	//sgRadio = new SansgridRadio;
+	
+	//SPI.attachInterrupt();
 	Serial.println("Setup Complete");
 }
 
 ISR(SPI_STC_vect) {
 	byte c;
-	if (digitalRead(SLAVE_READY) == LOW) {
-		if (pos < NUM_BYTES) {
-			SPDR = rx[pos++];
-			if (pos == NUM_BYTES - 1) {
-				spi_active = false;
-				digitalWrite(SLAVE_READY,HIGH);
-				pos = 0;
-		}
-		}
+	Serial.println("SPI IRQ");
+	switch(spi_rw) 
+	{
+		case 0:
+			if (pos < NUM_BYTES) {
+				SPDR = rx[pos++];
+				if (pos == NUM_BYTES - 1) {
+					spi_active = false;
+					spi_rw = 1;
+					digitalWrite(SLAVE_READY, HIGH);
+					pos = 0;
+				}
+			}
+			break;
+		case 1:
+			c = SPDR;
+			if (pos < NUM_BYTES) {
+				rx[pos++] = c;
+				if (pos == NUM_BYTES - 1) {
+					process_flag = true;
+				}
+			}
+			break;
+		default:
+			Serial.println("SPI Default Error");
+			break;
 	}
-	else {
-		c = SPDR;
-		if (pos < NUM_BYTES) {
-			rx[pos++] = c;
-			if (pos == NUM_BYTES - 1) process_flag = true;
-		}
-	}
+
 }
 
 void loop() {
+	delay(1000);
+	Serial.println("Looping");
 	if (process_flag) {
-		memcpy(&SpiData, rx, pos);
-		rx[pos] = 0;
+		memcpy(&SpiData, rx, sizeof(SpiData));
+		memset(rx,0,sizeof(SpiData));
 		pos = 0;
 		process_flag = false;
 		spi_active = false;
@@ -123,8 +141,11 @@ void loop() {
 				sgRadio.processPacket();
 				memcpy(rx,&SpiData,sizeof(SpiData)); 
 				spi_active = true;
-				Serial.write((const uint8_t *)rx,sizeof(SpiData));
-				delay(5000);
+				Serial.write("Sending SPI");
+				delay(50);
+				//Serial.write((const uint8_t *)rx,sizeof(SpiData));
+				//delay(5000);
+				spi_rw = 0;
 				digitalWrite(SLAVE_READY, LOW);
 			}
 		}

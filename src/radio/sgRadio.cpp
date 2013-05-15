@@ -18,33 +18,31 @@ bool SansgridRadio::mode(enum RadioMode mode) {
 }
 
 bool SansgridRadio::setDestAddr(uint64_t addr) {
-	uint8_t * at_response = NULL;
-	char cmd[64];
-	
+	uint8_t at_response[12];
+	char cmd[80];
+	memset(at_response,'\0',12);
 	//set upper destination address
-	sprintf(cmd,"ATDH %d", (addr >> 32)); 
+	sprintf(cmd,"ATDH %x", (addr >> 32)); 
 	atCmd(at_response, (const char *)cmd);
-	if (at_response == NULL) {
+	if (at_response[0] == '\0') {
 		return 0;
 	}
 	else if(!IS_OK(at_response)) {
 		Radio->println("AT cmd Failed with");
-		delete at_response;
+		//delete at_response;
 		return 0;
 	}
-	else delete at_response;
 	
 	// set lower destination address
-	sprintf(cmd,"ATDH %d", (addr & 0x0000FFFF)); 
+	memset(at_response,'\0',12);
+	sprintf(cmd,"ATDL %x", (addr & 0x00000000FFFFFFFF)); 
 	atCmd(at_response, (const char *)cmd);
-	if (at_response == NULL) {
+	if (at_response == '\0') {
 		return 0;
 	}
 	else if(!IS_OK(at_response)) {
-		delete at_response;
 		return 0;
 	}
-	else  delete at_response;
 	
 	return 1;
 }
@@ -111,14 +109,14 @@ void SansgridRadio::processSpi() {
 			break;
 	}
 	
-	Radio->println("Copying back to packet_out_[f0/f1]");
-	delay(50);
+	//Radio->println("Copying back to packet_out_[f0/f1]");
+	//delay(50);
 	memcpy(&pkt0_frag[PACKET_HEADER_SZ],payload,F0_PYLD_SZ);
-	Radio->write(pkt0_frag,sizeof(pkt0_frag));
-	delay(50);
+	//Radio->write(pkt0_frag,sizeof(pkt0_frag));
+	//delay(50);
 	memcpy(&pkt1_frag[PACKET_HEADER_SZ],(payload+F0_PYLD_SZ),F1_PYLD_SZ);
-	Radio->write(pkt1_frag,MAX_XB_PYLD);
-	delay(50);
+	//Radio->write(pkt1_frag,MAX_XB_PYLD);
+	//delay(50);
 }
 
 bool SansgridRadio::defrag() {

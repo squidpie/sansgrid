@@ -46,7 +46,7 @@
 #define MODE(mode) (router_mode == mode)
 #define IS_OK(err) (((sizeof(err) > 1) && (*err == 0x4F) && (*(err + 1) == 0x4B))) // check that err = 'OK'
 
-#define BROADCAST 0x0
+#define BROADCAST 0x000000000000FFFF
 
 #define PKT_FRAME 0
 #define	PKT_XBSN  1
