@@ -107,6 +107,14 @@ switch ( hexdec($data["dt"]) ) {
 		// Sensor has accepts the server's response to its challenge
 		processSquawkAcceptsChallenge($router_ip, $data, $db);
 		break;
+	case 33: 	// 33 = 0x21
+		// Chirp data from sensor
+		processChirpData($router_ip, $data, $db);
+		break;
+	case 253: 	// 253 = 0xfd
+		// Status updates from the router
+		updateSensorStatus($router_ip, $data, $db);
+		break;
 	default: 
 		die ("Error: Unknown data type: ' " . hexdec($data["dt"]) . " '\n");
 		break; 	# Technically not needed since we just died.

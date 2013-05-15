@@ -23,6 +23,8 @@ printf ("%4d  -  %s\n", 1, "Eyeball");
 printf ("%4d  -  %s\n", 2, "Mock");
 printf ("%4d  -  %s\n", 3, "Peacock");
 printf ("%4d  -  %s\n", 4, "Squawk");
+#printf ("%4d  -  %s\n", 5, "Squawk");
+printf ("%4d  -  %s\n", 6, "Sensor status updates (0xFD)");
 
 print "\n";
 $user_request = &verifyInput( (1,2,3,4) );
@@ -32,6 +34,7 @@ switch ($user_request) {
 	case 2 { &generate_mock();}
 	case 3 { &generate_peacock();}
 	case 4 { &generate_squawk();}
+	case 6 { &generate_status_update();}
 }
 
 # END OF MAIN CODE
@@ -278,6 +281,49 @@ sub generate_squawk {
 	&savePayload($payload);
 
 } # End generate_squawk
+
+
+# ############################################################################## 
+# generate_status_update()
+#
+#	Generate peacock payload
+#
+sub generate_status_update {
+
+	my $input;
+	my $payload;
+
+	#rdid
+	$payload .= $ff_del . "rdid" . $nf_del . &getField("rdid") . $ff_del;
+	$payload .= "dt" . $nf_del . "fd" . $ff_del;
+
+
+	print "Status update:\n";
+	print "  1) online\n";
+	print "  2) stale\n";
+	print "  3) offline\n";
+	$user_request = &verifyInput( (1, 2, 3) );
+
+	switch ($user_request) {
+
+		case 1 { 
+			$payload .= "data" . $nf_del . "online" . $ff_del;
+		}
+
+		case 2 { 
+			$payload .= "data" . $nf_del . "stale" . $ff_del;
+		}
+		
+		case 3 { 
+			$payload .= "data" . $nf_del . "offline" . $ff_del;
+		}
+	}
+
+	# THIS IS WHERE I LEFT OFF!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	&savePayload($payload);
+
+} # End generate_status_update
 
 
 # ############################################################################## 

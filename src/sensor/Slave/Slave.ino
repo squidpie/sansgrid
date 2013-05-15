@@ -128,8 +128,15 @@ void loop (void){
 // SPI interrupt routine
 ISR (SPI_STC_vect){
     // Read byte sent from Master SPI  
+    Serial.println( "Interrupt" );
     byte c = SPDR; 
-    
+    if ( pos < sizeof rx ){
+            rx[ pos++ ] = c;
+            // If buffer is full process it
+            if ( pos == NUM_BYTES - 1 )
+                process_it = true;
+        }
+    /*    
     // Command to store SPI data either in
     // Transfer or Receive Buffer
     switch (command){
@@ -157,6 +164,6 @@ ISR (SPI_STC_vect){
         break;
     default:
         break;
-    }
+    }*/
 }  
 

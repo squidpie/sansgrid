@@ -52,6 +52,7 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 		return -1;
 	}
 
+	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
 	sg_chirp.datatype = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
 	memcpy(&sg_serial.payload, &sg_chirp, sizeof(SansgridChirp));
 	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
@@ -137,13 +138,11 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 			break;
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
+		case SG_SERVSTATUS:
 			return SG_DEVSTATUS_HEARTBEAT;
 			break;
 		case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 		case SG_CHIRP_DATA_SENSOR_TO_SERVER:
-		case SG_CHIRP_DATA_STREAM_START:
-		case SG_CHIRP_DATA_STREAM_CONTINUE:
-		case SG_CHIRP_DATA_STREAM_END:
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 		case SG_CHIRP_SENSOR_DISCONNECT:
 			return SG_DEVSTATUS_CHIRPING;
@@ -566,20 +565,28 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
-	routingTableSetCurrentPacket(routing_table, 
-			sg_serial->ip_addr, SG_DEVSTATUS_HEARTBEAT);
-	syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
-			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
+	if (sg_heartbeat->datatype != 0xfd) {
+		routingTableSetCurrentPacket(routing_table, 
+				sg_serial->ip_addr, SG_DEVSTATUS_HEARTBEAT);
+		syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
+				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
+	} else {
+		syslog(LOG_INFO, "Handling Server Command: device %u",
+				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
+	}
+
 
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			// Heartbeat from router to sensor
-			routingTableHeartbeatDevice(routing_table, sg_serial->ip_addr);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
 			routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+			break;
+		case 0xfd:
+			routerHandleServerStatus(routing_table, sg_serial);
 			break;
 		default:
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
@@ -624,15 +631,6 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 					SG_DEVSTATUS_LEASED);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
-		case SG_CHIRP_DATA_STREAM_START:
-			// Start of data stream
-			// Currently undefined
-		case SG_CHIRP_DATA_STREAM_CONTINUE:
-			// Continued stream of data
-			// Currently undefined
-		case SG_CHIRP_DATA_STREAM_END:
-			// End of data stream
-			// Currently undefined
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			// Network is disconnecting sensor
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
@@ -657,11 +655,13 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 	SANSGRID_UNION(SansgridIRStatus, SGIR_un) sg_ir_union;
 	sg_ir_union.serialdata = sg_serial->payload; 
 	sg_irstatus = sg_ir_union.formdata;
-	syslog(LOG_INFO, "Handling Router<-->Sserver packet: device %u",
+	syslog(LOG_INFO, "Handling Router<-->Server packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	// FIXME: Get rid of magic payload type number 0xfd
 	if (sg_irstatus->datatype == 0xfd) {
-		sgTCPSend(sg_serial, sizeof(SansgridSerial));
+		if (!strcmp(sg_irstatus->status, "stale")
+				|| !strcmp(sg_irstatus->status, "lost"))
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 	} else {
 		return -1;
 	}

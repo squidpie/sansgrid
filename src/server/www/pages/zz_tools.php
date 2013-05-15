@@ -142,7 +142,8 @@ function appendToPayload ($current_payload, $key, $value) {
 
 
 /* ************************************************************************** */
-//
+// Get's the current refresh rate for auto-refresh'able pages (index, pipeline, /i
+// logs).
 function returnRefresh () {
 
 	$db = returnDatabaseConnection();
@@ -161,12 +162,50 @@ function returnRefresh () {
 /* ************************************************************************** */
 
 
+
+
+/* ************************************************************************** */
+// Get's the current refresh rate for auto-refresh'able pages (index, pipeline, /i
+// logs).
+function takeSensorOffline ($rdid) {
+
+	$db = returnDatabaseConnection();
+
+	// Let's first get the id_sensor for the log
+	$query = "SELECT id_sensor FROM sensor WHERE rdid='$rdid'";
+	$result = mysqli_query($db, $query) or die ("Couldn't execute query tso2.");
+	$row = mysqli_fetch_assoc($result);
+	$id_sensor = $row['id_sensor'];
+
+	// If we don't see this rdid, then we're done I guess.
+	if ( $id_sensor == " ")
+		return;
+
+	// Log it
+	$msg  = "Sensor ($id_sensor) now offline. ";
+	addtolog($msg);
+
+	// Now we take the sensor offline and remove the the rdid
+	$query  = "UPDATE sensor SET status='offline', rdid='' ";
+	$query .= "WHERE id_sensor='$id_sensor'";
+	$result = mysqli_query($db, $query) or die ("Couldn't execute query tso3.");
+
+
+} // End takeSensorOffline()
+
+/* ************************************************************************** */
+
+
 /* ************************************************************************** */
 //
 function xmitToRouter ($outbound_payload, $url="") {
 
 	print "This doesn't belong here (zz_tools.php) but: $outbound_payload\n";
 	#return;
+
+	# DELETE THIS! THIS IS JUST FOR DEBUGGING!!!!
+	if ($url == "10.42.0.1")
+		$url = "10.42.0.40";
 
 	#$url="10.42.0.40/API-router.php";
 	$url="$url/API-router.php";
