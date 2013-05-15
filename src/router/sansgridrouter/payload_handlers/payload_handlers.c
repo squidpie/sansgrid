@@ -407,6 +407,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sg_serial->ip_addr, SG_DEVSTATUS_MOCKING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
+	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 
 
 	switch (sg_mock->datatype) {
@@ -443,6 +444,7 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PEACOCKING);
+	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 	if (sg_peacock->additional_IO_needed == 1) {
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
@@ -494,6 +496,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_SQUAWKING);
+	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
@@ -566,8 +569,6 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
 	if (sg_heartbeat->datatype != 0xfd) {
-		routingTableSetCurrentPacket(routing_table, 
-				sg_serial->ip_addr, SG_DEVSTATUS_HEARTBEAT);
 		syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
 				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	} else {
@@ -576,10 +577,12 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	}
 
 
+
 	switch (sg_heartbeat->datatype) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
 			// Heartbeat from router to sensor
-			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			if(!routingTableIsDeviceLost(routing_table, sg_serial->ip_addr))
+				sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
@@ -629,6 +632,7 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Data sent from server to sensor
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_LEASED);
+			routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
@@ -662,6 +666,8 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 		if (!strcmp(sg_irstatus->status, "stale")
 				|| !strcmp(sg_irstatus->status, "lost"))
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
+		if (!strcmp(sg_irstatus->status, "online"))
+				routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 	} else {
 		return -1;
 	}

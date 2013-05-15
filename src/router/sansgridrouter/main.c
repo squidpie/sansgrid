@@ -149,36 +149,47 @@ void *heartbeatRuntime(void *arg) {
 	int hb_status = 0;
 	uint32_t rdid;
 	int device_lost = 0;
+	int exit_code;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	routingTableForEachDevice(routing_table, ip_addr);
-	count = routingTableGetDeviceCount(routing_table);
+	count = routingTableGetDeviceCount(routing_table)-1;
 	while (1) {
 		do {
+			if (count == 0)
+				count = 1;
 			if (HEARTBEAT_INTERVAL/count == 0) {
 				// interval is < 1 second
 				// sleep in usecs
 				req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
 				req.tv_sec = 0;
-				nanosleep(&req, &rem);
+				do {
+					exit_code = nanosleep(&req, &rem);
+					if (rem.tv_nsec != 0) 
+						req.tv_nsec = rem.tv_nsec;
+					if (rem.tv_sec != 0)
+						req.tv_sec = rem.tv_sec;
+				} while (exit_code == -1);
 				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
 			} else {
 				sleep(HEARTBEAT_INTERVAL/count);
 			}
-		} while ((count = routingTableGetDeviceCount(routing_table)) < 2);
+		} while ((count = (routingTableGetDeviceCount(routing_table)-1)) < 1);
 
 		while (dispatch_pause) {
 			sleep(1);
 		}
-		syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
 
-		sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-		memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
-		memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
-		queueEnqueue(dispatch, sg_serial);
-		sg_serial = NULL;
+		if (!routingTableIsDeviceLost(routing_table, ip_addr)) {
+			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+			memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+			queueEnqueue(dispatch, sg_serial);
+			sg_serial = NULL;
+		}
 		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
 			// device status changed... either went stale or was lost
 			// FIXME: remove magic number by specifying this as payload type
