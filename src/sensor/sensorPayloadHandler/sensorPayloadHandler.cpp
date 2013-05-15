@@ -30,6 +30,9 @@
 // transmit all outboud SPI packets in the form of a SansgridSerial.
 void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
     Serial.println( "payloadHandler");
+    // Delay one second between packets sent
+    // to allow radio and router to process packet
+    delay(1000);
     // Read in data type from first position of payload
     // to determine what to do with packet
     uint8_t command = sg_serial->payload[0];
@@ -219,6 +222,9 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             parseSquawk( sg_serial , &sg_squawk_acknowledge );
             // Transmit Squawk payload
             transmitSquawk( sg_serial , &sg_squawk_acknowledge );
+            // Delay one second to allow radio and router to
+            // process packets before sending
+            delay(1000);
             // Respond to Squawk challenge by changing datatype
             // to 0x17, challenge is allready in Squawk payload
             sg_squawk_acknowledge.dt[0] = (uint8_t) 0x17;
@@ -423,8 +429,8 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
             payloadHandler( sg_config , sg_serial);
         }
         Serial.println("LOOPING");
-        // Delay 1 second between packets
-        // during mating 
+        // Only send one packet for test purposes
+        // remove after testing
         while(1){
             delay(1000);
         }
