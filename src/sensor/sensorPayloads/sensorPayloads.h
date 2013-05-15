@@ -47,7 +47,7 @@
 #define IP_ADDRESS 16
 #define CONTROL 1
 #define SENSOR_A 39
-#define DELAY 6
+#define DELAY 12
 #define EYEBALL_PADDING 62
 #define PECK_PADDING 15
 #define PEACOCK_PADDING 1
@@ -135,8 +135,8 @@ typedef struct SansgridNest{
 } SansgridNest;
 
 typedef struct SansgridSquawk{
-    static uint8_t dt[ DT ];
-    static uint8_t data[ DATA ];
+    uint8_t dt[ DT ];
+    uint8_t data[ DATA ];
 } SansgridSquawk;
 
 typedef struct SansgridHeartbeat{
