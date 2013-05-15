@@ -740,10 +740,10 @@ function processChirpData($router_ip, $payload, $db) {
 	global $SG;
 
 	$rdid 	= $payload['rdid'];
-	$sid 	= strtolower($payload['status']);
+	$sid 	= cleanZeroes(strtolower($payload['sid']));
 	$data 	= strtolower($payload['data']);
 
-	// Do we have an online sensor using this rdid?
+	// Do we have an online sensor using this rdid?...
 	$query  = "SELECT COUNT(*) as count FROM sensor ";
 	$query .= "WHERE rdid='$rdid' AND status='online' OR status='stale'";
 	$result = mysqli_query($db, $query) 
@@ -751,52 +751,26 @@ function processChirpData($router_ip, $payload, $db) {
 	$row = mysqli_fetch_assoc($result);
 	$count = $row['count'];
 
+	// ...If we don't, then we give up.
 	if ( $count != 1 ) 
 		die ("Error: sensor not online");
 	
-	// OK, so what's the current status?
+	// Now let's get the sensor data
 	$query = "SELECT * FROM sensor WHERE rdid='$rdid'";
 	$result = mysqli_query($db, $query) 
-		or die ("Couldn't execute query uss1.");
+		or die ("Couldn't execute query pcd2.");
 	$row = mysqli_fetch_assoc($result);
+	$id_sensor 	= $row['id_sensor'];
 
-	$id_sensor = $row['id_sensor'];
-	$status = $row['status'];
+	// Finally we update
+	$query  = "UPDATE io SET value='$data' ";
+	$query .= "WHERE id_sensor='$id_sensor' AND sig_id='$sid'";
+	mysqli_query($db, $query) or die ("Couldn't execute query pcd3.");
 
+	// Log it
+	$msg  = "Update signal ($sid) from ($id_sensor): $data. ";
+	addtolog($msg);
 
-	// If the update is 'offline' then just do it
-	if ( $new_status == 'offline' ) {
-		takeSensorOffline ($rdid);
-		
-	// If the update is 'online' or 'stale' we have to first make sure that the
-	// sensor is also either 'online ' or 'stale'.  In other words, a sensor
-	// can't go from 'offline' to either of other two conditions.  It would need
-	// to re-Squawk to get back on the network. 
-	} else {
-
-		// OK, so what's the current status?
-		$query = "SELECT id_sensor, status FROM sensor WHERE rdid='$rdid'";
-		$result = mysqli_query($db, $query) 
-			or die ("Couldn't execute query uss1.");
-		$row = mysqli_fetch_assoc($result);
-
-		$id_sensor = $row['id_sensor'];
-		$status = $row['status'];
-
-		// If sensor isn't offline, then go ahead and update
-		if ( ($status == "online") OR ($status == 'stale') ) {
-			$query  = "UPDATE sensor SET status='$new_status' ";
-			$query .= "WHERE rdid='$rdid'";
-			$result = mysqli_query($db, $query) 
-				or die ("Couldn't execute query uss2.");
-
-			// Log it
-			$msg  = "Sensor ($id_sensor) now $new_status. ";
-			addtolog($msg);
-
-		}
-
-	}
 
 	// Now we tell the router that we've updated the status successfully
 	$reply = appendToPayload($SG['ff_del'], "rdid", 	$rdid);
