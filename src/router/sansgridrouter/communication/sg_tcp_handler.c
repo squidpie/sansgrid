@@ -126,10 +126,8 @@ char *match(Dictionary dict[], int size, char *key) {
 
 
 static int32_t translateRdid(Dictionary dict[], int size) {
-	uint8_t rdid[4];
 	uint32_t rdid_return;
-	atox(rdid,					match(dict, size, "rdid"),		4*sizeof(uint8_t));
-	memcpy(&rdid_return, rdid, 4*sizeof(uint8_t));
+	rdid_return = atoi(match(dict, size, "rdid"));
 	return rdid_return;
 }
 
@@ -329,14 +327,11 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 
 	// Find payload type
 	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
-	atox(rdid, 		match(dict, size, "rdid"), 4*sizeof(uint8_t));
+	//atox(rdid, 		match(dict, size, "rdid"), 4*sizeof(uint8_t));
+	rdid_32 = atoi(match(dict, size, "rdid"));
 	if (datatype == ~0x0) {
 		return -1;
 	}
-	rdid_size = (strlen(match(dict, size, "rdid"))+1)/2;
-	byteToWord(&rdid_32, rdid, 4*sizeof(uint8_t));
-	rdid_32 = rdid_32 >> ((4-rdid_size)*8);
-	//printf("rdid = %u\n", rdid_32);
 	if (!rdid_32) {
 		// broadcast
 		//routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
@@ -373,12 +368,15 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 			exit_code = convertIRStatus(dict, size, sg_serial);
 			break;
 		default:
+			printf("Type not found: %u\n", dev_datatype);
 			exit_code = -1;
 			break;
 	}
+	printf("Exiting with %i\n", exit_code);
 
 	return exit_code;
 }
+
 
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
@@ -417,6 +415,30 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	} else {
 		sprintf(payload, "%s%x", payload, 0x0);
 	}
+	return 0;
+}
+
+
+
+
+
+int addIntField(const char *key, uint8_t *value, uint32_t size, char *payload) {
+	// Add a field to the payload
+	int i;
+	int cap = 0;
+	int field_not_zero = 0;
+	int first_byte = 0;
+	uint32_t value_32 = 0;
+	const char *delim_key = DELIM_KEY;
+	const char *delim_val = DELIM_VAL;
+
+	sprintf(payload, "%s%s%s%s", payload, delim_key, key, delim_val);
+	for (i=0; i<size; i++) {
+		value_32 = value_32 << 8;
+		value_32 |= value[i];
+	}
+	sprintf(payload, "%s%u", payload, value_32);
+
 	return 0;
 }
 
@@ -468,8 +490,10 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		return -1;
 	} else {
 		// match found; continue
-		memcpy(rdid, &rdid_32, 4*sizeof(uint8_t));
-		addHexField("rdid", rdid, 4, payload);
+		//memcpy(rdid, &rdid_32, 4*sizeof(uint8_t));
+		wordToByte(rdid, &rdid_32, 4);
+		//addHexField("rdid", rdid, 4, payload);
+		addIntField("rdid", rdid, 4, payload);
 	}
 
 

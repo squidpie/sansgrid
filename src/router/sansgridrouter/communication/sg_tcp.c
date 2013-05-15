@@ -33,7 +33,7 @@
 #include "../sansgrid_router.h"
 
 
-#define USE_SANSRTS 1
+//#define USE_SANSRTS 1
 
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
@@ -42,13 +42,10 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		return -1;
 	char cmd[2000];
 	char payload[size*5];
+#ifdef USE_SANSRTS
 	char config_path[300];
-	FILE *FPTR = NULL;
-#ifndef USE_SANSRTS
-	char key[100],
-		 url[50];
-	char sansgrid_path[300];
 #endif
+	FILE *FPTR = NULL;
 	char *buffer = NULL;
 	int buff_size = size;
 	int exit_code;
@@ -67,8 +64,9 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 #ifdef USE_SANSRTS
 		snprintf(cmd, 2000, "%s \"%s\"", config_path, payload);
 #else
-		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode --key=%s --data-urlencode --payload=\"%s\"", 
-				router_opts.url, router_opts.key, payload);
+		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode key='%s' --data-urlencode payload='%s'", 
+				router_opts.serverip, router_opts.serverkey, payload);
+		printf("%s\n", cmd);
 #endif
 		if ((FPTR = popen(cmd, "r")) == NULL) {
 			syslog(LOG_WARNING, "Router-->Server send failed");
