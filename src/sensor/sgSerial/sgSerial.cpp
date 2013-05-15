@@ -22,103 +22,109 @@
 
 #include <Arduino.h>
 #include "sgSerial.h"
+
+#define DUE 1
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
-int sgSerialOpen(void){
-    spiMasterInit( SLAVE_SELECT , SLAVE_READY );
-	return 0;
+uint8_t sgSerialOpen(void){
+    // Initialize Sensor SPI communication
+    SPI.begin();
+    // Set order bits are shifted onto the SPI bus
+    SPI.setBitOrder( MSBFIRST ); 
+    // Set SPI Baud Rate to 500 KHz
+    // 84 MHz / 252 = 500 KHz
+    #ifdef DUE
+    SPI.setClockDivider( 168 );
+    #else
+    SPI.setClockDivider( SPI_CLOCK_DIV32 );
+    #endif // DUE
+    // Set SPI Mode 0-3
+    SPI.setDataMode( SPI_MODE0 );
+    return 0;
 }
 
-// Configure radio as a router radio
+// Configure radio as a router or sensor radio
 // Radio will be configured as a sensor radio by default.
-int sgSerialSetAsRouter(void){
+uint8_t sgSerialSetAsRouter(void){
     // TBD
-	return -1;
+    return -1;
 }
 
-int sgSerialSetAsSensor(void){
-	//TBD
-	return -1;
+uint8_t sgSerialSetAsSensor(void){
+    //TBD
+    return -1;
 }
 
-// Send size bytes of serialdata serially
-int sgSerialSend(SansgridSerial *sg_serial, int size ){
-	byte padding = 0x00;
-	spiMasterTransmit( sg_serial->control ,  CONTROL , SLAVE_SELECT );
-	spiMasterTransmit( sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
-	spiMasterTransmit( sg_serial->payload ,  PAYLOAD , SLAVE_SELECT );
-	// Pad Packet to necessary size
-	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
-	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-            if( i == ( size - 1 ) ){
-				#ifdef DUE
-				SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-				#else // End Due code Begin Uno
-				spiMasterOpen( SLAVE_SELECT );
-				SPI.transfer( padding );
-				spiMasterClose( SLAVE_SELECT );
-				#endif // DUE
-			}
-			else{
-				#ifdef DUE
-				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
-				#else // End Due code Begin Uno
-				spiMasterOpen( SLAVE_SELECT );
-				SPI.transfer( padding );
-				spiMasterClose( SLAVE_SELECT );
-				#endif // DUE
-			}
-			delayMicroseconds( DELAY );
-		}
-	}
-	return 0;
+// Send size bytes of serial data over SPI.
+uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
+    // Buffer to store data array to send to Slave over SPI
+	uint8_t data_out[ NUM_BYTES ];
+	// Copy SansgridSerial data to buffer
+    memcpy( data_out , sg_serial, sizeof(SansgridSerial));
+    // Open SPI bus
+	sgSerialOpen();
+	// Delay to allow slave to process
+    delayMicroseconds( DELAY );
+	// Send dummy byte to Set command on Slave
+	Serial.println( "First Byte" );
+    SPI.transfer( 0xAD );
+	// Delay to alow slave to process
+    delayMicroseconds( DELAY );
+	// Loop through buffer sending one byte at a time over SPI
+    for( int i = 0 ; i < NUM_BYTES ; i++){
+        // Send a byte over SPI
+		SPI.transfer( data_out[i] );
+		Serial.println( data_out[i] );
+		// Delay to allow Slave to process
+        delayMicroseconds( DELAY );
+    }
+	// Close SPI bus
+    //sgSerialClose();
+    return 0;
 }
 
-// Get data from serial in. Data size will be in size.
-int sgSerialReceive(SansgridSerial *sg_serial, int size){
-	byte padding = 0x00;
-	#ifdef DUE
-	SPI.transfer( SLAVE_SELECT , RECEIVE , SPI_LAST  );
-	#else // End Due code Begin Uno
-	spiMasterOpen( SLAVE_SELECT );
-	SPI.transfer( RECEIVE );
-	spiMasterClose( SLAVE_SELECT );
-	#endif // DUE
-	spiMasterReceive( RECEIVE , sg_serial->control , CONTROL , SLAVE_SELECT );
-	spiMasterReceive( RECEIVE , sg_serial->ip_addr , IP_ADDRESS , SLAVE_SELECT );
-	spiMasterReceive( RECEIVE , sg_serial->payload , PAYLOAD , SLAVE_SELECT );
-	// Pad Packet to necessary size
-	if( size > CONTROL + IP_ADDRESS + PAYLOAD ){
-	    for( int i = CONTROL + IP_ADDRESS + PAYLOAD ; i < size ; i++ ){ 	
-			if( i == ( size - 1 ) ){
-				#ifdef DUE
-				SPI.transfer( SLAVE_SELECT , padding , SPI_LAST );
-				#else // End Due code Begin Uno
-				spiMasterOpen( SLAVE_SELECT );
-				SPI.transfer( padding );
-				spiMasterClose( SLAVE_SELECT );
-				#endif // DUE
-			}
-			else{
-				#ifdef DUE
-				SPI.transfer( SLAVE_SELECT , padding , SPI_CONTINUE );
-				#else // End Due code Begin Uno
-				spiMasterOpen( SLAVE_SELECT );
-				SPI.transfer( padding );
-				spiMasterClose( SLAVE_SELECT );
-				#endif // DUE
-			}
-			delayMicroseconds( DELAY );
-		}
-	}
-	return 0;
+// Receive size bytes of serial data over SPI.
+uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
+    // Array of size NUM_BYTES to store SPI packet
+    uint8_t data_in[NUM_BYTES];
+    // Dummy byte sent to slave 
+    uint8_t rec = RECEIVE;
+    // Open SPI bus
+    sgSerialOpen();
+    // Delay to allow Slave to process
+    delayMicroseconds( DELAY );
+    // First dummy transfer defines the command 
+    // for valid or not valid data
+    SPI.transfer( rec );
+    // Delay to allow Slave to process
+    delayMicroseconds( DELAY );
+    // Second dummy transfer allows the first 
+    // byte transferred from Slave to be placed
+    // in SPDR register and will be sent on the
+    // next call in the for Loop.
+    SPI.transfer( rec );
+    // Delay to allow Slave to process
+    delayMicroseconds( DELAY );
+    // Loop through receiving bytes the length 
+    // of packet defined as NUM_BYTES
+    for( int i = 0 ; i < NUM_BYTES ; i++){
+        data_in[i] = SPI.transfer( rec );
+        // Delay to allow Slave to process
+        delayMicroseconds( DELAY );
+    }
+    // Close SPI bus
+    //sgSerialClose();
+    // Copy data from array into SansgridSerial structure
+    // containing Control byte, IP address, and Payload
+    memcpy( sg_serial, data_in , sizeof(data_in) );
+    return 0;
 }
 
 // Function is called when all SPI input and output is completed. Stops SPI 
 // from being transmitted and received. 
-int sgSerialClose(void){
-	SPI.end();
-	return 0;
+uint8_t sgSerialClose(void){
+    SPI.end();
+    return 0;
 }

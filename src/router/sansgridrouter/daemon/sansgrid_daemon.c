@@ -23,7 +23,6 @@
 #include <stdlib.h>			// exit()
 #include <unistd.h>			// fork(), setsid(), chdir(), close(), sleep()
 #include <syslog.h>
-//#include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -39,29 +38,13 @@
 
 
 
-void getSansgridDir(char wd[150]) {
-	// Get the .sansgrid directory path
-	// Return success or failure
-	// pass the path back in wd
-	char *home_path = getenv("HOME");
-
-	if (!home_path) {
-		syslog(LOG_NOTICE, "Didn't get home directory");
-		sprintf(wd, "/home/pi/.sansgrid");
-	} else {
-		snprintf(wd, 120, "%s/.sansgrid", home_path);
-	}
-	// FIXME: check to see if dir exists
-	// 			if not, get config from /etc/sansgrid
-
-}
 
 int isRunning(void) {
 	// Check to see if the sansgrid daemon is running
 	pid_t sgpid;
 	FILE *FPTR = NULL;
 	char config_path[150];
-	getSansgridDir(config_path);
+	getSansgridControlDir(config_path);
 	strncat(config_path, "/sansgridrouter.pid", 150);
 
 	if (!(FPTR = fopen(config_path, "r"))) {

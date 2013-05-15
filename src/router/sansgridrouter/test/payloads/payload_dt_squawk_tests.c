@@ -69,7 +69,7 @@ int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	//int exit_code;
 	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
 					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0};
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
 	test_struct->peck = &peck;
@@ -91,7 +91,7 @@ int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	//int exit_code;
 	PayloadTestNode squawk_server = {SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0},
 					squawk_sensor = {SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_SQUAWKING, 0};
-	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING };
+	PayloadTestNode peck = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_SQUAWKING, 0};
 	test_struct->squawk_server = &squawk_server;
 	test_struct->squawk_sensor = &squawk_sensor;
 	test_struct->peck = &peck;

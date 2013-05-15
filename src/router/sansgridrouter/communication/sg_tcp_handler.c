@@ -268,7 +268,7 @@ static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_seri
 }
 
 static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
-	// Get a squawk datatype from the payload
+	// Get a chirp datatype from the payload
 	SansgridChirp sg_chirp;
 
 	atox(&sg_chirp.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
@@ -277,6 +277,22 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 	
 	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
 
+	return translateRdid(dict, size);
+}
+
+static int8_t convertIRStatus(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+	// Get an router<-->server datatype from the payload
+	SansgridIRStatus sg_irstatus;
+	char *status = NULL;
+
+	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
+	atox(&sg_irstatus.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_irstatus.rdid,			match(dict, size, "rdid"),			1*sizeof(uint8_t));
+	if ((status = match(dict, size, "status")) != NULL) {
+		strcpy(sg_irstatus.status, status);
+	}
+
+	memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
 	return translateRdid(dict, size);
 }
 
@@ -297,6 +313,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 		 *key 		= NULL,
 		 *value 	= NULL;
 
+	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	memset(sg_serial->ip_addr, 0x0, sizeof(sg_serial->ip_addr));
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
@@ -351,6 +368,9 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 			break;
 		case SG_DEVSTATUS_CHIRPING:
 			exit_code = convertChirp(dict, size, sg_serial);
+			break;
+		case SG_DEVSTATUS_HEARTBEAT:
+			exit_code = convertIRStatus(dict, size, sg_serial);
 			break;
 		default:
 			exit_code = -1;
@@ -421,6 +441,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	SansgridPeacock 	sg_peacock;
 	SansgridNest 		sg_nest;
 	SansgridSquawk 		sg_squawk;
+	SansgridIRStatus 	sg_irstatus;
 	//SansgridHeartbeat 	sg_heartbeat;
 	SansgridChirp 		sg_chirp;
 	uint32_t 			rdid_32 = 0;
@@ -452,6 +473,8 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	}
 
 
+	if (payload_type == SG_HEARTBEAT_SENSOR_TO_ROUTER)
+		payload_type = 0xfd;
 	addHexField("dt", &payload_type, 1, payload);
 	switch (datatype) {
 		case SG_DEVSTATUS_EYEBALLING:
@@ -503,7 +526,10 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			addHexField("data", sg_squawk.data, 64, payload);
 			break;
 		case SG_DEVSTATUS_HEARTBEAT:
-			// Nothing here
+		case 0xfd:
+			// Heartbeat
+			memcpy(&sg_irstatus, sg_serial->payload, sizeof(SansgridIRStatus));
+			addCharField("status", sg_irstatus.status, sizeof(sg_irstatus.status), payload);
 			break;
 		case SG_DEVSTATUS_CHIRPING:
 			memcpy(&sg_chirp, sg_serial->payload, sizeof(SansgridChirp));

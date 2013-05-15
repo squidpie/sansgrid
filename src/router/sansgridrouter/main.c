@@ -19,6 +19,7 @@
  *
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include "routing_table/heartbeat.h"
 
 #include <stdio.h>
@@ -133,31 +134,59 @@ void *heartbeatRuntime(void *arg) {
 	uint8_t ip_addr[IP_SIZE];
 	SansgridSerial sg_serial;
 	SansgridHeartbeat sg_hb;
+	SansgridIRStatus sg_irstatus;
+	SansgridChirp sg_chirp;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
+	struct timespec req, rem;
+	int hb_status = 0;
+	uint32_t rdid;
 
+	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
+	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
 	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+	routingTableForEachDevice(routing_table, ip_addr);
+	count = routingTableGetDeviceCount(routing_table);
 	while (1) {
-		count = routingTableGetDeviceCount(routing_table);
-		if (count == 0) {
-			// check for possible floating point exceptions
-			// if count is 0, you'll get a divide-by-zero error below
-			count = 1;
-		}
-		if (HEARTBEAT_INTERVAL/count == 0) {
-			// interval is < 1 second
-			// sleep in usecs
-			sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
-		} else {
-			sleep(HEARTBEAT_INTERVAL/count);
-		}
+		do {
+			if (HEARTBEAT_INTERVAL/count == 0) {
+				// interval is < 1 second
+				// sleep in usecs
+				req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
+				req.tv_sec = 0;
+				nanosleep(&req, &rem);
+				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
+			} else {
+				sleep(HEARTBEAT_INTERVAL/count);
+			}
+		} while ((count = routingTableGetDeviceCount(routing_table)) < 2);
+
 		while (dispatch_pause) {
 			sleep(1);
 		}
-		if (routingTableFindNextDevice(routing_table, ip_addr) != 0) {
-			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
-			memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-			sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+		syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
+		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
+		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
+			// device status changed... either went stale or was lost
+			// FIXME: remove magic number by specifying this as payload type
+			sg_irstatus.datatype = 0xfd;
+			rdid = routingTableIPToRDID(routing_table, ip_addr);
+			wordToByte(sg_irstatus.rdid, &rdid, sizeof(rdid));
+			if (routingTableIsDeviceLost(routing_table, ip_addr)) {
+				// Device was just lost
+				syslog(LOG_NOTICE, "Device %i has just been lost", routingTableIPToRDID(routing_table, ip_addr));
+				strcpy(sg_irstatus.status, "lost");
+			} else if (routingTableIsDeviceStale(routing_table, ip_addr)) {
+				// Device just went stale
+				strcpy(sg_irstatus.status, "stale");
+				syslog(LOG_NOTICE, "Device %i has just gone stale", routingTableIPToRDID(routing_table, ip_addr));
+			}
+			memcpy(&sg_serial, &sg_irstatus, sizeof(SansgridIRStatus));
+			sgTCPSend(&sg_serial, sizeof(SansgridSerial));
+		}
+		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
+			routingTableForEachDevice(routing_table, ip_addr);
 		}
 	}
 
@@ -222,14 +251,12 @@ int sgSocketListen(void) {
 	struct sockaddr_un local, remote;		// socket addresses
 	socklen_t len;							// socket lengths
 	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
-	char home_path[150];
 	char socket_path[150];					// socket locations
 	SansgridSerial sg_serial;
 	int exit_code;
 	char *packet;
 
-	getSansgridDir(home_path);
-	strcpy(socket_path, home_path);
+	getSansgridControlDir(socket_path);
 
 	// Create a socket endpoint
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -282,6 +309,16 @@ int sgSocketListen(void) {
 			shutdown_server = 1;
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "strict-auth")) {
+			// require strict adherence to authentication protocol
+			routingTableRequireStrictAuth(routing_table);
+			strcpy(str, "Auth is strictly enforced");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "loose-auth")) {
+			// don't require strict adherence to authentication protocol
+			routingTableAllowLooseAuth(routing_table);
+			strcpy(str, "Auth is loosely enforced");
 			socketDoSend(s2, str);
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
@@ -364,24 +401,38 @@ int sgSocketListen(void) {
 			do {
 				sprintf(str, "Routing Table Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
+				if (routingTableIsAuthStrict(routing_table)) {
+					sprintf(str, "\tStrict Authentication\n");
+				} else {
+					sprintf(str, "\tLoose Authentication\n");
+				}
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\tHeartbeat Period: %i seconds\n",
+					   HEARTBEAT_INTERVAL);
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\nDispatch Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
 				if (dispatch_pause)
 					sprintf(str, "\tDispatch Paused\n");
 				else
 					sprintf(str, "\tDispatch Running\n");
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "Dispatch Size: %i of %i\n", 
+			    sprintf(str, "\tQueued: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "Devices:\n");
+				sprintf(str, "\nDevices:\n");
 				if (socketDoSend(s2, str) < 0) break;
-			} while (0);
-			for (int i=0; i<devnum; i++) {
-				routingTableGetStatus(routing_table, i, str);
-				syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
-				if (socketDoSend(s2, str) < 0) {
-					break;
+				sprintf(str, " \
+rdid                IP address                 status  Last Packet\n");
+				if (socketDoSend(s2, str) < 0) break;
+				for (int i=0; i<devnum; i++) {
+					routingTableGetStatus(routing_table, i, str);
+					syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
+					if (socketDoSend(s2, str) < 0) {
+						break;
+					}
 				}
-			}
+			} while (0);
 		} else if (!strcmp(str, "devices")) {
 			// Get the number of devices
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
@@ -442,19 +493,10 @@ int sgSocketSend(const char *data, const int size) {
 	struct sockaddr_un remote;
 	char str[SG_SOCKET_BUFF_SIZE];
 	char socket_path[150];
-	char home_path[150];
 
-	getSansgridDir(home_path);
-	strcpy(socket_path, home_path);
+	getSansgridControlDir(socket_path);
 
-	// FIXME:
-	// 	I'll probably have to add a function
-	// 	to find the actual datadir; check the current directory,
-	// 	then check the PREFIX/share dir?
-	// 	But then it would break if there was a file with the same name in the current dir
-	// 	but wasn't for the same purpose. And it still might cause stale scripts...
-	//printf("%s\n", DATADIR);
-	// Make sure the server is running 
+	// Make sure the daemon is running 
 	// before we try to send a command
 	if (!isRunning()) {
 		printf("sansgridrouter isn't running\n");
@@ -510,11 +552,13 @@ int sgStorePID(pid_t pid) {
 	FILE *PIDFILE;
 	char config_path[150];
 	char pidpath[150];
-	char home_path[150];
-	getSansgridDir(home_path);
-	strcpy(config_path, home_path);
+	int error_code;
+
+	getSansgridControlDir(config_path);
 	snprintf(pidpath, 150, "%s/sansgridrouter.pid", config_path);
 	if ((PIDFILE = fopen(pidpath, "w")) == NULL) {
+		error_code = errno;
+		syslog(LOG_ERR, "For path %s: %s", pidpath, strerror(error_code));
 		perror("fopen");
 		return -1;
 	}
@@ -525,24 +569,80 @@ int sgStorePID(pid_t pid) {
 	return 0;
 }
 
+int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
+	uint8_t hexarray[16];
+	uint8_t ip_right[16];
+	char *divider;
+	uint32_t size;
+	uint32_t index,
+			 base = 0;
+	char *bounds;
+	char *moved_ip;
+	uint32_t right_size = 0;
+	if (ip_str[0] == '\'')
+		ip_str = &ip_str[1];
+	if ((divider = strstr(ip_str, "\'")) != NULL) {
+			divider[0] = '\0';
+	}
+	moved_ip = ip_str;
+	if ((divider = strstr(ip_str, "::")) != NULL) {
+		// found a divider
+		right_size = parseIPv6(&divider[2], ip_right);
+		divider[1] = '\0';
+	} 
+	bounds = &ip_str[strlen(ip_str)-1];
+	memset(ip_addr, 0x0, 16);
+	divider = moved_ip;
+
+	while (divider < bounds) {
+		if ((divider = strstr(moved_ip, ":")) == NULL) {
+			divider = bounds;
+		}
+		if (divider[0] == ':')
+			divider[0] = '\0';
+		size = (strlen(moved_ip)+1)/2;
+		atox(hexarray, moved_ip, sizeof(hexarray));
+		for (index = base; index < base+size; index++) {
+			ip_addr[index] = hexarray[index-base];
+		}
+		base = index;
+		if (divider >= bounds)
+			break;
+		moved_ip = &divider[1];
+	}
+	for (index = 0; index < right_size; index++)
+		ip_addr[16-right_size+index] = ip_right[index];
+
+	return base;
+}
+
+
 int parseConfFile(const char *path, RouterOpts *ropts) {
 	// parse a config file
 	FILE *FPTR;
 	char *buffer = NULL;
 	size_t buff_alloc = 50;
+	uint8_t netmask[IP_SIZE];
 	char key[100],
 		 url[100],
 		 essid[100],
 		 hidden_str[10],
-		 verbosity_str[20];
+		 verbosity_str[20],
+		 netmask_str[50],
+		 strictness_str[10];
 	int hidden = 0;
 	int verbosity = 0;
+	int strictness = 0;
 
 	int foundkey = 0,
 		foundurl = 0,
 		foundessid = 0,
 		foundhidden = 0,
-		foundverbosity = 0;
+		foundverbosity = 0,
+		foundnetmask = 0,
+		foundstrictness = 0;
+	char *str = NULL;
+	char *saveptr = NULL;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -568,13 +668,33 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 				hidden = 0;
 			else
 				foundhidden = 0;
+		} else if (strstr(buffer, "strictness")) {
+			sscanf(buffer, "strictness = %s", strictness_str);
+			foundstrictness = 1;
+			if (strstr(strictness_str, "1"))
+				strictness = 1;
+			else if (strstr(strictness_str, "0"))
+				strictness = 0;
+			else
+				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
-			sscanf(buffer, "essid = %s", essid);
+			str = strtok_r(buffer, "'", &saveptr);
+			str = strtok_r(NULL, "'", &saveptr);
+			if (str == NULL) {
+				syslog(LOG_WARNING, "Couldn't parse config file");
+				return -1;
+			}
+			strcpy(essid, str);
+			//sscanf(buffer, "essid = '%s'", essid);
 			foundessid = 1;
 		} else if (strstr(buffer, "verbosity")) {
 			sscanf(buffer, "verbosity = %s", verbosity_str);
 			verbosity = atoi(verbosity_str);
 			foundverbosity = 1;
+		} else if (strstr(buffer, "netmask")) {
+			sscanf(buffer, "netmask = %s", netmask_str);
+			parseIPv6(netmask_str, netmask);
+			foundnetmask = 1;
 		}
 	}
 	fclose(FPTR);
@@ -590,7 +710,11 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		ropts->verbosity = verbosity;
 		setlogmask(LOG_UPTO(verbosity));
 	}
-		
+	if (foundnetmask)
+		memcpy(ropts->netmask, netmask, IP_SIZE);
+	if (foundstrictness) {
+		ropts->strictness = strictness;
+	}
 
 	return 0;
 }	
@@ -605,7 +729,6 @@ int main(int argc, char *argv[]) {
 	int c;								// getopt var
 	char *option = NULL;				// getopt var
 	int32_t no_daemonize = 0;			// bool: should we run in foreground?
-	char home_path[150];
 	char config_path[150];				// Sansgrid Dir
 	pid_t sgpid;						// Sansgrid PID
 	char payload[400];
@@ -618,8 +741,7 @@ int main(int argc, char *argv[]) {
 	router_opts.verbosity = LOG_ERR;
 	setlogmask(LOG_UPTO(router_opts.verbosity));
 
-	getSansgridDir(home_path);
-	strcpy(config_path, home_path);
+	getSansgridConfDir(config_path);
 	strcat(config_path, "/sansgrid.conf");
 
 	parseConfFile(config_path, &router_opts);
@@ -757,6 +879,12 @@ int main(int argc, char *argv[]) {
 		} else if (strstr(option, "key=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "strict-auth")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (!strcmp(option, "loose-auth")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
 			if (optind < argc) {
@@ -765,6 +893,10 @@ int main(int argc, char *argv[]) {
 				sgSocketSend(doDrop, strlen(doDrop));
 				exit(EXIT_SUCCESS);
 			}
+		} else if (strstr(option, "packet=")) {
+			sprintf(payload, "packet: %s", &option[7]);
+			sgSocketSend(payload, strlen(payload));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -807,12 +939,15 @@ int main(int argc, char *argv[]) {
 
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
-	// TODO: Assign ESSID from config file
-	// TODO: Assign netmask from options
-	routing_table = routingTableInit(router_base, "Stock ESSID");
+	routing_table = routingTableInit(router_opts.netmask, "Stock ESSID");
 	void *arg;
 
-	// TODO: set IP address from netmask in options
+	if (router_opts.strictness == 1) {
+		routingTableRequireStrictAuth(routing_table);
+	} else if (router_opts.strictness == 0) {
+		routingTableAllowLooseAuth(routing_table);
+	}
+
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
@@ -857,30 +992,93 @@ void usage(int status) {
 		printf("Try sansgridrouter -h\n");
 	else {
 		printf("Usage: sansgridrouter [OPTION]\n");
-		printf("\
+		printf("\n\
+Startup Options\n\
   -c  --config=[CONFIGFILE]  use CONFIGFILE instead of default config file\n\
   -f  --foreground           Don't background daemon\n\
   -p  --packet=[PACKET]      Send a sansgrid payload to the server\n\
-  -v  --verbose              Be verbose (-vvvv for very verbose)\n\
+                             This arg is deprecated. Use the command instead.\n\
+  -v  --verbose              Be verbose (warnings)\n\
+  -vv                        Be more verbose (notices)\n\
+  -vvv                       Be even more verbose (info)\n\
+  -vvvv                      Be very very verbose (debug)\n\
   -q  --quiet                Be less verbose\n\
   -h, --help                 display this help and exit\n\
       --version              output version information and exit\n\
 \n\
-      status                 show status of devices\n\
-      kill                   shutdown the router daemon\n\
+Daemon Querying\n\
       running                check to see if router daemon is running\n\
       devices                print number of devices tracked\n\
+      status                 show status of devices\n\
+\n\
+Daemon Commands\n\
+      packet=[PACKET]        Send a sansgrid payload to the server\n\
+      start                  start the router daemon\n\
+      restart                restart the router daemon\n\
+      kill                   shutdown the router daemon\n\
       hide-network           don't broadcast essid\n\
       show-network           broadcast essid\n\
-	  drop [DEVICE]          drop a device\n\
+      drop [DEVICE]          drop a device\n\
+      drop all               drop all devices\n\
+      pause                  don't send any packets\n\
+      resume                 continue sending packets\n\
+\n\
+Daemon Configuration\n\
+      strict-auth            require strict adherence to authentication protocol\n\
+      loose-auth             as long as eyeball comes first, don't care about packet order\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
-	  key=[SERVERKEY]        set the server key\n\
-      pause                  don't send any packets\n\
-      resume                 continue sending packets\n");
+      key=[SERVERKEY]        set the server key\n\
+");
 	}
 	exit(status);
 }
+
+
+
+void getSansgridConfDir(char wd[150]) {
+	// Get the .sansgrid directory path
+	// Return success or failure
+	// pass the path back in wd
+	char *home_path = getenv("HOME");
+
+	if (!home_path) {
+		syslog(LOG_NOTICE, "Didn't get home directory");
+		sprintf(wd, "/home/pi/.sansgrid");
+	} else {
+		snprintf(wd, 120, "%s/.sansgrid", home_path);
+	}
+	// FIXME: check to see if dir exists
+	// 			if not, get config from /etc/sansgrid
+
+}
+
+void getSansgridControlDir(char wd[150]) {
+	// Get the location of the unix pipe and the .pid file
+	struct stat buffer;
+	int error_code;
+
+	sprintf(wd, "/tmp/sansgrid");
+	if (stat(wd, &buffer) >= 0) {
+		// Found /tmp/sansgrid dir
+		return;
+	} else if (stat("/tmp", &buffer) >= 0) {
+		// Found /tmp directory
+		// Make sansgrid dir there
+		if (mkdir(wd, 0777) < 0) {
+			error_code = errno;
+			syslog(LOG_ERR, "Couldn't create %s: %s", wd, strerror(error_code));
+			exit(EXIT_FAILURE);
+		} else {
+			return;
+		}
+	} else {
+		syslog(LOG_ERR, "Couldn't find /tmp dir. Exiting");
+		exit(EXIT_FAILURE);
+	}
+	return;
+}
+
 
 // vim: ft=c ts=4 noet sw=4:

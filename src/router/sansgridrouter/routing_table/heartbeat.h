@@ -23,13 +23,13 @@
 #ifndef __SG_ROUTING_HEARTBEAT_H__
 #define __SG_ROUTING_HEARTBEAT_H__
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
-//#define HEARTBEAT_UINTERVAL 4000000	// interval, in usecs, between device heartbeats 
 #define HEARTBEAT_INTERVAL 240		// interval, in seconds, between device heartbeats
+#define PING_THRESHOLD 8			// number of lost pings before device is considered lost
+#define STALE_THRESHOLD 4			// number of lost pings before device is considered stale
 
 #include <payloads.h>
 
-enum SansgridHeartbeatStatusEnum {
+enum __attribute__((deprecated))SansgridHeartbeatStatusEnum {
 	SG_DEVICE_NOT_PRESENT,
 	SG_DEVICE_PRESENT,
 	SG_DEVICE_PINGING,
@@ -37,8 +37,15 @@ enum SansgridHeartbeatStatusEnum {
 	SG_DEVICE_LOST
 };
 
-int sleepMicro(uint32_t usecs);
+typedef struct HeartbeatStatus HeartbeatStatus;
 
+int32_t hbIsDeviceStale(HeartbeatStatus *hb);
+int32_t hbIsDeviceLost(HeartbeatStatus *hb);
+HeartbeatStatus *hbInit(int32_t ping_thres, int32_t stale_thres);
+HeartbeatStatus *hbInitDefault(void);
+void hbDestroy(HeartbeatStatus *hb);
+int32_t hbDecrement(HeartbeatStatus *hb);
+int32_t hbRefresh(HeartbeatStatus *hb);
 
 
 #endif

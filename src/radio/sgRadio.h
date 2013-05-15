@@ -41,12 +41,16 @@
 #define F0_PYLD_SZ 41
 #define F1_PYLD_SZ 40
 #define RADIO_PKT_SZ 90
-#define FRAG_BUF_SZ 32
+#define FRAG_BUF_SZ 6
 
 #define MODE(mode) (router_mode == mode)
 #define IS_OK(err) (((sizeof(err) > 1) && (*err == 0x4F) && (*(err + 1) == 0x4B))) // check that err = 'OK'
 
 #define BROADCAST 0x0
+
+#define PKT_FRAME 0
+#define	PKT_XBSN  1
+#define PKT_PYLD  9
 
 enum RadioMode {
 	SENSOR,
@@ -61,9 +65,6 @@ enum FragTableEntry {
 };
 
 enum packetIndex {
-	PKT_FRAME = 0,
-	PKT_XBSN = 1,
-	PKT_PYLD = 9
 };
 
 //static SerialDebug * debugger;
@@ -78,37 +79,39 @@ void read_spi();
 
 class SansgridRadio {
 	private:
-		RadioMode router_mode;
-		
-		uint8_t incoming_packet[MAX_XB_PYLD];
-		uint8_t packet_out_f0[MAX_XB_PYLD];
-		uint8_t packet_out_f1[MAX_XB_PYLD];
-		uint8_t packet_buffer[SG_PACKET_SZ];
-		
-		uint8_t frag_buffer[FRAG_BUF_SZ][RADIO_PKT_SZ];
-		unsigned int next;
-		
-		uint8_t xbsn[XB_SN_LN];
-		uint8_t origin_xbsn[XB_SN_LN];
-		
-		uint8_t * payload;
-		uint8_t * ip;
-		SansgridSerial * SpiData;
-		HardwareSerial * Radio;
-		
-		SnIpTable * sn_table;
-		//SerialDebug debug;
-		
 		void setXBsn(void);
 		int findSn(int sn);
 		void atCmd(uint8_t *,const char *);
 		bool mode(enum RadioMode mode);
 		bool setDestAddr(uint64_t addr);
 		uint8_t * genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn);
+	// declare this here or everything breaks... wtf.	
+		uint8_t incoming_packet[MAX_XB_PYLD];
+		uint8_t pkt0_frag[MAX_XB_PYLD];
+		uint8_t pkt1_frag[MAX_XB_PYLD];
 		
+		uint8_t * pending_packet;
+		
+		uint8_t * payload;
+		uint8_t * ip;
+		
+		SansgridSerial * SpiData;
+		HardwareSerial * Radio;
+		SnIpTable * sn_table;
+		
+		RadioMode router_mode;
+	
+		uint8_t packet_buffer[SG_PACKET_SZ];
+		
+		uint8_t frag_buffer[FRAG_BUF_SZ][RADIO_PKT_SZ];
+		
+		uint8_t xbsn[XB_SN_LN];
+		uint8_t origin_xbsn[XB_SN_LN];
+
+		unsigned int next;
+		//SerialDebug debug;
 	public:
 		SansgridRadio();
-		~SansgridRadio();
 		void read();
 		void write();
 		void set_mode(RadioMode mode);
@@ -119,5 +122,6 @@ class SansgridRadio {
 		void processPacket(void);
 		bool defrag(void);
 };
+
 
 #endif
