@@ -21,7 +21,7 @@ $page = "<form name=\"sgform\" method=\"post\" action=\"${_SERVER['PHP_SELF']}\"
 
 // Get list of all sensors we've mated with that are online
 $query  = "SELECT * FROM sensor WHERE has_mated='y'";
-$query .= " AND status='online' ";
+$query .= " AND status='online' or status='stale'";
 $query .= " ORDER BY manid, modnum";
 $result = mysqli_query($db, $query) or die ("Couldn't execute query 1.");
 
@@ -39,7 +39,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 	// Start fieldset
 	$page .= "<fieldset class=\"SGfieldset\">";
-	$page .= "<legend>$sensor_name</legend>";
+	$page .= "<legend class=\"$status\">$sensor_name</legend>";
 	
 	// Do we have any inputs to the sensor?...
 	$query  = "SELECT COUNT(*) AS count FROM io ";
@@ -117,6 +117,7 @@ $page .= "</form>";
 <head>
 <title><? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
+<? print returnRefresh(); ?>
 </head>
 
 <body>

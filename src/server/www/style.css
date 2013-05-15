@@ -235,6 +235,10 @@ fieldset.SGfieldset {
 	box-shadow: .4em .4em 1px grey;
 	}
 
+fieldset.SGfieldset legend.stale {
+	background-color: yellow;
+	}
+
 fieldset.SGfieldset h4 {
 	margin-left: -.5em;
 	}
