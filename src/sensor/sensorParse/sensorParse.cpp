@@ -32,7 +32,7 @@ void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
     memcpy( tx->payload + DT + MANID + MODNUM + SN , sg_eyeball->profile , PROFILE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE , sg_eyeball->mode , MODE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE + MODE , sg_eyeball->padding, EYEBALL_PADDING);
-	Serial.println( "Transmitting Eyeball" );
+    Serial.println( "Transmitting Eyeball" );
     sgSerialSend( tx , 1 );
 }
 
@@ -42,32 +42,44 @@ void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
     for( int i = DT + SENSOR_KEY ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
     Serial.println( "Transmitting Mock" );
-	sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
-    memcpy( tx->payload , sg_peacock , sizeof(SansgridPeacock) );
-	Serial.println( "Transmitting Peacock" );
+    memcpy( tx->payload , sg_peacock->dt , DT );
+    memcpy( tx->payload + DT , sg_peacock->id_a , SENSOR_ID );
+    memcpy( tx->payload + DT + SENSOR_ID , sg_peacock->classification_a , CLASSIFICATION );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION , sg_peacock->direction_a , DIRECTION );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_peacock->label_a , LABEL );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_peacock->units_a , UNITS );
+    memcpy( tx->payload + DT + SENSOR_A , sg_peacock->id_b, SENSOR_ID );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID , sg_peacock->classification_b, CLASSIFICATION );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION , sg_peacock->direction_b , DIRECTION );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_peacock->label_b , LABEL );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_peacock->units_b , UNITS );
+    tx->payload[79] = sg_peacock->additional[0];
+    tx->payload[80] = sg_peacock->padding[0];
+    Serial.println( "Transmitting Peacock" );
     sgSerialSend( tx , 1 );
 }
 
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     memcpy( tx->payload , sg_squawk->dt , DT );
     memcpy( tx->payload + DT , sg_squawk->data , DATA );
-	Serial.println( "Transmitting Squawk" );
+    Serial.println( "Transmitting Squawk" );
     sgSerialSend( tx , 1 );
 }
 
 void parseSquawkSerial( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     memcpy( tx->payload , sg_squawk->dt , DT );
     memcpy( tx->payload + DT , sg_squawk->data , DATA );
-	Serial.println( "Copying Squawk into SansgridSerial" );
+    Serial.println( "Copying Squawk into SansgridSerial" );
 }
 
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
     memcpy( tx->payload , sg_chirp->dt , DT );
     memcpy( tx->payload + DT , sg_chirp->data , DATA );
-	Serial.println( "Transmitting Chirp" );
+    Serial.println( "Transmitting Chirp" );
     sgSerialSend( tx , 1 );
 }
 
@@ -75,7 +87,7 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
     memcpy( tx->payload , sg_heartbeat->dt , DT );
     for( int i = DT ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
-	Serial.println( "Transmitting Heartbeat" );
+    Serial.println( "Transmitting Heartbeat" );
     sgSerialSend( tx , 1 );
 }
 

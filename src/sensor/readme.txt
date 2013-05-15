@@ -20,7 +20,10 @@ For more detail and information on installing libraries, see:
 
 
 To compile on Uno ensure to comment out: //#define DUE 1
-in the spiMaster.cpp file.
+in the sgSerial.cpp file.
 
 To compile on DUE ensure to NOT comment out:  #define DUE 1
-in the spiMaster.cpp file.
+in the sgSerial.cpp file.
+
+To implement a push button mate ensure to not comment out: #define PUSH_BUTTON 1
+in the sensorPayloadHandler.cpp.

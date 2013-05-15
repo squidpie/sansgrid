@@ -19,7 +19,7 @@
  *
  *
  */
- 
+    
 #ifndef __SENSOR_PAYLOADS_H__
 #define __SENSOR_PAYLOADS_H__
 
@@ -71,6 +71,7 @@ typedef struct SensorConfig{
     static bool squawk;
     static bool nest;
     static bool chirp;
+    static bool nokey;
     static bool challenge;
     static bool forget;
     static uint8_t manid[ MANID ];
@@ -81,15 +82,13 @@ typedef struct SensorConfig{
     static uint8_t router_ip[ IP_ADDRESS ];
     static uint8_t server_public_key[ SERVER_KEY ];
     static uint8_t sensor_public_key[ SENSOR_KEY ]; 
-    SansgridSensor a;
-    SansgridSensor b;
 } SensorConfig;
 
 typedef struct SansgridFly{
     uint8_t dt[ DT ];
     int8_t network_name[ DATA ];
 } SansgridFly;
-	
+    
 typedef struct SansgridEyeball{
     static uint8_t dt[ DT ];
     static uint8_t manid[ MANID ];
@@ -124,8 +123,16 @@ typedef struct SansgridMock{
 
 typedef struct SansgridPeacock{
     static uint8_t dt[ DT ];
-    SansgridSensor a;
-    SansgridSensor b;
+    static uint8_t id_a[ SENSOR_ID ];
+    static uint8_t classification_a[ CLASSIFICATION ];
+    static uint8_t direction_a[ DIRECTION ];
+    static int8_t label_a[ LABEL ];
+    static int8_t units_a[ UNITS ];    
+    static uint8_t id_b[ SENSOR_ID ];
+    static uint8_t classification_b[ CLASSIFICATION ];
+    static uint8_t direction_b[ DIRECTION ];
+    static int8_t label_b[ LABEL ];
+    static int8_t units_b[ UNITS ];
     static uint8_t additional[ ADDITIONAL ];
     static uint8_t padding[ PEACOCK_PADDING ];
 } SansgridPeacock;

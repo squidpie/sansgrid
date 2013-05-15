@@ -26,8 +26,6 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#define DUE 1
-
 #define NUM_BYTES 98        // Number of bytes tranferred over SPI
 #define CONTROL 1           // Number of bytes in control 
 #define IP_ADDRESS 16       // Number of bytes in source/destination IP address
