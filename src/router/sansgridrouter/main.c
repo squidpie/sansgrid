@@ -46,13 +46,19 @@ static int dispatch_pause = 0;
 
 
 void *dispatchRuntime(void *arg) {
-	SansgridSerial *sg_serial;
+	SansgridSerial *sg_serial = NULL;
 
 	while (1) {
+		if(sg_serial != NULL) {
+			free(sg_serial);
+			sg_serial = NULL;
+		}
+
 		if (queueDequeue(dispatch, (void**)&sg_serial) == -1) {
 			syslog(LOG_ERR, "Dispatch Queue Failed, Quitting");
 			exit(EXIT_FAILURE);
 		}
+		printf("Got packet of type %x\n", sg_serial->payload[0]);
 		while (dispatch_pause) {
 			sleep(1);
 		}
@@ -85,6 +91,7 @@ void *dispatchRuntime(void *arg) {
 				routerHandleNest(routing_table, sg_serial);
 				break;
 			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
+			case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
 			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
 			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
@@ -97,16 +104,17 @@ void *dispatchRuntime(void *arg) {
 			case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 				routerHandleHeartbeat(routing_table, sg_serial);
 				break;
+			case SG_SERVSTATUS:
+				routerHandleServerStatus(routing_table, sg_serial);
+				break;
 			case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
 			case SG_CHIRP_DATA_SENSOR_TO_SERVER:
-			case SG_CHIRP_DATA_STREAM_START:
-			case SG_CHIRP_DATA_STREAM_CONTINUE:
-			case SG_CHIRP_DATA_STREAM_END:
 			case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			case SG_CHIRP_SENSOR_DISCONNECT:
 				routerHandleChirp(routing_table, sg_serial);
 				break;
 			default:
+				printf("Not found: %x\n", sg_serial->payload[0]);
 				break;
 		}
 	}
@@ -132,7 +140,7 @@ void *heartbeatRuntime(void *arg) {
 
 	int32_t count;
 	uint8_t ip_addr[IP_SIZE];
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial = NULL;
 	SansgridHeartbeat sg_hb;
 	SansgridIRStatus sg_irstatus;
 	SansgridChirp sg_chirp;
@@ -140,11 +148,11 @@ void *heartbeatRuntime(void *arg) {
 	struct timespec req, rem;
 	int hb_status = 0;
 	uint32_t rdid;
+	int device_lost = 0;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
 	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
-	memcpy(&sg_serial.payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 	routingTableForEachDevice(routing_table, ip_addr);
 	count = routingTableGetDeviceCount(routing_table);
 	while (1) {
@@ -165,11 +173,16 @@ void *heartbeatRuntime(void *arg) {
 			sleep(1);
 		}
 		syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
-		memcpy(&sg_serial.ip_addr, ip_addr, IP_SIZE);
-		sgSerialSend(&sg_serial, sizeof(SansgridSerial));
+
+		sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+		memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+		memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+		queueEnqueue(dispatch, sg_serial);
+		sg_serial = NULL;
 		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
 			// device status changed... either went stale or was lost
 			// FIXME: remove magic number by specifying this as payload type
+			printf("hb_status = %x\n", hb_status);
 			sg_irstatus.datatype = 0xfd;
 			rdid = routingTableIPToRDID(routing_table, ip_addr);
 			wordToByte(sg_irstatus.rdid, &rdid, sizeof(rdid));
@@ -177,13 +190,22 @@ void *heartbeatRuntime(void *arg) {
 				// Device was just lost
 				syslog(LOG_NOTICE, "Device %i has just been lost", routingTableIPToRDID(routing_table, ip_addr));
 				strcpy(sg_irstatus.status, "lost");
+				device_lost = 1;
 			} else if (routingTableIsDeviceStale(routing_table, ip_addr)) {
 				// Device just went stale
 				strcpy(sg_irstatus.status, "stale");
 				syslog(LOG_NOTICE, "Device %i has just gone stale", routingTableIPToRDID(routing_table, ip_addr));
 			}
-			memcpy(&sg_serial, &sg_irstatus, sizeof(SansgridIRStatus));
-			sgTCPSend(&sg_serial, sizeof(SansgridSerial));
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+			sg_serial->control = 0xad;
+			memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
+			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+			queueEnqueue(dispatch, sg_serial);
+			sg_serial = NULL;
+			if (device_lost) {
+				device_lost = 0;
+				//routerFreeDevice(routing_table, ip_addr);
+			}
 		}
 		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
 			routingTableForEachDevice(routing_table, ip_addr);
@@ -252,7 +274,7 @@ int sgSocketListen(void) {
 	socklen_t len;							// socket lengths
 	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
 	char socket_path[150];					// socket locations
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial = NULL;
 	int exit_code;
 	char *packet;
 
@@ -323,15 +345,17 @@ int sgSocketListen(void) {
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
 			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 			exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
-					&sg_serial);
+					sg_serial);
 			if (exit_code == -1) {
 				strcpy(str, "bad packet");
 				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
 			} else {
 				strcpy(str, "packet accepted");
-				queueEnqueue(dispatch, &sg_serial);
+				queueEnqueue(dispatch, sg_serial);
 				syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
+				sg_serial = NULL;
 				if (socketDoSend(s2, str) == -1) {
 					close(s2);
 					continue;
