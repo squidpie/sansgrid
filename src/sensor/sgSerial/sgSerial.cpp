@@ -1,5 +1,5 @@
-/* Serial Communication implementation
- * Specific to the Arduino DUE Platform
+/* Serial Communication Implementation
+ * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -10,12 +10,12 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *
  */
@@ -60,21 +60,21 @@ uint8_t sgSerialSetAsSensor(void){
 // Send size bytes of serial data over SPI.
 uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     // Buffer to store data array to send to Slave over SPI
-	uint8_t data_out[ NUM_BYTES ];
-	// Copy SansgridSerial data to buffer
+    uint8_t data_out[ NUM_BYTES ];
+    // Copy SansgridSerial data to buffer
     memcpy( data_out , sg_serial, sizeof(SansgridSerial));
     // Open SPI bus
-	sgSerialOpen();
-	// Send dummy byte to Set command on Slave
-	Serial.println( "First Byte" );
+    sgSerialOpen();
+    // Send dummy byte to Set command on Slave
+    Serial.println( "First Byte" );
     SPI.transfer( 0xAD );
-	// Loop through buffer sending one byte at a time over SPI
+    // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
-		SPI.transfer( data_out[i] );
-		Serial.println( data_out[i] );
+        SPI.transfer( data_out[i] );
+        Serial.println( data_out[i] );
     }
-	// Close SPI bus - NOT USED
+    // Close SPI bus - NOT USED
     //sgSerialClose();
     return 0;
 }
@@ -99,8 +99,8 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI and store
-		// byte received in data_in buffer
-		data_in[i] = SPI.transfer( rec );
+        // byte received in data_in buffer
+        data_in[i] = SPI.transfer( rec );
     }
     // Close SPI bus - NOT USED
     //sgSerialClose();
