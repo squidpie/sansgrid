@@ -26,6 +26,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#define DUE 1
+
 #define NUM_BYTES 98        // Number of bytes tranferred over SPI
 #define CONTROL 1           // Number of bytes in control 
 #define IP_ADDRESS 16       // Number of bytes in source/destination IP address
@@ -33,8 +35,12 @@
 #define RECEIVE 0xFD        // Control byte for receiving data
 #define TRANSMIT 0xAD       // Control byte for transmit data
 #define SLAVE_SELECT  10    // SS pin 10
+
+#ifdef DUE
 #define SLAVE_READY  8      // Hand shake pin identifying Slave has data to send
-#define DELAY 12            // Delay in microseconds between bytes sent
+#else
+#define SLAVE_READY 2       // Hand shake pin for UNO, interrupt on pin 2 only
+#endif // DUE
 
 typedef struct SansgridSerial{
     uint8_t control[ CONTROL ];       // Control byte

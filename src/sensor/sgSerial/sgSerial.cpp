@@ -65,22 +65,16 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     memcpy( data_out , sg_serial, sizeof(SansgridSerial));
     // Open SPI bus
 	sgSerialOpen();
-	// Delay to allow slave to process
-    delayMicroseconds( DELAY );
 	// Send dummy byte to Set command on Slave
 	Serial.println( "First Byte" );
     SPI.transfer( 0xAD );
-	// Delay to alow slave to process
-    delayMicroseconds( DELAY );
 	// Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
 		SPI.transfer( data_out[i] );
 		Serial.println( data_out[i] );
-		// Delay to allow Slave to process
-        delayMicroseconds( DELAY );
     }
-	// Close SPI bus
+	// Close SPI bus - NOT USED
     //sgSerialClose();
     return 0;
 }
@@ -93,28 +87,22 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     uint8_t rec = RECEIVE;
     // Open SPI bus
     sgSerialOpen();
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
     // First dummy transfer defines the command 
     // for valid or not valid data
     SPI.transfer( rec );
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
-    // in SPDR register and will be sent on the
-    // next call in the for Loop.
+    // in SPDR register and will be stored on the
+    // next SPI.transfer() in the for Loop.
     SPI.transfer( rec );
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
     // Loop through receiving bytes the length 
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
-        data_in[i] = SPI.transfer( rec );
-        // Delay to allow Slave to process
-        delayMicroseconds( DELAY );
+        // Send a byte over SPI and store
+		// byte received in data_in buffer
+		data_in[i] = SPI.transfer( rec );
     }
-    // Close SPI bus
+    // Close SPI bus - NOT USED
     //sgSerialClose();
     // Copy data from array into SansgridSerial structure
     // containing Control byte, IP address, and Payload

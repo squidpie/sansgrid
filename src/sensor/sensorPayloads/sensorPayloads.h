@@ -1,5 +1,4 @@
 /* Sensor Payload Structs and Definitions
- * specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -72,6 +71,7 @@ typedef struct SensorConfig{
     static bool nest;
 	static bool chirp;
 	static bool challenge;
+	static bool forget;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];

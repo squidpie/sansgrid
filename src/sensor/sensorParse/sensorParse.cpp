@@ -1,5 +1,4 @@
 /* Sensor Parse Payload implementation
-* Specific to the Arduino DUE Platform
 *
 * Copyright (C) 2013 SansGrid
 *
@@ -58,6 +57,12 @@ void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     sgSerialSend( tx , 1 );
 }
 
+void parseSquawkSerial( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
+    memcpy( tx->payload , sg_squawk->dt , DT );
+    memcpy( tx->payload + DT , sg_squawk->data , DATA );
+	Serial.println( "Copying Squawk into SansgridSerial" );
+}
+
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
     memcpy( tx->payload , sg_chirp->dt , DT );
     memcpy( tx->payload + DT , sg_chirp->data , DATA );
@@ -73,7 +78,7 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
     sgSerialSend( tx , 1 );
 }
 
-// Payloads recieved at Sensor from Router
+// Payloads received at Sensor from Router
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
     memcpy( sg_fly->dt , rx->payload , DT );
     memcpy( sg_fly->network_name , rx->payload + 1 , DATA );
