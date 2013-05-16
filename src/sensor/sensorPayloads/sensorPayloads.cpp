@@ -34,6 +34,7 @@ bool SensorConfig::chirp = false;
 bool SensorConfig::nokey = false;
 bool SensorConfig::challenge = false;
 bool SensorConfig::forget = false;
+bool SensorConfig::received = false;
 uint8_t SensorConfig::manid[ MANID ] = { 0x00, 0x00, 0x00, 0x01 };
 uint8_t SensorConfig::modnum[ MODNUM ] = { 0x00, 0x00, 0x00, 0x01 };
 int8_t SensorConfig::sn[ SN ] = { 0x44, 0x55, 0x45, 0x31, 0x32, 0x33, 0x34, 0x35 };

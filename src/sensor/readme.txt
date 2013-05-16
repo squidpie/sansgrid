@@ -3,10 +3,9 @@ Then either paste this in your sketch at the top:
 
      #include <sensorPayloadHandler.h>
      #include <sgSerial.h>
-     #include <spiMaster.h>
      #include <sensorPayloads.h>
      #include <sensorParse.h>
-     #include <sensorConnect.h>
+     #include <SPI.h>
 
 or select SKETCH then IMPORT LIBRARIES then select the libraries to include.
 

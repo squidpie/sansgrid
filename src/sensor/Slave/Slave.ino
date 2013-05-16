@@ -108,6 +108,12 @@ void loop (void){
     command = 0;
     process_it = false;
     }  // end of flag set
+    /*
+    delay(5000);
+    digitalWrite( SLAVE_READY , LOW );
+    delayMicroseconds( 6 );
+    digitalWrite( SLAVE_READY , HIGH );
+    delay(5000);*/
 }  // end of loop
 
 // Peck
