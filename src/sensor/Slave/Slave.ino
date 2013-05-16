@@ -3,13 +3,14 @@
  */
  
 #include <SPI.h>
-
-#define SLAVE_READY 7
 #define NUM_BYTES 98
-byte command;
-byte rx [ NUM_BYTES ];
-// Fly
-/*byte tx [ NUM_BYTES ] = { 0xF0,// Control Byte 1 BYTE
+#define SLAVE_READY 7
+#define DELAY 6
+
+// Buffers
+uint8_t rx_buf [NUM_BYTES];
+// FLY TEST PACKET
+uint8_t tx_buf [NUM_BYTES] = { 0xF0,// Control Byte 1 BYTE
         0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xA8,
         0x00,0x01, // IP Address 16 BYTES
         0x10, // Payload (Data Type) 1 BYTE
@@ -21,6 +22,94 @@ byte rx [ NUM_BYTES ];
         0x00,0x00,0x53,0x61,0x6E,0x73,0x67,0x72,0x69,0x64 }; // Payload 
         // Network ID 80 BYTES
         // Payload 81 BYTES
+
+// Buffer position markers
+volatile uint8_t pos;
+volatile uint8_t pos_b;
+
+// SPI command byte
+volatile uint8_t command;
+
+// Process flag
+volatile boolean process_it;
+
+// Setup SPI Slave device
+void setup (void)
+{
+  Serial.begin (9600);   // debugging
+
+  // Transmit on MISO - Master In Slave Out
+  pinMode(MISO, OUTPUT);
+  
+  // Initialize Slave Ready port
+  pinMode(SLAVE_READY, OUTPUT);
+  digitalWrite(SLAVE_READY, HIGH);
+  
+  // Initiate SPI in slave mode
+  SPCR |= _BV(SPE);
+  
+  // Set buffer Positions 
+  pos = 0;               // rxfer empty
+  pos_b = 0;             // txfer first uint8_t
+  
+  // Set Command byte to default
+  command = 0;           // Set command to default
+  
+  // Set Process flag to default 
+  process_it = false;    // Set flag to default
+
+  // Turn on SPI interrupt
+  SPI.attachInterrupt();
+
+}  // End of Setup
+
+// SPI Interrupt Service Routine
+ISR (SPI_STC_vect)
+{
+  // Read byte from SPI SPDR register
+  uint8_t c = SPDR;  
+  // Call Command Byte
+  switch(command){
+  case 0x00:
+      // Set Command byte from intial dummy byte
+      command = c;
+      break;
+  case 0xAD:
+      // Receive SPI Packet from Master
+      if ( pos < NUM_BYTES ){
+          rx_buf [pos++] = c;
+          // If buffer is full set process_it flag
+          if ( pos == NUM_BYTES - 1 )
+              process_it = true;
+      }
+      break;
+  case 0xFD:
+      // Transmit SPI Packet to Master
+      SPDR = tx_buf[ pos_b++ ];
+      // If buffer is full set process_it flag
+      if ( pos_b == NUM_BYTES )               
+          process_it = true; 
+      break;
+  default:
+      break;
+    }  // End of Command Byte
+}  // End of Interupt Service Routine
+
+// Main Loop - Wait for flag set in ISR
+void loop (void){
+  // Check if process packet flag is set
+  if (process_it)
+    { 
+    Serial.println( "Packet" );  
+    for( int i = 0 ; i < NUM_BYTES ; i++ )
+        Serial.println ( rx_buf[i], DEC );
+    pos = 0;
+    pos_b = 0;
+    command = 0;
+    process_it = false;
+    }  // end of flag set
+}  // end of loop
+
 // Peck
 /*byte tx [ NUM_BYTES ] = { 0xAD,// Control Byte 1 BYTE
         0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xA8,
@@ -67,103 +156,3 @@ byte tx [ NUM_BYTES ] = { 0xAD,// Control Byte 1 BYTE
         // 80 BYTES
         // Payload 81 BYTES
 */
-volatile byte pos;
-//volatile byte pos2;
-boolean process_it;
-
-void setup (void){
-    // Initialize Serial bps
-    Serial.begin (9600);
-
-    // Initialize Master In Slave Out Port
-    pinMode(MISO, OUTPUT);
-  
-    // Initialize Slave Ready port
-    pinMode(SLAVE_READY, OUTPUT);
-    digitalWrite(SLAVE_READY, HIGH);
-  
-    // Initialize SPI in Slave mode
-    SPCR |= _BV(SPE);
-  
-    // Set buffer Counters to Zero 
-    pos = 0;   // rxfer empty
-    //pos2 = 0;  // txfer empty
-    command = (uint8_t) 0x00;
-    
-    // Set Process flag to default
-    process_it = false;
-
-    // Initialize SPI interrupt
-    SPI.attachInterrupt();
-}
-
-void loop (void){
-    //delay(5000);
-    // Assert Slave Ready Low, transfer buffer ready to send
-    //if ( command == 0x00 )
-    //digitalWrite(SLAVE_READY , LOW );
-    // Delay to allow Master to process interrupt
-    //delayMicroseconds(60);
-    // Assert Slave Ready back to High
-    //digitalWrite(SLAVE_READY , HIGH );
-    //delay(5000);
-    // Buffer is Full, process SPI Packet
-    if ( process_it ){
-        Serial.println( "Processing" );
-        //Serial.println( pos );
-        for( int i = 0 ; i < NUM_BYTES ; i++ )
-            Serial.println( rx[i] );
-        Serial.println( "Packet End");
-        // Reset Command from Control Byte
-        command = (uint8_t) 0x00;
-        // Reset Buffer Position to Zero
-        pos = 0;
-        //pos2 = 0;
-        // Reset Process SPI Packet Flag
-        process_it = false;
-    }
-    //while(1){};
-}
-
-// SPI interrupt routine
-ISR (SPI_STC_vect){
-    // Read byte sent from Master SPI  
-    Serial.println( "Interrupt" );
-    byte c = SPDR; 
-    if ( pos < sizeof rx ){
-            rx[ pos++ ] = c;
-            // If buffer is full process it
-            if ( pos == NUM_BYTES - 1 )
-                process_it = true;
-        }
-    /*    
-    // Command to store SPI data either in
-    // Transfer or Receive Buffer
-    switch (command){
-    case 0x00:
-        digitalWrite(SLAVE_READY , HIGH );
-        // Store initial Command
-        command = (uint8_t) c; 
-        SPDR = 0;
-        break;
-    case 0xAD:
-        // Store byte read from Master in receive buffer
-        if ( pos < sizeof rx ){
-            rx[ pos++ ] = c;
-            // If buffer is full process it
-            if ( pos == NUM_BYTES - 1 )
-                process_it = true;
-        }
-        break;
-    case 0xFD:
-        // Send Slave Data in transfer buffer to Master 
-        //SPDR=tx[ pos2++ ];
-        // If buffer is full process it
-        //if ( pos2 == NUM_BYTES - 1  )               
-            //process_it = true; 
-        break;
-    default:
-        break;
-    }*/
-}  
-

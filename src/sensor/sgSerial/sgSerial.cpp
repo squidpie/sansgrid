@@ -23,7 +23,8 @@
 #include <Arduino.h>
 #include "sgSerial.h"
 
-#define DUE 1
+//#define DUE 1
+#define DELAY 6
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
@@ -35,11 +36,11 @@ uint8_t sgSerialOpen(void){
     SPI.setBitOrder( MSBFIRST ); 
     // Set SPI Baud Rate to 500 KHz
     // 84 MHz / 252 = 500 KHz
-    #ifdef DUE
-    SPI.setClockDivider( 168 );
-    #else
+    //#ifdef DUE
+    //SPI.setClockDivider( 252 );
+    //#else
     SPI.setClockDivider( SPI_CLOCK_DIV32 );
-    #endif // DUE
+    //#endif // DUE
     // Set SPI Mode 0-3
     SPI.setDataMode( SPI_MODE0 );
     return 0;
@@ -62,17 +63,22 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     // Buffer to store data array to send to Slave over SPI
     uint8_t data_out[ NUM_BYTES ];
     // Copy SansgridSerial data to buffer
-    memcpy( data_out , sg_serial, sizeof(SansgridSerial));
+    memcpy( data_out , sg_serial->control, CONTROL );
+	memcpy( data_out + CONTROL , sg_serial->ip_addr, IP_ADDRESS  );
+	memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
     sgSerialOpen();
-    // Send dummy byte to Set command on Slave
-    Serial.println( "First Byte" );
-    SPI.transfer( 0xAD );
+    delayMicroseconds(DELAY);
+	// Send dummy byte to Set command on Slave
+    //Serial.println( "First Byte" );
+    SPI.transfer( data_out[0] );
+	delayMicroseconds(DELAY);
     // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
         SPI.transfer( data_out[i] );
-        Serial.println( data_out[i] );
+		delayMicroseconds(DELAY);
+        //Serial.println( data_out[i] );
     }
     // Close SPI bus - NOT USED
     //sgSerialClose();
@@ -86,7 +92,7 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // Dummy byte sent to slave 
     uint8_t rec = RECEIVE;
     // Open SPI bus
-    sgSerialOpen();
+    //sgSerialOpen();
     // First dummy transfer defines the command 
     // for valid or not valid data
     SPI.transfer( rec );

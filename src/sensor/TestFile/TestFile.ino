@@ -36,23 +36,27 @@ SensorConfig sg_config;
 SansgridSerial sg_data_in;
 SansgridSerial sg_data_out;
 
+int intPin = 0;
+
 void setup(){
     // This allows for debugging by displaying information 
-    // at Arduino IDE terminal, just click the eyeglass top
+    // in Arduino IDE terminal, just click the eyeglass top
     // right to see output after programming.
     Serial.begin(9600); 
-    // Initialize Slave ready pin as input
-    pinMode( SLAVE_READY, INPUT_PULLUP );
+    
     // Initialize interrupt for Slave Ready pin
     #ifdef DUE 
-    //attachInterrupt( SLAVE_READY , receive , LOW );
+    //attachInterrupt( SLAVE_READY , receive , RISING );
     #else
-    //attachInterrupt( int.0 , receive , LOW );
+    //attachInterrupt( 0 , receive , FALLING );
     #endif // end of DUE
+    
     // Set Mate, true is automatic, false is push button based
     //sg_config.mate = true; 
+    
     // Set SansgridSerial data_out control byte
     sg_data_out.control[0] = 0xAD;
+    
     // Call Sensor Configuration which sets the:
     // Serial Number, Model Number, Manufacture ID, Sensor Public Key
     // Sensor signal A and B
@@ -66,14 +70,13 @@ void setup(){
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    //sg_config.fly = true;
+    sg_config.fly = true;
     //sg_config.sing = true;
-    sg_config.mock = true;
+    //sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.nokey = true;
     //sg_config.challenge = true;
-    
 }
 
 void loop(){
@@ -89,7 +92,7 @@ void loop(){
     //delay(1000);
     //Serial.println( "Connected to Network" );
     
-    Serial.println( "Interrupt Service Routine" );
+    //Serial.println( "Interrupt Service Routine" );
     //sgSerialReceive( &sg_data_in, 1 );
     
     // Testing Squawk - remove for final source code

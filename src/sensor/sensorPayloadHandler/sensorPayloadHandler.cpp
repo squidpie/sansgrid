@@ -307,7 +307,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             SansgridFly sg_fly;
             parseFly( sg_serial , &sg_fly );
             memcpy( sg_config->network_name , sg_fly.network_name , DATA );
-            sg_config->fly = true;
+			Serial.println( "FLY" );
+            //sg_config->fly = true;
             break;
         case 0xFE :    
             // - Reserved for future expansion
@@ -438,9 +439,9 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
         
         // Only send one packet for test purposes
         // remove after testing
-        while(1){
+        //while(1){
             delay(1000);
-        }
+        //}
     }
 }
    
