@@ -90,29 +90,36 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // Array of size NUM_BYTES to store SPI packet
     uint8_t data_in[NUM_BYTES];
     // Dummy byte sent to slave 
-    uint8_t rec = RECEIVE;
+    uint8_t rec = 0xFD;
     // Open SPI bus
-    //sgSerialOpen();
+    sgSerialOpen();
     // First dummy transfer defines the command 
     // for valid or not valid data
-    SPI.transfer( rec );
+    delayMicroseconds(DELAY);
+	SPI.transfer( rec );
+	delayMicroseconds(DELAY);
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
     // in SPDR register and will be stored on the
     // next SPI.transfer() in the for Loop.
     SPI.transfer( rec );
+	delayMicroseconds(DELAY);
     // Loop through receiving bytes the length 
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI and store
         // byte received in data_in buffer
         data_in[i] = SPI.transfer( rec );
+		delayMicroseconds(DELAY);
     }
     // Close SPI bus - NOT USED
     //sgSerialClose();
     // Copy data from array into SansgridSerial structure
     // containing Control byte, IP address, and Payload
-    memcpy( sg_serial, data_in , sizeof(data_in) );
+    // Copy SansgridSerial data to buffer
+    memcpy( sg_serial->control , data_in , CONTROL );
+	memcpy( sg_serial->ip_addr , data_in + CONTROL , IP_ADDRESS  );
+	memcpy( sg_serial->payload , data_in + CONTROL + IP_ADDRESS , PAYLOAD );
     return 0;
 }
 

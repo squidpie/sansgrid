@@ -405,35 +405,38 @@ bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
 // Connect sensor to network. Wait in while loop until nested.
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){ 
     Serial.println( "Sensor Connect Function" );
-	// Sent a Mock packet, now send a Peacock packet
-    if ( sg_config->mock == true ){
-        // Peacock
-        Serial.println( "PEACOCKING" );
-        sg_serial->control[0] = (uint8_t) 0xAD;
-        memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
-        sg_serial->payload[0] = (uint8_t) 0x0C;
-        payloadHandler( sg_config , sg_serial);
-    }
-    // Received a Sing packet, send a Mock packet
-    else if ( sg_config->sing == true ){
-        // Mock
-        Serial.println( "MOCKING" );
-        sg_serial->control[0] = (uint8_t) 0xAD;
-        memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
-        if( sg_config->nokey == false )
-            sg_serial->payload[0] = (uint8_t) 0x07;
-        else
-            sg_serial->payload[0] = (uint8_t) 0x08;   
-        payloadHandler( sg_config , sg_serial);            
-    }
-    // Received Fly packet, send an Eyeball packet
-    else if( sg_config->fly == true ){
-        // Eyeball
-        Serial.println( "EYEBALLING");
-        sg_serial->control[0] = (uint8_t) 0xAD;
-        memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
-        sg_serial->payload[0] = (uint8_t) 0x00;
-        payloadHandler( sg_config , sg_serial);
-    }
+	while( sg_config->nest == false ){
+		// Sent a Mock packet, now send a Peacock packet
+		if ( sg_config->mock == true ){
+			// Peacock
+			Serial.println( "PEACOCKING" );
+			sg_serial->control[0] = (uint8_t) 0xAD;
+			memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+			sg_serial->payload[0] = (uint8_t) 0x0C;
+			payloadHandler( sg_config , sg_serial);
+		}
+		// Received a Sing packet, send a Mock packet
+		else if ( sg_config->sing == true ){
+			// Mock
+			Serial.println( "MOCKING" );
+			sg_serial->control[0] = (uint8_t) 0xAD;
+			memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+			if( sg_config->nokey == false )
+				sg_serial->payload[0] = (uint8_t) 0x07;
+			else
+				sg_serial->payload[0] = (uint8_t) 0x08;   
+			payloadHandler( sg_config , sg_serial);            
+		}
+		// Received Fly packet, send an Eyeball packet
+		else if( sg_config->fly == true ){
+			// Eyeball
+			Serial.println( "EYEBALLING");
+			sg_serial->control[0] = (uint8_t) 0xAD;
+			memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
+			sg_serial->payload[0] = (uint8_t) 0x00;
+			payloadHandler( sg_config , sg_serial);
+		}
+		delay(2000);
+	}
 }
    

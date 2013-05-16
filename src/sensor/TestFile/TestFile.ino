@@ -84,7 +84,6 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
-        delay(1000);
         sensorConnect( &sg_config , &sg_data_out );  
     }
   
