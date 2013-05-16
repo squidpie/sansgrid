@@ -30,7 +30,7 @@
 #include <SPI.h>
 
 //#define PUSH_BUTTON 1
-#define DUE 1
+//#define DUE 1
 
 SensorConfig sg_config;
 SansgridSerial sg_data_in;
@@ -66,9 +66,9 @@ void setup(){
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    sg_config.fly = true;
+    //sg_config.fly = true;
     //sg_config.sing = true;
-    //sg_config.mock = true;
+    sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.nokey = true;
