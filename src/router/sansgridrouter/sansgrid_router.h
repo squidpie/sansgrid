@@ -33,6 +33,8 @@
 #include "routing_table/routing_table.h"
 #include "daemon/sansgrid_daemon.h"
 
+#define SG_SOCKET_BUFF_SIZE 1000
+
 typedef struct RouterOpts {
 	// options to pull out of a config file
 	// or to grab from command-line arguments
@@ -43,6 +45,8 @@ typedef struct RouterOpts {
 	int hidden_network;		// whether or not to broadcast essid
 	int verbosity;			// how loud we should be
 	int strictness;
+	int dispatch_pause;		// whether the dispatch should dequeue
+	int heartbeat_period;	// how often a device should be pinged
 } RouterOpts;
 
 
@@ -55,6 +59,8 @@ uint8_t router_base[IP_SIZE];
 int sgStorePID(pid_t pid);
 void getSansgridConfDir(char wd[150]);
 void getSansgridControlDir(char wd[150]);
+int socketDoReceive(int s, char *str);
+int socketDoSend(int s, const char *str);
 
 
 #endif
