@@ -44,6 +44,7 @@ void usage(int status);
 
 void *dispatchRuntime(void *arg) {
 	SansgridSerial *sg_serial = NULL;
+	enum SansgridDeviceStatusEnum gen_ptype;
 
 	while (1) {
 		if(sg_serial != NULL) {
@@ -59,60 +60,49 @@ void *dispatchRuntime(void *arg) {
 		while (router_opts.dispatch_pause) {
 			sleep(1);
 		}
-		// FIXME: Use sgPayloadGetType, defined in payload_handlers.c
-		switch (sg_serial->payload[0]) {
-			case SG_HATCH:
-				routerHandleHatching(routing_table, sg_serial);
-				break;
-			case SG_FLY:
-				routerHandleFly(routing_table, sg_serial);
-				break;
-			case SG_EYEBALL:
-				routerHandleEyeball(routing_table, sg_serial);
-				break;
-			case SG_PECK:
-				routerHandlePeck(routing_table, sg_serial);
-				break;
-			case SG_SING_WITH_KEY:
-			case SG_SING_WITHOUT_KEY:
-				routerHandleSing(routing_table, sg_serial);
-				break;
-			case SG_MOCK_WITH_KEY:
-			case SG_MOCK_WITHOUT_KEY:
-				routerHandleMock(routing_table, sg_serial);
-				break;
-			case SG_PEACOCK:
-				routerHandlePeacock(routing_table, sg_serial);
-				break;
-			case SG_NEST:
-				routerHandleNest(routing_table, sg_serial);
-				break;
-			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
-			case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
-			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
-			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
-			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
-			case SG_SQUAWK_SERVER_DENY_SENSOR:
-			case SG_SQUAWK_SERVER_RESPOND:
-			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
-				routerHandleSquawk(routing_table, sg_serial);
-				break;
-			case SG_HEARTBEAT_ROUTER_TO_SENSOR:
-			case SG_HEARTBEAT_SENSOR_TO_ROUTER:
-				routerHandleHeartbeat(routing_table, sg_serial);
-				break;
-			case SG_SERVSTATUS:
-				routerHandleServerStatus(routing_table, sg_serial);
-				break;
-			case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
-			case SG_CHIRP_DATA_SENSOR_TO_SERVER:
-			case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
-			case SG_CHIRP_SENSOR_DISCONNECT:
-				routerHandleChirp(routing_table, sg_serial);
-				break;
-			default:
-				printf("Not found: %x\n", sg_serial->payload[0]);
-				break;
+		if (sg_serial->payload[0] == SG_SERVSTATUS) {
+			routerHandleServerStatus(routing_table, sg_serial);
+		} else {
+			gen_ptype = sgPayloadGetType(sg_serial->payload[0]);
+			switch (gen_ptype) {
+				case SG_DEVSTATUS_HATCHING:
+					routerHandleHatching(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_FLYING:
+					routerHandleFly(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_EYEBALLING:
+					routerHandleEyeball(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_PECKING:
+					routerHandlePeck(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_SINGING:
+					routerHandleSing(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_MOCKING:
+					routerHandleMock(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_PEACOCKING:
+					routerHandlePeacock(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_NESTING:
+					routerHandleNest(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_SQUAWKING:
+					routerHandleSquawk(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_HEARTBEAT:
+					routerHandleHeartbeat(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_CHIRPING:
+					routerHandleChirp(routing_table, sg_serial);
+					break;
+				default:
+					printf("Not found: %x->%x\n", 
+							sg_serial->payload[0], gen_ptype);
+					break;
+			}
 		}
 	}
 	pthread_exit(arg);
