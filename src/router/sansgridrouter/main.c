@@ -708,8 +708,7 @@ int main(int argc, char *argv[]) {
 				exit(EXIT_SUCCESS);
 			}
 		} else if (strstr(option, "packet=")) {
-			sprintf(payload, "packet: %s", &option[7]);
-			sgSocketSend(payload, strlen(payload));
+			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running

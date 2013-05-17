@@ -188,24 +188,24 @@ int sgSocketListen(void) {
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
-		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
-			// Got a packet from the server
-			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
-			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
-					sg_serial);
-			if (exit_code == -1) {
-				strcpy(str, "bad packet");
-				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
-			} else {
-				strcpy(str, "packet accepted");
+		} else if (strstr(str, "packet=")) {
+			if ((packet = strstr(str, DELIM_KEY)) != NULL) {
+				// Got a packet from the server
+				syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
+				sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+				exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
+						sg_serial);
+				strcpy(str, "packet enqueued");
 				queueEnqueue(dispatch, sg_serial);
-				syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
+				syslog(LOG_DEBUG, "sansgrid daemon: enqueued a packet from client");
 				sg_serial = NULL;
-				if (socketDoSend(s2, str) == -1) {
-					close(s2);
-					continue;
-				}
+			} else {
+				strcpy(str, "No packet found");
+				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
+			}
+			if (socketDoSend(s2, str) == -1) {
+				close(s2);
+				continue;
 			}
 		} else if (strstr(str, "drop") != NULL) {
 			// drop a device
