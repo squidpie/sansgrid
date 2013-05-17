@@ -22,6 +22,7 @@
 
 int daemon_init(void);
 int isRunning(void);
+int sgSocketListen(void);
 
 
 
