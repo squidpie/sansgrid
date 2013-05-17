@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <syslog.h>
 
-static int global_strictness = 1;
+static int global_strictness = DEV_AUTH_LOOSE;
 
 struct DeviceAuth {
 	enum SansgridDeviceStatusEnum auth_place,
@@ -52,10 +52,34 @@ int deviceAuthDisable(DeviceAuth *dev_auth) {
 		return -1;
 	}
 	int old_strictness = dev_auth->strictness;
-	dev_auth->strictness = 0;
+	dev_auth->strictness = DEV_AUTH_NONE;
 	return old_strictness;
 }
 
+int deviceAuthEnableLoosely(DeviceAuth *dev_auth) {
+	// make sure devices at least eyeball first
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthEnable");
+		return -1;
+	}
+	int old_strictness = dev_auth->strictness;
+	dev_auth->strictness = DEV_AUTH_LOOSE;
+	return old_strictness;
+}
+
+
+int deviceAuthEnableFiltered(DeviceAuth *dev_auth) {
+	// If we get an unexpected packet, drop it
+	// don't drop the offending device though
+	if (devauthAssertValid(dev_auth) == -1) {
+		syslog(LOG_INFO, "NULL in deviceAuthEnable");
+		return -1;
+	}
+	int old_strictness = dev_auth->strictness;
+	dev_auth->strictness = DEV_AUTH_FILTERED;
+	return old_strictness;
+}
+	
 int deviceAuthEnable(DeviceAuth *dev_auth) {
 	// authenticate devices
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -63,7 +87,7 @@ int deviceAuthEnable(DeviceAuth *dev_auth) {
 		return -1;
 	}
 	int old_strictness = dev_auth->strictness;
-	dev_auth->strictness = 1;
+	dev_auth->strictness = DEV_AUTH_STRICT;
 	return old_strictness;
 }
 
@@ -109,9 +133,16 @@ int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
 		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
 		return -1;
 	}
-	if (dev_auth->strictness == 0) {
+	if (dev_auth->strictness == DEV_AUTH_NONE) {
 		// always valid
 		return 1;
+	} else if (dev_auth->strictness == DEV_AUTH_LOOSE) {
+		// only valid if device has eyeballed
+		if (dev_auth->auth_place != SG_DEVSTATUS_NULL) {
+			return 1;
+		} else {
+			return 0;
+		}
 	} else if ((dev_auth->next_expected_packet == SG_DEVSTATUS_LEASED) &&
 			(gdt == SG_DEVSTATUS_CHIRPING || gdt == SG_DEVSTATUS_HEARTBEAT)) {
 		return 1;

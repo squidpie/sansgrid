@@ -469,20 +469,45 @@ int32_t routingTableRequireStrictAuth(RoutingTable *table) {
 			deviceAuthEnable(table->routing_table[i]->auth);
 		}
 	}
-	table->default_strictness = 1;
+	table->default_strictness = DEV_AUTH_STRICT;
 	return 1;
 }
 
-
+int32_t routingTableSetAuthFiltered(RoutingTable *table) {
+	// If we get an unexpected packet, drop it
+	// don't drop the offending device though
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthEnableFiltered(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = DEV_AUTH_FILTERED;
+	return 0;
+}
+	
 int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 	// allow loose adherence to routing protocol
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthEnableLoosely(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = DEV_AUTH_LOOSE;
+	return 0;
+}
+
+int32_t routingTableDisableAuth(RoutingTable *table) {
+	// Don't care about any type of auth
+	// WARNING: this is dangerous
 	tableAssertValid(table);
 	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {
 			deviceAuthDisable(table->routing_table[i]->auth);
 		}
 	}
-	table->default_strictness = 0;
+	table->default_strictness = DEV_AUTH_NONE;
 	return 0;
 }
 
@@ -573,6 +598,7 @@ int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
+
 	return hbDecrement(table->routing_table[index]->hb);
 }
 

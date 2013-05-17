@@ -23,7 +23,7 @@
 #ifndef __SG_ROUTING_HEARTBEAT_H__
 #define __SG_ROUTING_HEARTBEAT_H__
 
-#define HEARTBEAT_INTERVAL 60		// interval, in seconds, between device heartbeats
+//#define HEARTBEAT_INTERVAL 1		// interval, in seconds, between device heartbeats
 #define PING_THRESHOLD 8			// number of lost pings before device is considered lost
 #define STALE_THRESHOLD 4			// number of lost pings before device is considered stale
 

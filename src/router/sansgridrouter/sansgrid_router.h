@@ -28,6 +28,7 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #include "dispatch/dispatch.h"
 #include "routing_table/routing_table.h"
@@ -47,6 +48,7 @@ typedef struct RouterOpts {
 	int strictness;
 	int dispatch_pause;		// whether the dispatch should dequeue
 	int heartbeat_period;	// how often a device should be pinged
+	sem_t hb_wait;			// post this to interrupt heartbeat sleep
 } RouterOpts;
 
 

@@ -270,8 +270,9 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 	SansgridChirp sg_chirp;
 
 	atox(&sg_chirp.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(&sg_chirp.datasize,		match(dict, size, "?"),			1*sizeof(uint8_t));
-	atox(sg_chirp.data,				match(dict, size, "data"),		79*sizeof(uint8_t));
+	atox(&sg_chirp.datasize,		match(dict, size, "datasize"),	1*sizeof(uint8_t));
+	strncpy((char*)sg_chirp.data, 			match(dict, size, "data"),	79);
+	//atox(sg_chirp.data,				match(dict, size, "data"),		79*sizeof(uint8_t));
 	
 	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
 
@@ -304,8 +305,6 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	Dictionary dict[30];
 	int32_t size = 0;
 	int8_t exit_code = 0;
-	uint8_t rdid[4];
-	int rdid_size;
 	uint32_t rdid_32;
 	char *saved 	= NULL,
 		 *key 		= NULL,
@@ -424,10 +423,7 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 
 int addIntField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
-	int i;
-	int cap = 0;
-	int field_not_zero = 0;
-	int first_byte = 0;
+	uint32_t i;
 	uint32_t value_32 = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
@@ -486,7 +482,8 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
 		// no match found: this really shouldn't happen
-		syslog(LOG_NOTICE, "No device found: last byte of ip: %x", sg_serial->ip_addr[IP_SIZE-1]);
+		syslog(LOG_NOTICE, "No device found: %u", 
+				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 		return -1;
 	} else {
 		// match found; continue
@@ -558,7 +555,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 		case SG_DEVSTATUS_CHIRPING:
 			memcpy(&sg_chirp, sg_serial->payload, sizeof(SansgridChirp));
 			addHexField("datasize", &sg_chirp.datasize, 1, payload);
-			addHexField("data",		sg_chirp.data, 79, payload);
+			addCharField("data",		(char*)sg_chirp.data, 79, payload);
 			break;
 		default:
 			// error
