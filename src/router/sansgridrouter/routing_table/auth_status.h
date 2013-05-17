@@ -26,6 +26,7 @@ typedef struct DeviceAuth DeviceAuth;
 
 
 int deviceAuthDisable(DeviceAuth *dev_auth);
+int deviceAuthEnableLoosely(DeviceAuth *dev_auth);
 int deviceAuthEnable(DeviceAuth *dev_auth);
 int deviceAuthIsEnabled(DeviceAuth *dev_auth);
 DeviceAuth *deviceAuthInit(int strictness);

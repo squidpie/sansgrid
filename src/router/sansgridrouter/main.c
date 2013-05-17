@@ -836,7 +836,10 @@ Daemon Commands\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
-      auth={loose,strict}    control adherence to authentication protocol at router level\n\
+      auth=                  control adherence to authentication protocol at router level\n\
+           none                no authentication (dangerous)\n\
+           loose               device must eyeball (default)\n\
+           strict              device must follow exact protocol\n\
       network={hidden,shown} control sending of essid packet\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\

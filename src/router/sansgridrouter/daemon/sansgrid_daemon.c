@@ -195,18 +195,20 @@ int sgSocketListen(void) {
 				sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 				exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
 						sg_serial);
-				strcpy(str, "packet enqueued");
-				queueEnqueue(dispatch, sg_serial);
-				syslog(LOG_DEBUG, "sansgrid daemon: enqueued a packet from client");
+				if (exit_code == -1) {
+					strcpy(str, "packet conversion failed");
+					syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
+				} else {
+					strcpy(str, "packet enqueued");
+					queueEnqueue(dispatch, sg_serial);
+					syslog(LOG_DEBUG, "sansgrid daemon: enqueued a packet from client");
+				}
 				sg_serial = NULL;
 			} else {
 				strcpy(str, "No packet found");
-				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
+				syslog(LOG_NOTICE, "sansgrid daemon: didn't get a packet");
 			}
-			if (socketDoSend(s2, str) == -1) {
-				close(s2);
-				continue;
-			}
+			socketDoSend(s2, str);
 		} else if (strstr(str, "drop") != NULL) {
 			// drop a device
 			uint32_t device = 0;
@@ -233,10 +235,7 @@ int sgSocketListen(void) {
 			} else {
 				strcpy(str, "Bad device given");
 			}
-			if (socketDoSend(s2, str) < 0) {
-				close(s2);
-				continue;
-			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "url")) {
 			// return the url
 			strcpy(str, router_opts.serverip);
@@ -244,10 +243,7 @@ int sgSocketListen(void) {
 		} else if (!strcmp(str, "key")) {
 			// return the key
 			strcpy(str, router_opts.serverkey);
-			if (socketDoSend(s2, str) == -1) {
-				close(s2);
-				continue;
-			}
+			socketDoSend(s2, str);
 		} else if (strstr(str, "url")) {
 			// Set a new server URL
 			if (strlen(str) > 4) {
@@ -291,13 +287,16 @@ int sgSocketListen(void) {
 				} else if (strstr(str, "loose")) {
 					routingTableAllowLooseAuth(routing_table);
 					strcpy(str, "Auth is loosely enforced");
+				} else if (strstr(str, "none")) {
+					routingTableDisableAuth(routing_table);
+					strcpy(str, "Auth is disabled");
 				} else {
 					strcpy(str, "Not a valid option");
 				}
 			} else {
 				strcpy(str, "No option given");
 			}
-			if (socketDoSend(s2, str) < 0) break;
+			socketDoSend(s2, str);
 		} else if (strstr(str, "network=")) {
 			if (strstr(str, "hidden")) {
 				router_opts.hidden_network = 1;
@@ -308,7 +307,7 @@ int sgSocketListen(void) {
 			} else {
 				strcpy(str, "Not a valid option");
 			}
-			if (socketDoSend(s2, str) < 0) break;
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -329,10 +328,12 @@ int sgSocketListen(void) {
 				if (socketDoSend(s2, str) < 0) break;
 				// print whether or not the authentication is strict
 				sprintf(str, "\tAuthentication:\t\t");
-				if (routingTableIsAuthStrict(routing_table)) {
+				if (routingTableIsAuthStrict(routing_table) == 2) {
 					strcat(str, "Strict\n");
-				} else {
+				} else if (routingTableIsAuthStrict(routing_table) == 1) {
 					strcat(str, "Loose\n");
+				} else {
+					strcat(str, "None\n");
 				}
 				if (socketDoSend(s2, str) < 0) break;
 				// Print how often we heartbeat a device
