@@ -288,7 +288,7 @@ int sgSocketListen(void) {
 				}
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, "\tHeartbeat Period: %i seconds\n",
-					   HEARTBEAT_INTERVAL);
+					   router_opts.heartbeat_period);
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, "\nDispatch Status:\n");
 				if (socketDoSend(s2, str) < 0) break;

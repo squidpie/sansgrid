@@ -157,10 +157,10 @@ void *heartbeatRuntime(void *arg) {
 		do {
 			if (count == 0)
 				count = 1;
-			if (HEARTBEAT_INTERVAL/count == 0) {
+			if (router_opts.heartbeat_period/count == 0) {
 				// interval is < 1 second
 				// sleep in usecs
-				req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
+				req.tv_nsec = ((router_opts.heartbeat_period*1000L)/count)*1000000L;
 				req.tv_sec = 0;
 				do {
 					exit_code = nanosleep(&req, &rem);
@@ -171,7 +171,7 @@ void *heartbeatRuntime(void *arg) {
 				} while (exit_code == -1);
 				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
 			} else {
-				sleep(HEARTBEAT_INTERVAL/count);
+				sleep(router_opts.heartbeat_period/count);
 			}
 		} while ((count = (routingTableGetDeviceCount(routing_table)-1)) < 1);
 
@@ -433,10 +433,12 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		 hidden_str[10],
 		 verbosity_str[20],
 		 netmask_str[50],
-		 strictness_str[10];
+		 strictness_str[10],
+		 heartbeat_str[50];
 	int hidden = 0;
 	int verbosity = 0;
 	int strictness = 0;
+	int heartbeat = 0;
 
 	int foundkey = 0,
 		foundurl = 0,
@@ -444,7 +446,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundhidden = 0,
 		foundverbosity = 0,
 		foundnetmask = 0,
-		foundstrictness = 0;
+		foundstrictness = 0,
+		foundheartbeat = 0;
 	char *str = NULL;
 	char *saveptr = NULL;
 
@@ -499,6 +502,10 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			sscanf(buffer, "netmask = %s", netmask_str);
 			parseIPv6(netmask_str, netmask);
 			foundnetmask = 1;
+		} else if (strstr(buffer, "heartbeat")) {
+			sscanf(buffer, "heartbeat = %s", heartbeat_str);
+			heartbeat = atoi(heartbeat_str);
+			foundheartbeat = 1;
 		}
 	}
 	fclose(FPTR);
@@ -519,6 +526,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	if (foundstrictness) {
 		ropts->strictness = strictness;
 	}
+	if (foundheartbeat)
+		ropts->heartbeat_period = heartbeat;
 
 	return 0;
 }	
