@@ -693,6 +693,9 @@ int main(int argc, char *argv[]) {
 		} else if (strstr(option, "key=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "heartbeat=")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "strict-auth")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
@@ -844,6 +847,7 @@ Daemon Configuration\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
       key=[SERVERKEY]        set the server key\n\
+      heartbeat=[PERIOD]     set the heartbeat period\n\
 ");
 	}
 	exit(status);

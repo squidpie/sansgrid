@@ -254,7 +254,10 @@ int sgSocketListen(void) {
 		} else if (!strcmp(str, "key")) {
 			// return the key
 			strcpy(str, router_opts.serverkey);
-			socketDoSend(s2, str);
+			if (socketDoSend(s2, str) == -1) {
+				close(s2);
+				continue;
+			}
 		} else if (strstr(str, "url")) {
 			// Set a new server URL
 			if (strlen(str) > 4) {
@@ -272,6 +275,20 @@ int sgSocketListen(void) {
 				strcpy(str, "Successfully set server key");
 			} else {
 				strcpy(str, "Couldn't set server key");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "heartbeat=")) {
+			// set heartbeat period
+			if (strlen(str) > 10) {
+				int hb = atoi(&str[10]);
+				if (hb != 0) {
+					router_opts.heartbeat_period = hb;
+					strcpy(str, "Changed Heartbeat Period");
+				} else {
+					strcpy(str, "Couldn't change Heartbeat Period");
+				}
+			} else {
+				strcpy(str, "No interval given");
 			}
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
