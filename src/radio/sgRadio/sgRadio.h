@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 //#include <SerialDebug.h>
-#include <sgSerial.h>
-#include <payloads.h>
+#include "sgSerial.h"
+#include "payloads.h"
 #include "sgSnIp.h"
 
 #define __FUNC__ (char *)__func__
