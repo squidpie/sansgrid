@@ -261,3 +261,4 @@ fieldset.SGfieldset legend {
 .alignc { text-align: center; }
 .alignr { text-align: right; }
 .alignl { text-align: left; }
+td.gen_padding {padding: 1em .5em .25em .5em; }
