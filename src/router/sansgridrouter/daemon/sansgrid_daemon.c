@@ -40,6 +40,7 @@
 #include "../sansgrid_router.h"
 #include "../communication/sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
+#include "../routing_table/auth_status.h"
 
 
 
@@ -287,6 +288,9 @@ int sgSocketListen(void) {
 				} else if (strstr(str, "loose")) {
 					routingTableAllowLooseAuth(routing_table);
 					strcpy(str, "Auth is loosely enforced");
+				} else if (strstr(str, "filtered")) {
+					routingTableSetAuthFiltered(routing_table);
+					strcpy(str, "Auth is enforced for packets");
 				} else if (strstr(str, "none")) {
 					routingTableDisableAuth(routing_table);
 					strcpy(str, "Auth is disabled");
@@ -312,6 +316,7 @@ int sgSocketListen(void) {
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			int devnum = routingTableGetDeviceCount(routing_table);
+			int strictness = routingTableIsAuthStrict(routing_table);
 			do {
 				sprintf(str, "Routing Table Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
@@ -328,9 +333,11 @@ int sgSocketListen(void) {
 				if (socketDoSend(s2, str) < 0) break;
 				// print whether or not the authentication is strict
 				sprintf(str, "\tAuthentication:\t\t");
-				if (routingTableIsAuthStrict(routing_table) == 2) {
+				if (strictness == DEV_AUTH_STRICT) {
 					strcat(str, "Strict\n");
-				} else if (routingTableIsAuthStrict(routing_table) == 1) {
+				} else if (strictness == DEV_AUTH_FILTERED) {
+					strcat(str, "Filtered\n");
+				} else if (strictness == DEV_AUTH_LOOSE) {
 					strcat(str, "Loose\n");
 				} else {
 					strcat(str, "None\n");

@@ -469,11 +469,23 @@ int32_t routingTableRequireStrictAuth(RoutingTable *table) {
 			deviceAuthEnable(table->routing_table[i]->auth);
 		}
 	}
-	table->default_strictness = 2;
+	table->default_strictness = DEV_AUTH_STRICT;
 	return 1;
 }
 
-
+int32_t routingTableSetAuthFiltered(RoutingTable *table) {
+	// If we get an unexpected packet, drop it
+	// don't drop the offending device though
+	tableAssertValid(table);
+	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
+		if (table->routing_table[i]) {
+			deviceAuthEnableFiltered(table->routing_table[i]->auth);
+		}
+	}
+	table->default_strictness = DEV_AUTH_FILTERED;
+	return 0;
+}
+	
 int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 	// allow loose adherence to routing protocol
 	tableAssertValid(table);
@@ -482,7 +494,7 @@ int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 			deviceAuthEnableLoosely(table->routing_table[i]->auth);
 		}
 	}
-	table->default_strictness = 1;
+	table->default_strictness = DEV_AUTH_LOOSE;
 	return 0;
 }
 
@@ -495,7 +507,7 @@ int32_t routingTableDisableAuth(RoutingTable *table) {
 			deviceAuthDisable(table->routing_table[i]->auth);
 		}
 	}
-	table->default_strictness = 0;
+	table->default_strictness = DEV_AUTH_NONE;
 	return 0;
 }
 

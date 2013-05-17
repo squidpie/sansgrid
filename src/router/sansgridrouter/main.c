@@ -21,6 +21,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include "routing_table/heartbeat.h"
+#include "routing_table/auth_status.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -45,8 +46,10 @@ void usage(int status);
 void *dispatchRuntime(void *arg) {
 	SansgridSerial *sg_serial = NULL;
 	enum SansgridDeviceStatusEnum gen_ptype;
+	int exit_code;
 
 	while (1) {
+		exit_code = 0;
 		if(sg_serial != NULL) {
 			free(sg_serial);
 			sg_serial = NULL;
@@ -66,43 +69,47 @@ void *dispatchRuntime(void *arg) {
 			gen_ptype = sgPayloadGetType(sg_serial->payload[0]);
 			switch (gen_ptype) {
 				case SG_DEVSTATUS_HATCHING:
-					routerHandleHatching(routing_table, sg_serial);
+					exit_code = routerHandleHatching(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_FLYING:
-					routerHandleFly(routing_table, sg_serial);
+					exit_code = routerHandleFly(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_EYEBALLING:
-					routerHandleEyeball(routing_table, sg_serial);
+					exit_code = routerHandleEyeball(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_PECKING:
-					routerHandlePeck(routing_table, sg_serial);
+					exit_code = routerHandlePeck(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_SINGING:
-					routerHandleSing(routing_table, sg_serial);
+					exit_code = routerHandleSing(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_MOCKING:
-					routerHandleMock(routing_table, sg_serial);
+					exit_code = routerHandleMock(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_PEACOCKING:
-					routerHandlePeacock(routing_table, sg_serial);
+					exit_code = routerHandlePeacock(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_NESTING:
-					routerHandleNest(routing_table, sg_serial);
+					exit_code = routerHandleNest(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_SQUAWKING:
-					routerHandleSquawk(routing_table, sg_serial);
+					exit_code = routerHandleSquawk(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_HEARTBEAT:
-					routerHandleHeartbeat(routing_table, sg_serial);
+					exit_code = routerHandleHeartbeat(routing_table, sg_serial);
 					break;
 				case SG_DEVSTATUS_CHIRPING:
-					routerHandleChirp(routing_table, sg_serial);
+					exit_code = routerHandleChirp(routing_table, sg_serial);
 					break;
 				default:
 					printf("Not found: %x->%x\n", 
 							sg_serial->payload[0], gen_ptype);
 					break;
 			}
+		}
+		if (exit_code == -1) {
+			if (routingTableIsAuthStrict(routing_table) == DEV_AUTH_STRICT) 
+				routerFreeDevice(routing_table, sg_serial->ip_addr);
 		}
 	}
 	pthread_exit(arg);
@@ -839,7 +846,8 @@ Daemon Configuration\n\
       auth=                  control adherence to authentication protocol at router level\n\
            none                no authentication (dangerous)\n\
            loose               device must eyeball (default)\n\
-           strict              device must follow exact protocol\n\
+           filtered            unexpected packets are dropped, devices stay\n\
+           strict              device must follow exact protocol or is dropped\n\
       network={hidden,shown} control sending of essid packet\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\

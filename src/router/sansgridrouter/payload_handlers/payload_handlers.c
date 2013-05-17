@@ -669,7 +669,7 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 		if (!strcmp(sg_irstatus->status, "online"))
 				routingTableHeardDevice(routing_table, sg_serial->ip_addr);
 	} else {
-		return -1;
+		return 1;
 	}
 
 	return 0;
