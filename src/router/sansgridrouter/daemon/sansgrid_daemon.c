@@ -283,6 +283,7 @@ int sgSocketListen(void) {
 				int hb = atoi(&str[10]);
 				if (hb != 0) {
 					router_opts.heartbeat_period = hb;
+					sem_post(&router_opts.hb_wait);
 					strcpy(str, "Changed Heartbeat Period");
 				} else {
 					strcpy(str, "Couldn't change Heartbeat Period");

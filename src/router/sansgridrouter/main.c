@@ -36,7 +36,8 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 #include <errno.h>
-
+#include <time.h>
+#include <semaphore.h>
 
 
 void usage(int status);
@@ -141,12 +142,13 @@ void *heartbeatRuntime(void *arg) {
 	SansgridIRStatus sg_irstatus;
 	SansgridChirp sg_chirp;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
-	struct timespec req, rem;
+	struct timespec req, epoch;
 	int hb_status = 0;
 	uint32_t rdid;
 	int device_lost = 0;
-	int exit_code;
 	uint32_t current_packet;
+	uint64_t nano_add = 0;
+	uint64_t sec_add = 0;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -155,6 +157,7 @@ void *heartbeatRuntime(void *arg) {
 	count = routingTableGetDeviceCount(routing_table)-1;
 	while (1) {
 		do {
+			clock_gettime(CLOCK_REALTIME, &epoch);
 			if (count == 0)
 				count = 1;
 			if (router_opts.heartbeat_period/count == 0) {
@@ -162,17 +165,22 @@ void *heartbeatRuntime(void *arg) {
 				// sleep in usecs
 				req.tv_nsec = ((router_opts.heartbeat_period*1000L)/count)*1000000L;
 				req.tv_sec = 0;
-				do {
-					exit_code = nanosleep(&req, &rem);
-					if (rem.tv_nsec != 0) 
-						req.tv_nsec = rem.tv_nsec;
-					if (rem.tv_sec != 0)
-						req.tv_sec = rem.tv_sec;
-				} while (exit_code == -1);
-				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
 			} else {
-				sleep(router_opts.heartbeat_period/count);
+				req.tv_nsec = 0;
+				req.tv_sec = router_opts.heartbeat_period / count;
 			}
+			nano_add = epoch.tv_nsec + req.tv_nsec;
+			sec_add = epoch.tv_sec + req.tv_sec;
+			if (nano_add > 1000000000L) {
+				// wrap nanoseconds into seconds
+				nano_add = (nano_add-1000000000L);
+				sec_add++;
+			}
+			req.tv_nsec = nano_add;
+			req.tv_sec = sec_add;
+			
+			//exit_code = nanosleep(&req, &rem);
+			sem_timedwait(&router_opts.hb_wait, &req);
 		} while ((count = (routingTableGetDeviceCount(routing_table)-1)) < 1);
 
 		while (router_opts.dispatch_pause) {
@@ -559,6 +567,7 @@ int main(int argc, char *argv[]) {
 	strcat(config_path, "/sansgrid.conf");
 
 	parseConfFile(config_path, &router_opts);
+	sem_init(&router_opts.hb_wait, 0, 0);
 
 	// Parse arguments with getopt
 	while (1) {
@@ -798,6 +807,7 @@ int main(int argc, char *argv[]) {
 	pthread_join(fly_thread, &arg);
 
 	// Cleanup
+	sem_destroy(&router_opts.hb_wait);
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
 
