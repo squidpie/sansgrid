@@ -340,12 +340,12 @@ function processPeacock ($router_ip, $payload, $db) {
 	addToLog($msg);
 
 	// Now, do we have I/O 'B'?
-	if ( hexdec($sidb) !=  253) {  // 0xFd = 253
+	if ( (hexdec($sidb) !=  253) && ($sidb != "") ) {  // 0xFd = 253
 
 		print "sidb is $sidb or as a decimal it's " . hexdec($sidb) . " \n\n";
 
 		$query  = "INSERT INTO io (id_sensor,sig_id,class,direction,label,units)";
-		$query .= " VALUES ('$sidb', '$classb', '$dirb', '$labelb', '$unitsb')"; 
+		$query .= " VALUES ('$id_sensor', '$sidb', '$classb', '$dirb', '$labelb', '$unitsb')"; 
 		mysqli_query ($db, $query) or die ("Can't execute query pc3.\n$query\n");
 
 		$msg  = "[$router_ip] - Peacock: Added '$labelb' for sensor $id_sensor. ";
@@ -355,6 +355,10 @@ function processPeacock ($router_ip, $payload, $db) {
 	// Is this the last Peacock? If so, then it's time to Nest!! Woo!!!
 	if ($additional	== 0) {
 		generateNest($router_ip, $rdid, $db);
+	// If we have more I/O coming, let's log that we're waiting
+	} else {
+		$msg  = "[$router_ip] - Additional Peacocks expected for sensor $id_sensor. ";
+		addToLog($msg);
 	}
 
 } // End processPeacock
@@ -742,6 +746,10 @@ function processChirpData($router_ip, $payload, $db) {
 	$rdid 	= $payload['rdid'];
 	$sid 	= cleanZeroes(strtolower($payload['sid']));
 	$data 	= strtolower($payload['data']);
+
+	// Log it
+	//$msg  = "DEBUG -- Chirp data:  ";
+	//addtolog($msg);
 
 	// Do we have an online sensor using this rdid?...
 	$query  = "SELECT COUNT(*) as count FROM sensor ";

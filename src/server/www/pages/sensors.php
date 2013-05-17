@@ -59,6 +59,9 @@ while ($row = mysqli_fetch_assoc($result)) {
 	// Table header
 	$page .= "<input type=\"hidden\" name=\"come_from\" value=\"hey_there\">\n";
 	$page .= "<table width=\"98%\" class=\"sansgrid\">";
+	//$page .= "<tr>\n";
+	//$page .= "\t<th width=\"20em\">($id_sensor)</th>\n";
+	//$page .= "</tr>\n";
 	$page .= "<tr>\n";
 	$page .= "\t<th width=\"20em\">Manufacturer:</th>\n";
 	$page .= "\t<td colspan=\"2\" title=\"manid: $manid\" >$man_name</td>\n";
@@ -68,7 +71,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 	$page .= "\t<td title=\"modnum: $modnum\" colspan=\"2\">$mod_name</td>\n";
 	$page .= "</tr>\n";
 	$page .= "<tr>\n";
-	$page .= "\t<th>Name:</th>\n";
+	$page .= "\t<th title=\"ID: $id_sensor\" >Name:</th>\n";
 	$page .= "\t<td>\n";
 	$page .= "\t\t<input type=\"text\" name=\"name[$id_sensor]\" value=\"$sensor_name\" size=\"30\" class=\"sgtext\">\n";
 	$page .= "\t</td>\n";

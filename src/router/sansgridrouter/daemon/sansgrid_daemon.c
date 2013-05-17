@@ -30,11 +30,16 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/un.h>
+#include <arpa/inet.h>
 
+#include <sgSerial.h>
 #include "sansgrid_daemon.h"
 #include "../dispatch/dispatch.h"
 #include "../routing_table/routing_table.h"
 #include "../sansgrid_router.h"
+#include "../communication/sg_tcp.h"
+#include "../payload_handlers/payload_handlers.h"
 
 
 
@@ -113,6 +118,247 @@ int daemon_init(void) {
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
 	syslog(LOG_INFO, "Closed standard unix file descriptors");
+
+	return 0;
+}
+
+
+int sgSocketListen(void) {
+	// Wait for a command from a client
+	int s, s2;								// socket info
+	struct sockaddr_un local, remote;		// socket addresses
+	socklen_t len;							// socket lengths
+	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
+	char socket_path[150];					// socket locations
+	SansgridSerial *sg_serial = NULL;
+	int exit_code;
+	char *packet;
+
+	getSansgridControlDir(socket_path);
+
+	// Create a socket endpoint
+	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	// Create the socket path
+	// FIXME: Check for permissions errors here
+	local.sun_family = AF_UNIX;
+	mkdir(socket_path, 0755);
+	strcat(socket_path, "/command_socket");
+	strcpy(local.sun_path, socket_path);
+
+	unlink(local.sun_path);
+
+	// bind the name to the socket
+	len = strlen(local.sun_path) + sizeof(local.sun_family);
+	if (bind(s, (struct sockaddr *)&local, len) == -1) {
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+	chmod(socket_path, 0777);
+
+	// listen for socket connections
+	if (listen(s, 5) == -1) {
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+	int shutdown_server = 0;
+
+	do {
+		// Block until a connection appears
+		// Then Accept the connection
+		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
+			perror("accept");
+			exit(EXIT_FAILURE);
+		}
+		// Receive and interpret the data
+		if (socketDoReceive(s2, str) == -1) {
+			syslog(LOG_WARNING, "sansgrid daemon: receive error");
+			break;
+		}
+		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
+
+
+		// Interpret command
+		if (!strcmp(str, "kill")) {
+			// Kill the server
+			shutdown_server = 1;
+			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
+			routerFreeAllDevices(routing_table);
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "strict-auth")) {
+			// require strict adherence to authentication protocol
+			routingTableRequireStrictAuth(routing_table);
+			strcpy(str, "Auth is strictly enforced");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "loose-auth")) {
+			// don't require strict adherence to authentication protocol
+			routingTableAllowLooseAuth(routing_table);
+			strcpy(str, "Auth is loosely enforced");
+			socketDoSend(s2, str);
+		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
+			// Got a packet from the server
+			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+			exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
+					sg_serial);
+			if (exit_code == -1) {
+				strcpy(str, "bad packet");
+				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
+			} else {
+				strcpy(str, "packet accepted");
+				queueEnqueue(dispatch, sg_serial);
+				syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
+				sg_serial = NULL;
+				if (socketDoSend(s2, str) == -1) {
+					close(s2);
+					continue;
+				}
+			}
+		} else if (strstr(str, "drop") != NULL) {
+			// drop a device
+			uint32_t device = 0;
+			uint8_t ip_addr[IP_SIZE];
+			syslog(LOG_NOTICE, "Dropping device");
+			if (strlen(str) <= strlen("drop")) {
+				strcpy(str, "No device specified");
+			} else if (!strcmp(str, "drop all")) {
+				// drop all devices
+				routerFreeAllDevices(routing_table);
+				strcpy(str, "All devices freed");
+			} else if ((device = atoi(&str[5])) != 0) {
+				// drop device
+				routingTableRDIDToIP(routing_table, device, ip_addr);
+				if (routingTableLookup(routing_table, ip_addr) == 1) {
+					if (routerFreeDevice(routing_table, ip_addr) == -1) {
+						sprintf(str, "Couldn't free device: %i", device);
+					} else {
+						sprintf(str, "Device freed: %i", device);
+					}
+				} else {
+					sprintf(str, "Device not found: %i", device);
+				}
+			} else {
+				strcpy(str, "Bad device given");
+			}
+			if (socketDoSend(s2, str) < 0) {
+				close(s2);
+				continue;
+			}
+		} else if (!strcmp(str, "url")) {
+			// return the url
+			strcpy(str, router_opts.serverip);
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "key")) {
+			// return the key
+			strcpy(str, router_opts.serverkey);
+			socketDoSend(s2, str);
+		} else if (strstr(str, "url")) {
+			// Set a new server URL
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverip, &str[4], sizeof(router_opts.serverip));
+				strcpy(str, "Successfully changed server IP");
+			}
+			else {
+				strcpy(str, "Couldn't change server IP");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "key")) {
+			// Set a new server key
+			if (strlen(str) > 4) {
+				memcpy(router_opts.serverkey, &str[4], sizeof(router_opts.serverkey));
+				strcpy(str, "Successfully set server key");
+			} else {
+				strcpy(str, "Couldn't set server key");
+			}
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "status")) {	
+			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
+			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+			int devnum = routingTableGetDeviceCount(routing_table);
+			do {
+				sprintf(str, "Routing Table Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				if (routingTableIsAuthStrict(routing_table)) {
+					sprintf(str, "\tStrict Authentication\n");
+				} else {
+					sprintf(str, "\tLoose Authentication\n");
+				}
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\tHeartbeat Period: %i seconds\n",
+					   HEARTBEAT_INTERVAL);
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\nDispatch Status:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				if (router_opts.dispatch_pause)
+					sprintf(str, "\tDispatch Paused\n");
+				else
+					sprintf(str, "\tDispatch Running\n");
+				if (socketDoSend(s2, str) < 0) break;
+			    sprintf(str, "\tQueued: %i of %i\n", 
+						queueSize(dispatch), queueMaxSize(dispatch));
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, "\nDevices:\n");
+				if (socketDoSend(s2, str) < 0) break;
+				sprintf(str, " \
+rdid                IP address                 status  Last Packet\n");
+				if (socketDoSend(s2, str) < 0) break;
+				for (int i=0; i<devnum; i++) {
+					routingTableGetStatus(routing_table, i, str);
+					syslog(LOG_DEBUG, "sansgrid daemon: sending back: %s", str);
+					if (socketDoSend(s2, str) < 0) {
+						break;
+					}
+				}
+			} while (0);
+		} else if (!strcmp(str, "devices")) {
+			// Get the number of devices
+			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
+			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "hide-network")) {
+			// Don't broadcast essid
+			syslog(LOG_NOTICE, "Sansgrid Daemon: Hiding ESSID network");
+			router_opts.hidden_network = 1;
+			strcpy(str, "Hiding Network");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "is-hidden")) {
+			// return if the network is hidden (not broadcasting)
+			if (router_opts.hidden_network) {
+				strcpy(str, "Hidden Network");
+			} else {
+				strcpy(str, "Shown Network");
+			}
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "show-network")) {
+			// Broadcast essid
+			syslog(LOG_NOTICE, "Sansgrid Daemon: Showing ESSID network");
+			router_opts.hidden_network = 0;
+			strcpy(str, "Showing Network");
+			socketDoSend(s2, str);
+		} else if (!strcmp(str, "pause")) {
+			// pause packet sending
+			if (!router_opts.dispatch_pause) {
+				strcpy(str, "Pausing payload handling");
+				socketDoSend(s2, str);
+			}
+			router_opts.dispatch_pause = 1;
+		} else if (!strcmp(str, "resume")) {
+			// resume packet sending
+			if (router_opts.dispatch_pause) {
+				strcpy(str, "Resuming payload handling");
+				socketDoSend(s2, str);
+			}
+			router_opts.dispatch_pause = 0;
+		}
+		syslog(LOG_INFO, "sansgrid daemon: sending back: %s", str);
+
+		close(s2);
+	} while (!shutdown_server);
+
+	// cleanup
 
 	return 0;
 }
