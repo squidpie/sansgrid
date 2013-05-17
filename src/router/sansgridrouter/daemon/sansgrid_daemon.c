@@ -298,6 +298,17 @@ int sgSocketListen(void) {
 				strcpy(str, "No option given");
 			}
 			if (socketDoSend(s2, str) < 0) break;
+		} else if (strstr(str, "network=")) {
+			if (strstr(str, "hidden")) {
+				router_opts.hidden_network = 1;
+				strcpy(str, "Hiding Network");
+			} else if (strstr(str, "shown")) {
+				router_opts.hidden_network = 0;
+				strcpy(str, "Showing Network");
+			} else {
+				strcpy(str, "Not a valid option");
+			}
+			if (socketDoSend(s2, str) < 0) break;
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -360,12 +371,6 @@ rdid                IP address                 status  Last Packet\n");
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "hide-network")) {
-			// Don't broadcast essid
-			syslog(LOG_NOTICE, "Sansgrid Daemon: Hiding ESSID network");
-			router_opts.hidden_network = 1;
-			strcpy(str, "Hiding Network");
-			socketDoSend(s2, str);
 		} else if (!strcmp(str, "is-hidden")) {
 			// return if the network is hidden (not broadcasting)
 			if (router_opts.hidden_network) {
@@ -373,12 +378,6 @@ rdid                IP address                 status  Last Packet\n");
 			} else {
 				strcpy(str, "Shown Network");
 			}
-			socketDoSend(s2, str);
-		} else if (!strcmp(str, "show-network")) {
-			// Broadcast essid
-			syslog(LOG_NOTICE, "Sansgrid Daemon: Showing ESSID network");
-			router_opts.hidden_network = 0;
-			strcpy(str, "Showing Network");
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "pause")) {
 			// pause packet sending

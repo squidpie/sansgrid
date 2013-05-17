@@ -671,14 +671,6 @@ int main(int argc, char *argv[]) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "hide-network")) {
-			// hide the network
-			sgSocketSend("hide-network", 13);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "show-network")) {
-			// show the network
-			sgSocketSend("show-network", 13);
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "is-hidden")) {
 			// check to see if the network is hidden
 			sgSocketSend("is-hidden", 10);
@@ -702,6 +694,9 @@ int main(int argc, char *argv[]) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (strstr(option, "auth=")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "network=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
@@ -836,8 +831,6 @@ Daemon Commands\n\
       start                  start the router daemon\n\
       restart                restart the router daemon\n\
       kill                   shutdown the router daemon\n\
-      hide-network           don't broadcast essid\n\
-      show-network           broadcast essid\n\
       drop [DEVICE]          drop a device\n\
       drop all               drop all devices\n\
       pause                  don't send any packets\n\
@@ -845,6 +838,7 @@ Daemon Commands\n\
 \n\
 Daemon Configuration\n\
       auth={loose,strict}    control adherence to authentication protocol at router level\n\
+      network={hidden,shown} control sending of essid packet\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
