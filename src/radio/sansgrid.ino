@@ -111,8 +111,6 @@ ISR(SPI_STC_vect) {
 }
 
 void loop() {
-	delay(1000);
-	Serial.println("Looping");
 	if (process_flag) {
 		memcpy(&SpiData, rx, sizeof(SpiData));
 		memset(rx,0,sizeof(SpiData));

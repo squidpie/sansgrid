@@ -1,24 +1,24 @@
-/* Sensor Parse Payload implementation
-* Specific to the Arduino DUE Platform
-*
-* Copyright (C) 2013 SansGrid
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*
-*
-*/
+/* Sensor Parse Payload Implementation
+ * Specific to the Arduino Platform
+ *
+ * Copyright (C) 2013 SansGrid
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *
+ *
+ */
 
 #include <Arduino.h>
 #include "sensorParse.h"
@@ -32,7 +32,7 @@ void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
     memcpy( tx->payload + DT + MANID + MODNUM + SN , sg_eyeball->profile , PROFILE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE , sg_eyeball->mode , MODE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE + MODE , sg_eyeball->padding, EYEBALL_PADDING);
-	Serial.println( "Transmitting Eyeball" );
+    Serial.println( "Transmitting Eyeball" );
     sgSerialSend( tx , 1 );
 }
 
@@ -42,26 +42,44 @@ void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
     for( int i = DT + SENSOR_KEY ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
     Serial.println( "Transmitting Mock" );
-	sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
-    memcpy( tx->payload , sg_peacock , sizeof(SansgridPeacock) );
-	Serial.println( "Transmitting Peacock" );
+    memcpy( tx->payload , sg_peacock->dt , DT );
+    memcpy( tx->payload + DT , sg_peacock->id_a , SENSOR_ID );
+    memcpy( tx->payload + DT + SENSOR_ID , sg_peacock->classification_a , CLASSIFICATION );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION , sg_peacock->direction_a , DIRECTION );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_peacock->label_a , LABEL );
+    memcpy( tx->payload + DT + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_peacock->units_a , UNITS );
+    memcpy( tx->payload + DT + SENSOR_A , sg_peacock->id_b, SENSOR_ID );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID , sg_peacock->classification_b, CLASSIFICATION );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION , sg_peacock->direction_b , DIRECTION );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION , sg_peacock->label_b , LABEL );
+    memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_peacock->units_b , UNITS );
+    tx->payload[79] = sg_peacock->additional[0];
+    tx->payload[80] = sg_peacock->padding[0];
+    Serial.println( "Transmitting Peacock" );
     sgSerialSend( tx , 1 );
 }
 
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     memcpy( tx->payload , sg_squawk->dt , DT );
     memcpy( tx->payload + DT , sg_squawk->data , DATA );
-	Serial.println( "Transmitting Squawk" );
+    Serial.println( "Transmitting Squawk" );
     sgSerialSend( tx , 1 );
+}
+
+void parseSquawkSerial( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
+    memcpy( tx->payload , sg_squawk->dt , DT );
+    memcpy( tx->payload + DT , sg_squawk->data , DATA );
+    Serial.println( "Copying Squawk into SansgridSerial" );
 }
 
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
     memcpy( tx->payload , sg_chirp->dt , DT );
     memcpy( tx->payload + DT , sg_chirp->data , DATA );
-	Serial.println( "Transmitting Chirp" );
+    Serial.println( "Transmitting Chirp" );
     sgSerialSend( tx , 1 );
 }
 
@@ -69,11 +87,11 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
     memcpy( tx->payload , sg_heartbeat->dt , DT );
     for( int i = DT ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
-	Serial.println( "Transmitting Heartbeat" );
+    Serial.println( "Transmitting Heartbeat" );
     sgSerialSend( tx , 1 );
 }
 
-// Payloads recieved at Sensor from Router
+// Payloads received at Sensor from Router
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
     memcpy( sg_fly->dt , rx->payload , DT );
     memcpy( sg_fly->network_name , rx->payload + 1 , DATA );

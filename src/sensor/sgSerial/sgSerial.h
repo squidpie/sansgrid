@@ -1,5 +1,5 @@
-/* Serial Communication uint8_terface
- * Specific to the Arduino DUE Platform
+/* Serial Communication Interface
+ * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -10,12 +10,12 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *
  */
@@ -26,6 +26,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+//#define DUE 1
+
 #define NUM_BYTES 98        // Number of bytes tranferred over SPI
 #define CONTROL 1           // Number of bytes in control 
 #define IP_ADDRESS 16       // Number of bytes in source/destination IP address
@@ -33,8 +35,12 @@
 #define RECEIVE 0xFD        // Control byte for receiving data
 #define TRANSMIT 0xAD       // Control byte for transmit data
 #define SLAVE_SELECT  10    // SS pin 10
+
+#ifdef DUE
 #define SLAVE_READY  8      // Hand shake pin identifying Slave has data to send
-#define DELAY 12            // Delay in microseconds between bytes sent
+#else
+#define SLAVE_READY 2       // Hand shake pin for UNO, interrupt on pin 2 only
+#endif // DUE
 
 typedef struct SansgridSerial{
     uint8_t control[ CONTROL ];       // Control byte

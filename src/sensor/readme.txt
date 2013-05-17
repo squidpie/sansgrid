@@ -3,10 +3,9 @@ Then either paste this in your sketch at the top:
 
      #include <sensorPayloadHandler.h>
      #include <sgSerial.h>
-     #include <spiMaster.h>
      #include <sensorPayloads.h>
      #include <sensorParse.h>
-     #include <sensorConnect.h>
+     #include <SPI.h>
 
 or select SKETCH then IMPORT LIBRARIES then select the libraries to include.
 
@@ -20,7 +19,10 @@ For more detail and information on installing libraries, see:
 
 
 To compile on Uno ensure to comment out: //#define DUE 1
-in the spiMaster.cpp file.
+in the sgSerial.cpp file.
 
 To compile on DUE ensure to NOT comment out:  #define DUE 1
-in the spiMaster.cpp file.
+in the sgSerial.cpp file.
+
+To implement a push button mate ensure to not comment out: #define PUSH_BUTTON 1
+in the sensorPayloadHandler.cpp.

@@ -1,5 +1,5 @@
 /* Sensor Payload Structs and Definitions
- * specific to the Arduino DUE Platform
+ * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -10,16 +10,16 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *
  */
- 
+    
 #ifndef __SENSOR_PAYLOADS_H__
 #define __SENSOR_PAYLOADS_H__
 
@@ -68,10 +68,13 @@ typedef struct SensorConfig{
     static bool fly;
     static bool sing;
     static bool mock;
-	static bool squawk;
+    static bool squawk;
     static bool nest;
-	static bool chirp;
-	static bool challenge;
+    static bool chirp;
+    static bool nokey;
+    static bool challenge;
+    static bool forget;
+	static bool received;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];
@@ -80,15 +83,13 @@ typedef struct SensorConfig{
     static uint8_t router_ip[ IP_ADDRESS ];
     static uint8_t server_public_key[ SERVER_KEY ];
     static uint8_t sensor_public_key[ SENSOR_KEY ]; 
-    SansgridSensor a;
-    SansgridSensor b;
 } SensorConfig;
 
 typedef struct SansgridFly{
     uint8_t dt[ DT ];
     int8_t network_name[ DATA ];
 } SansgridFly;
-	
+    
 typedef struct SansgridEyeball{
     static uint8_t dt[ DT ];
     static uint8_t manid[ MANID ];
@@ -123,8 +124,16 @@ typedef struct SansgridMock{
 
 typedef struct SansgridPeacock{
     static uint8_t dt[ DT ];
-    SansgridSensor a;
-    SansgridSensor b;
+    static uint8_t id_a[ SENSOR_ID ];
+    static uint8_t classification_a[ CLASSIFICATION ];
+    static uint8_t direction_a[ DIRECTION ];
+    static int8_t label_a[ LABEL ];
+    static int8_t units_a[ UNITS ];    
+    static uint8_t id_b[ SENSOR_ID ];
+    static uint8_t classification_b[ CLASSIFICATION ];
+    static uint8_t direction_b[ DIRECTION ];
+    static int8_t label_b[ LABEL ];
+    static int8_t units_b[ UNITS ];
     static uint8_t additional[ ADDITIONAL ];
     static uint8_t padding[ PEACOCK_PADDING ];
 } SansgridPeacock;

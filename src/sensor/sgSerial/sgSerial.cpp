@@ -1,5 +1,5 @@
-/* Serial Communication implementation
- * Specific to the Arduino DUE Platform
+/* Serial Communication Implementation
+ * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -10,12 +10,12 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *
  */
@@ -23,7 +23,8 @@
 #include <Arduino.h>
 #include "sgSerial.h"
 
-#define DUE 1
+//#define DUE 1
+#define DELAY 6
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
@@ -35,11 +36,11 @@ uint8_t sgSerialOpen(void){
     SPI.setBitOrder( MSBFIRST ); 
     // Set SPI Baud Rate to 500 KHz
     // 84 MHz / 252 = 500 KHz
-    #ifdef DUE
-    SPI.setClockDivider( 168 );
-    #else
+    //#ifdef DUE
+    //SPI.setClockDivider( 252 );
+    //#else
     SPI.setClockDivider( SPI_CLOCK_DIV32 );
-    #endif // DUE
+    //#endif // DUE
     // Set SPI Mode 0-3
     SPI.setDataMode( SPI_MODE0 );
     return 0;
@@ -60,27 +61,26 @@ uint8_t sgSerialSetAsSensor(void){
 // Send size bytes of serial data over SPI.
 uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     // Buffer to store data array to send to Slave over SPI
-	uint8_t data_out[ NUM_BYTES ];
-	// Copy SansgridSerial data to buffer
-    memcpy( data_out , sg_serial, sizeof(SansgridSerial));
+    uint8_t data_out[ NUM_BYTES ];
+    // Copy SansgridSerial data to buffer
+    memcpy( data_out , sg_serial->control, CONTROL );
+	memcpy( data_out + CONTROL , sg_serial->ip_addr, IP_ADDRESS  );
+	memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
-	sgSerialOpen();
-	// Delay to allow slave to process
-    delayMicroseconds( DELAY );
+    sgSerialOpen();
+    delayMicroseconds(DELAY);
 	// Send dummy byte to Set command on Slave
-	Serial.println( "First Byte" );
-    SPI.transfer( 0xAD );
-	// Delay to alow slave to process
-    delayMicroseconds( DELAY );
-	// Loop through buffer sending one byte at a time over SPI
+    //Serial.println( "First Byte" );
+    SPI.transfer( data_out[0] );
+	delayMicroseconds(DELAY);
+    // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
-		SPI.transfer( data_out[i] );
-		Serial.println( data_out[i] );
-		// Delay to allow Slave to process
-        delayMicroseconds( DELAY );
+        SPI.transfer( data_out[i] );
+		delayMicroseconds(DELAY);
+        //Serial.println( data_out[i] );
     }
-	// Close SPI bus
+    // Close SPI bus - NOT USED
     //sgSerialClose();
     return 0;
 }
@@ -90,35 +90,36 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // Array of size NUM_BYTES to store SPI packet
     uint8_t data_in[NUM_BYTES];
     // Dummy byte sent to slave 
-    uint8_t rec = RECEIVE;
+    uint8_t rec = 0xFD;
     // Open SPI bus
     sgSerialOpen();
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
     // First dummy transfer defines the command 
     // for valid or not valid data
-    SPI.transfer( rec );
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
+    delayMicroseconds(DELAY);
+	SPI.transfer( rec );
+	delayMicroseconds(DELAY);
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
-    // in SPDR register and will be sent on the
-    // next call in the for Loop.
+    // in SPDR register and will be stored on the
+    // next SPI.transfer() in the for Loop.
     SPI.transfer( rec );
-    // Delay to allow Slave to process
-    delayMicroseconds( DELAY );
+	delayMicroseconds(DELAY);
     // Loop through receiving bytes the length 
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
+        // Send a byte over SPI and store
+        // byte received in data_in buffer
         data_in[i] = SPI.transfer( rec );
-        // Delay to allow Slave to process
-        delayMicroseconds( DELAY );
+		delayMicroseconds(DELAY);
     }
-    // Close SPI bus
+    // Close SPI bus - NOT USED
     //sgSerialClose();
     // Copy data from array into SansgridSerial structure
     // containing Control byte, IP address, and Payload
-    memcpy( sg_serial, data_in , sizeof(data_in) );
+    // Copy SansgridSerial data to buffer
+    memcpy( sg_serial->control , data_in , CONTROL );
+	memcpy( sg_serial->ip_addr , data_in + CONTROL , IP_ADDRESS  );
+	memcpy( sg_serial->payload , data_in + CONTROL + IP_ADDRESS , PAYLOAD );
     return 0;
 }
 

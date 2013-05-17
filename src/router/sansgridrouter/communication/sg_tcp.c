@@ -33,8 +33,6 @@
 #include "../sansgrid_router.h"
 
 
-//#define USE_SANSRTS 1
-
 
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
@@ -42,9 +40,6 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		return -1;
 	char cmd[2000];
 	char payload[size*5];
-#ifdef USE_SANSRTS
-	char config_path[300];
-#endif
 	FILE *FPTR = NULL;
 	char *buffer = NULL;
 	int buff_size = size;
@@ -52,22 +47,15 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	syslog(LOG_INFO, "Sending packet over TCP");
 
 	// get the configuration path
-#ifdef USE_SANSRTS
-	snprintf(config_path, 300, "sansrts.pl");
-#endif
 
 	if (sgRouterToServerConvert(sg_serial, payload) == -1) {
 		syslog(LOG_WARNING, "Router-->Server conversion failed");
 		return -1;
 	} else {
 		syslog(LOG_DEBUG, "Sending packet %s to server", payload);
-#ifdef USE_SANSRTS
-		snprintf(cmd, 2000, "%s \"%s\"", config_path, payload);
-#else
 		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode key='%s' --data-urlencode payload='%s'", 
 				router_opts.serverip, router_opts.serverkey, payload);
 		printf("%s\n", cmd);
-#endif
 		if ((FPTR = popen(cmd, "r")) == NULL) {
 			syslog(LOG_WARNING, "Router-->Server send failed");
 			return -1;
