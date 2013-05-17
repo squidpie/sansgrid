@@ -146,6 +146,7 @@ void *heartbeatRuntime(void *arg) {
 	uint32_t rdid;
 	int device_lost = 0;
 	int exit_code;
+	uint32_t current_packet;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -178,8 +179,21 @@ void *heartbeatRuntime(void *arg) {
 			sleep(1);
 		}
 
+		current_packet = routingTableGetCurrentPacket(routing_table, ip_addr);
+		if ((current_packet != SG_DEVSTATUS_NESTING)
+				&& (current_packet != SG_DEVSTATUS_CHIRPING)) {
+			char name[100];
+			sgPayloadGetPayloadName(current_packet, name);
+			// device is still authenticating
+			// continue on
+			if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
+				routingTableForEachDevice(routing_table, ip_addr);
+			}
+			continue;
+		}
+
 		if (!routingTableIsDeviceLost(routing_table, ip_addr)) {
-			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
+			syslog(LOG_DEBUG, "heartbeat: sending to device %u", routingTableIPToRDID(routing_table, ip_addr));
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 			memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
