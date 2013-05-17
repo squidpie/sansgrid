@@ -188,16 +188,6 @@ int sgSocketListen(void) {
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "strict-auth")) {
-			// require strict adherence to authentication protocol
-			routingTableRequireStrictAuth(routing_table);
-			strcpy(str, "Auth is strictly enforced");
-			socketDoSend(s2, str);
-		} else if (!strcmp(str, "loose-auth")) {
-			// don't require strict adherence to authentication protocol
-			routingTableAllowLooseAuth(routing_table);
-			strcpy(str, "Auth is loosely enforced");
-			socketDoSend(s2, str);
 		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 			// Got a packet from the server
 			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
@@ -292,6 +282,22 @@ int sgSocketListen(void) {
 				strcpy(str, "No interval given");
 			}
 			socketDoSend(s2, str);
+		} else if (strstr(str, "auth=")) {
+			// change authentication
+			if (strlen(str) > 5) {
+				if (strstr(str, "strict")) {
+					routingTableRequireStrictAuth(routing_table);
+					strcpy(str, "Auth is strictly enforced");
+				} else if (strstr(str, "loose")) {
+					routingTableAllowLooseAuth(routing_table);
+					strcpy(str, "Auth is loosely enforced");
+				} else {
+					strcpy(str, "Not a valid option");
+				}
+			} else {
+				strcpy(str, "No option given");
+			}
+			if (socketDoSend(s2, str) < 0) break;
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -299,15 +305,31 @@ int sgSocketListen(void) {
 			do {
 				sprintf(str, "Routing Table Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
-				if (routingTableIsAuthStrict(routing_table)) {
-					sprintf(str, "\tStrict Authentication\n");
+				// Print ESSID
+				sprintf(str, "\tESSID:\t\t\t%s\n", router_opts.essid);
+				if (socketDoSend(s2, str) < 0) break;
+				// Print whether the network is hidden or not
+				sprintf(str, "\tHidden:\t\t\t");
+				if (router_opts.hidden_network == 1) {
+					strcat(str, "Yes\n");
 				} else {
-					sprintf(str, "\tLoose Authentication\n");
+					strcat(str, "No\n");
 				}
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "\tHeartbeat Period: %i seconds\n",
+				// print whether or not the authentication is strict
+				sprintf(str, "\tAuthentication:\t\t");
+				if (routingTableIsAuthStrict(routing_table)) {
+					strcat(str, "Strict\n");
+				} else {
+					strcat(str, "Loose\n");
+				}
+				if (socketDoSend(s2, str) < 0) break;
+				// Print how often we heartbeat a device
+				sprintf(str, "\tHeartbeat Period:\t%i seconds\n",
 					   router_opts.heartbeat_period);
 				if (socketDoSend(s2, str) < 0) break;
+				// Print whether we're pulling from the dispatch
+				// 		or whether we're holding everything on the dispatch
 				sprintf(str, "\nDispatch Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
 				if (router_opts.dispatch_pause)
@@ -315,9 +337,11 @@ int sgSocketListen(void) {
 				else
 					sprintf(str, "\tDispatch Running\n");
 				if (socketDoSend(s2, str) < 0) break;
+				// Print how full the dispatch is
 			    sprintf(str, "\tQueued: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
 				if (socketDoSend(s2, str) < 0) break;
+				// Print the routing table
 				sprintf(str, "\nDevices:\n");
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, " \

@@ -497,7 +497,13 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			verbosity = atoi(verbosity_str);
 			foundverbosity = 1;
 		} else if (strstr(buffer, "netmask")) {
-			sscanf(buffer, "netmask = %s", netmask_str);
+			str = strtok_r(buffer, "'", &saveptr);
+			str = strtok_r(NULL, "'", &saveptr);
+			if (str == NULL) {
+				sscanf(buffer, "netmask = %s", netmask_str);
+			} else {
+				strcpy(netmask_str, str);
+			}
 			parseIPv6(netmask_str, netmask);
 			foundnetmask = 1;
 		} else if (strstr(buffer, "heartbeat")) {
@@ -695,10 +701,7 @@ int main(int argc, char *argv[]) {
 		} else if (strstr(option, "heartbeat=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "strict-auth")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "loose-auth")) {
+		} else if (strstr(option, "auth=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
@@ -841,8 +844,7 @@ Daemon Commands\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
-      strict-auth            require strict adherence to authentication protocol\n\
-      loose-auth             as long as eyeball comes first, don't care about packet order\n\
+      auth={loose,strict}    control adherence to authentication protocol at router level\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
