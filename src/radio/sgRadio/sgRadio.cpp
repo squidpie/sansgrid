@@ -89,7 +89,7 @@ void SansgridRadio::processSpi() {
 			// router ip received
 			if (MODE(SENSOR)) 
 				router_mode = ROUTER;
-				setDestAddr(BROADCAST);
+//				setDestAddr(BROADCAST);
 				Radio->println("Hello Router");
 				delay(50);
 			break;
