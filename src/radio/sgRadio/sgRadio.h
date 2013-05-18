@@ -31,7 +31,7 @@
 
 
 #define SPI_IRQ_PIN 8
-#define ROUTER_MODE_PIN 12
+#define ROUTER_MODE_PIN 9
 
 #define XBSN	81
 

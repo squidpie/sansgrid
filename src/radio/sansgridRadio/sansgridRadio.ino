@@ -81,8 +81,8 @@ void setup() {
 	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
 	//sgRadio = new SansgridRadio;
 	
-  Serial.println("Setup Complete");
-  delay(500);
+  //Serial.println("Setup Complete");
+  //delay(500);
   SPI.attachInterrupt();
 }
 // SPI Interrupt Service Routine
@@ -131,14 +131,15 @@ ISR (SPI_STC_vect)
 
 
 void loop() {
-        if (spi_err) {
+  bad_data: 
+	if (spi_err) {
 		if (!spi_rw) digitalWrite(SLAVE_READY, HIGH);
 		else Serial.println("How do we recover?");
 		spi_err = false;
 	}
 	
 	if (process_flag) {
-          Serial.println("Process It");
+         // Serial.println("Process It");
 	   memcpy(&SpiData, rx, sizeof(SpiData));
 		memset(rx,0,sizeof(SpiData));
 		pos = 0;
@@ -164,22 +165,30 @@ void loop() {
 		 // Serial.flush();
 			//readPacket();
 	//readPacket();
-	
+
+			byte head = Serial.peek();
+			if (head != 0x00 && head != 0x01) {
+                                Serial.println("throwing out the bath water");
+                                delay(50);
+				while (Serial.available() > 0) { Serial.read(); }
+				goto bad_data;
+			}
+			
 			sgRadio.read();
+                        
 			if(sgRadio.defrag()) {
 				sgRadio.processPacket();
 				memcpy(rx,&SpiData,sizeof(SpiData)); 
 				spi_active = true;
 				Serial.write("Sending SPI");
 				delay(50);
-				//Serial.write((const uint8_t *)rx,sizeof(SpiData));
-				//delay(5000);
+				Serial.write((const uint8_t *)rx,sizeof(SpiData));
+				delay(1000);
 				spi_rw = 0;
 				digitalWrite(SLAVE_READY, LOW);
 			}
 		}
 	}
-    
 }
 // assert slave interrupt pin 7 to initate SPI tansfer
 

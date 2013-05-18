@@ -61,7 +61,7 @@ void SansgridRadio::processSpi() {
 	
 	switch (type) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
-			Radio->println("HeartBeat Received");
+			//Radio->println("HeartBeat Received");
 			return;
 		case SG_EYEBALL:
 			if(MODE(SENSOR)) {
@@ -90,8 +90,8 @@ void SansgridRadio::processSpi() {
 			if (MODE(SENSOR)) 
 				router_mode = ROUTER;
 //				setDestAddr(BROADCAST);
-				Radio->println("Hello Router");
-				delay(50);
+				//Radio->println("Hello Router");
+				//delay(50);
 			break;
 		
 		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
@@ -130,13 +130,12 @@ void SansgridRadio::processSpi() {
 bool SansgridRadio::defrag() {
 	bool rv = false;
 	if (MODE(SENSOR)) {
-		memcpy(&origin_xbsn, incoming_packet, XB_SN_LN);
-		if (memcmp(origin_xbsn,xbsn,XB_SN_LN)) {
+		memcpy(origin_xbsn, (incoming_packet + 1), XB_SN_LN);
+		if (memcmp(origin_xbsn,xbsn,XB_SN_LN) != 0) {
 			return rv;
 		}
 	}
 	if (incoming_packet[PKT_FRAME] == 0) {
-		//Radio->println("Frame 0 received"); delay(100);
 		frag_buffer[next][FRAG_PENDING] = 1;
 		memcpy(&frag_buffer[next][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN);
 		memcpy(&frag_buffer[next][FRAG_F0],&incoming_packet[PKT_PYLD],F0_PYLD_SZ);
@@ -154,7 +153,7 @@ bool SansgridRadio::defrag() {
 		//	Radio->write((unsigned int)addr); delay(100);
 			//Radio->write(0xFF);
 			if (frag_buffer[i][FRAG_PENDING] && !memcmp(&frag_buffer[i][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN)){
-				//Radio->println("Frame 1 received"); delay(100);
+				Radio->println("Frame 2 received"); delay(100);
 				frag_buffer[i][FRAG_PENDING] = 0;
 				memcpy(&frag_buffer[i][FRAG_F1], &incoming_packet[PKT_PYLD],F1_PYLD_SZ);
 				memcpy(&packet_buffer[0], &frag_buffer[i][FRAG_F0],SG_PACKET_SZ);
