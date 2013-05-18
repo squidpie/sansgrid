@@ -15,6 +15,7 @@ AC_PROG_RANLIB
 AC_CHECK_LIB([check], [srunner_create])
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([wiringPi], [wiringPiSPISetup])
+AC_CHECK_LIB([rt], [clock_gettime])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h stdint.h stdlib.h string.h syslog.h unistd.h])

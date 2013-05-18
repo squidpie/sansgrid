@@ -189,7 +189,8 @@ int sgSocketListen(void) {
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
-		} else if (strstr(str, "packet=")) {
+		} else if (strstr(str, "packet=")
+				|| strstr(str, "packet:")) {
 			if ((packet = strstr(str, DELIM_KEY)) != NULL) {
 				// Got a packet from the server
 				syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
