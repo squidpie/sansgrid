@@ -53,6 +53,8 @@ void setup() {
 		sgDebugInit(&SerialDebugger);
 		//SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
 	#else*/
+	pinMode(SLAVE_READY, OUTPUT);
+	digitalWrite(SLAVE_READY, HIGH);
 	Serial.begin(115200);
   //Serial.println("Setup starts here");
 	//pinMode(ledPin, OUTPUT);
@@ -68,8 +70,6 @@ void setup() {
   //pinMode(SPI_IRQ_PIN, INPUT);
   //digitalWrite(SPI_IRQ_PIN, HIGH);
       pinMode(MISO, OUTPUT);
-	pinMode(SLAVE_READY, OUTPUT);
-	digitalWrite(SLAVE_READY, HIGH);
 	SPCR |= _BV(SPE);
 	pos = 0;
 	process_flag = false;
@@ -91,38 +91,36 @@ ISR (SPI_STC_vect)
   // Read byte from SPI SPDR register
   uint8_t c = SPDR;
   // Call Command Byte
-  switch(command){
-  case 0x00:
-      // Set Command byte from intial dummy byte
-      command = c;
-      break;
-  case 0xAD:
+  switch(spi_rw){
+  case 1:
       // Receive SPI Packet from Master
       if ( pos < NUM_BYTES ){
           rx[pos++] = c;
           // If buffer is full set process_it flag
-          if ( pos == NUM_BYTES - 1 )    
+          if ( pos >= NUM_BYTES )    
               process_flag = true; 
         }
       break;
-  case 0xFD:
+  case 0:
       // Transmit SPI Packet to Master
-      SPDR = rx[ pos_b++ ];
-      // If buffer is full set process_it flag
-      if ( pos_b == NUM_BYTES ){
+			if (pos < NUM_BYTES ) {
+      	SPDR = rx[pos++];
+      	// If buffer is full set process_it flag
+      	if ( pos >= NUM_BYTES ){
+              digitalWrite(SLAVE_READY, HIGH);
               spi_active = false;
               pos = 0;
-              command = 0;
-              digitalWrite(SLAVE_READY, HIGH);
-      }
+              spi_rw = 1;
+      	}
+			}
       break;
   default:
       if ( pos < NUM_BYTES ){
           pos++;
           // If buffer is full set process_it flag
-          if ( pos == NUM_BYTES - 1 ) {
+          if ( pos >= NUM_BYTES ) {
             pos = 0;
-            command = 0;    
+						spi_err = 1;
           }
       }
       break;
@@ -131,19 +129,22 @@ ISR (SPI_STC_vect)
 
 
 void loop() {
-  bad_data: 
+  loop_head: 
 	if (spi_err) {
-		if (!spi_rw) digitalWrite(SLAVE_READY, HIGH);
+		if (!spi_rw) {
+			digitalWrite(SLAVE_READY, HIGH);
+			spi_rw = 1;
+		}
 		else Serial.println("How do we recover?");
 		spi_err = false;
 	}
 	
 	if (process_flag) {
-         // Serial.println("Process It");
-	   memcpy(&SpiData, rx, sizeof(SpiData));
+  	// Serial.println("Process It");
+	  memcpy(&SpiData, rx, sizeof(SpiData));
 		memset(rx,0,sizeof(SpiData));
 		pos = 0;
-                command = 0;
+    command = 0;
 		process_flag = false;
 		spi_active = false;
 		sgRadio.processSpi();
@@ -158,8 +159,8 @@ void loop() {
 	if (!spi_active) {
 // put your main code here, to run repeatedly: 
 		if (Serial.peek() >= 0) {
-                Serial.println("peek true");
-                delay(50);
+                //Serial.println("peek true");
+                //delay(50);
   			//Serial.println("Reading form XBee");
 			//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
 		 // Serial.flush();
@@ -168,10 +169,10 @@ void loop() {
 
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
-                                Serial.println("throwing out the bath water");
-                                delay(50);
+        Serial.println("throwing out the bath water");
+        delay(50);
 				while (Serial.available() > 0) { Serial.read(); }
-				goto bad_data;
+				goto loop_head;
 			}
 			
 			sgRadio.read();
@@ -182,8 +183,8 @@ void loop() {
 				spi_active = true;
 				Serial.write("Sending SPI");
 				delay(50);
-				Serial.write((const uint8_t *)rx,sizeof(SpiData));
-				delay(1000);
+				//Serial.write((const uint8_t *)rx,sizeof(SpiData));
+				//delay(1000);
 				spi_rw = 0;
 				digitalWrite(SLAVE_READY, LOW);
 			}
