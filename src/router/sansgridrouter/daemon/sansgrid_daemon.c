@@ -40,6 +40,7 @@
 #include "../sansgrid_router.h"
 #include "../communication/sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
+#include "../routing_table/auth_status.h"
 
 
 
@@ -188,35 +189,28 @@ int sgSocketListen(void) {
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "strict-auth")) {
-			// require strict adherence to authentication protocol
-			routingTableRequireStrictAuth(routing_table);
-			strcpy(str, "Auth is strictly enforced");
-			socketDoSend(s2, str);
-		} else if (!strcmp(str, "loose-auth")) {
-			// don't require strict adherence to authentication protocol
-			routingTableAllowLooseAuth(routing_table);
-			strcpy(str, "Auth is loosely enforced");
-			socketDoSend(s2, str);
-		} else if ((packet = strstr(str, DELIM_KEY)) != NULL) {
-			// Got a packet from the server
-			syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
-			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
-					sg_serial);
-			if (exit_code == -1) {
-				strcpy(str, "bad packet");
-				syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
-			} else {
-				strcpy(str, "packet accepted");
-				queueEnqueue(dispatch, sg_serial);
-				syslog(LOG_DEBUG, "sansgrid daemon: got good packet");
-				sg_serial = NULL;
-				if (socketDoSend(s2, str) == -1) {
-					close(s2);
-					continue;
+		} else if (strstr(str, "packet=")
+				|| strstr(str, "packet:")) {
+			if ((packet = strstr(str, DELIM_KEY)) != NULL) {
+				// Got a packet from the server
+				syslog(LOG_DEBUG, "sansgrid daemon: interpreting packet: %s", packet);
+				sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+				exit_code = sgServerToRouterConvert(strstr(packet, DELIM_KEY),
+						sg_serial);
+				if (exit_code == -1) {
+					strcpy(str, "packet conversion failed");
+					syslog(LOG_NOTICE, "sansgrid daemon: got bad packet");
+				} else {
+					strcpy(str, "packet enqueued");
+					queueEnqueue(dispatch, sg_serial);
+					syslog(LOG_DEBUG, "sansgrid daemon: enqueued a packet from client");
 				}
+				sg_serial = NULL;
+			} else {
+				strcpy(str, "No packet found");
+				syslog(LOG_NOTICE, "sansgrid daemon: didn't get a packet");
 			}
+			socketDoSend(s2, str);
 		} else if (strstr(str, "drop") != NULL) {
 			// drop a device
 			uint32_t device = 0;
@@ -243,10 +237,7 @@ int sgSocketListen(void) {
 			} else {
 				strcpy(str, "Bad device given");
 			}
-			if (socketDoSend(s2, str) < 0) {
-				close(s2);
-				continue;
-			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "url")) {
 			// return the url
 			strcpy(str, router_opts.serverip);
@@ -274,22 +265,91 @@ int sgSocketListen(void) {
 				strcpy(str, "Couldn't set server key");
 			}
 			socketDoSend(s2, str);
+		} else if (strstr(str, "heartbeat=")) {
+			// set heartbeat period
+			if (strlen(str) > 10) {
+				int hb = atoi(&str[10]);
+				if (hb != 0) {
+					router_opts.heartbeat_period = hb;
+					sem_post(&router_opts.hb_wait);
+					strcpy(str, "Changed Heartbeat Period");
+				} else {
+					strcpy(str, "Couldn't change Heartbeat Period");
+				}
+			} else {
+				strcpy(str, "No interval given");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "auth=")) {
+			// change authentication
+			if (strlen(str) > 5) {
+				if (strstr(str, "strict")) {
+					routingTableRequireStrictAuth(routing_table);
+					strcpy(str, "Auth is strictly enforced");
+				} else if (strstr(str, "loose")) {
+					routingTableAllowLooseAuth(routing_table);
+					strcpy(str, "Auth is loosely enforced");
+				} else if (strstr(str, "filtered")) {
+					routingTableSetAuthFiltered(routing_table);
+					strcpy(str, "Auth is enforced for packets");
+				} else if (strstr(str, "none")) {
+					routingTableDisableAuth(routing_table);
+					strcpy(str, "Auth is disabled");
+				} else {
+					strcpy(str, "Not a valid option");
+				}
+			} else {
+				strcpy(str, "No option given");
+			}
+			socketDoSend(s2, str);
+		} else if (strstr(str, "network=")) {
+			if (strstr(str, "hidden")) {
+				router_opts.hidden_network = 1;
+				strcpy(str, "Hiding Network");
+			} else if (strstr(str, "shown")) {
+				router_opts.hidden_network = 0;
+				strcpy(str, "Showing Network");
+			} else {
+				strcpy(str, "Not a valid option");
+			}
+			socketDoSend(s2, str);
 		} else if (!strcmp(str, "status")) {	
 			syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 			//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			int devnum = routingTableGetDeviceCount(routing_table);
+			int strictness = routingTableIsAuthStrict(routing_table);
 			do {
 				sprintf(str, "Routing Table Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
-				if (routingTableIsAuthStrict(routing_table)) {
-					sprintf(str, "\tStrict Authentication\n");
+				// Print ESSID
+				sprintf(str, "\tESSID:\t\t\t%s\n", router_opts.essid);
+				if (socketDoSend(s2, str) < 0) break;
+				// Print whether the network is hidden or not
+				sprintf(str, "\tHidden:\t\t\t");
+				if (router_opts.hidden_network == 1) {
+					strcat(str, "Yes\n");
 				} else {
-					sprintf(str, "\tLoose Authentication\n");
+					strcat(str, "No\n");
 				}
 				if (socketDoSend(s2, str) < 0) break;
-				sprintf(str, "\tHeartbeat Period: %i seconds\n",
-					   HEARTBEAT_INTERVAL);
+				// print whether or not the authentication is strict
+				sprintf(str, "\tAuthentication:\t\t");
+				if (strictness == DEV_AUTH_STRICT) {
+					strcat(str, "Strict\n");
+				} else if (strictness == DEV_AUTH_FILTERED) {
+					strcat(str, "Filtered\n");
+				} else if (strictness == DEV_AUTH_LOOSE) {
+					strcat(str, "Loose\n");
+				} else {
+					strcat(str, "None\n");
+				}
 				if (socketDoSend(s2, str) < 0) break;
+				// Print how often we heartbeat a device
+				sprintf(str, "\tHeartbeat Period:\t%i seconds\n",
+					   router_opts.heartbeat_period);
+				if (socketDoSend(s2, str) < 0) break;
+				// Print whether we're pulling from the dispatch
+				// 		or whether we're holding everything on the dispatch
 				sprintf(str, "\nDispatch Status:\n");
 				if (socketDoSend(s2, str) < 0) break;
 				if (router_opts.dispatch_pause)
@@ -297,9 +357,11 @@ int sgSocketListen(void) {
 				else
 					sprintf(str, "\tDispatch Running\n");
 				if (socketDoSend(s2, str) < 0) break;
+				// Print how full the dispatch is
 			    sprintf(str, "\tQueued: %i of %i\n", 
 						queueSize(dispatch), queueMaxSize(dispatch));
 				if (socketDoSend(s2, str) < 0) break;
+				// Print the routing table
 				sprintf(str, "\nDevices:\n");
 				if (socketDoSend(s2, str) < 0) break;
 				sprintf(str, " \
@@ -318,12 +380,6 @@ rdid                IP address                 status  Last Packet\n");
 			syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
 			sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 			socketDoSend(s2, str);
-		} else if (!strcmp(str, "hide-network")) {
-			// Don't broadcast essid
-			syslog(LOG_NOTICE, "Sansgrid Daemon: Hiding ESSID network");
-			router_opts.hidden_network = 1;
-			strcpy(str, "Hiding Network");
-			socketDoSend(s2, str);
 		} else if (!strcmp(str, "is-hidden")) {
 			// return if the network is hidden (not broadcasting)
 			if (router_opts.hidden_network) {
@@ -331,12 +387,6 @@ rdid                IP address                 status  Last Packet\n");
 			} else {
 				strcpy(str, "Shown Network");
 			}
-			socketDoSend(s2, str);
-		} else if (!strcmp(str, "show-network")) {
-			// Broadcast essid
-			syslog(LOG_NOTICE, "Sansgrid Daemon: Showing ESSID network");
-			router_opts.hidden_network = 0;
-			strcpy(str, "Showing Network");
 			socketDoSend(s2, str);
 		} else if (!strcmp(str, "pause")) {
 			// pause packet sending

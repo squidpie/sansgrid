@@ -62,6 +62,8 @@ void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDataTypeEnum dt);
 int32_t routingTableRequireStrictAuth(RoutingTable *table);
 int32_t routingTableAllowLooseAuth(RoutingTable *table);
+int32_t routingTableSetAuthFiltered(RoutingTable *table);
+int32_t routingTableDisableAuth(RoutingTable *table);
 int32_t routingTableIsAuthStrict(RoutingTable *table);
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE]);
 int32_t routingTableSetNextExpectedPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE], enum SansgridDeviceStatusEnum nextstatus);

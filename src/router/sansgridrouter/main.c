@@ -21,6 +21,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include "routing_table/heartbeat.h"
+#include "routing_table/auth_status.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -36,15 +37,19 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 #include <errno.h>
-
+#include <time.h>
+#include <semaphore.h>
 
 
 void usage(int status);
 
 void *dispatchRuntime(void *arg) {
 	SansgridSerial *sg_serial = NULL;
+	enum SansgridDeviceStatusEnum gen_ptype;
+	int exit_code;
 
 	while (1) {
+		exit_code = 0;
 		if(sg_serial != NULL) {
 			free(sg_serial);
 			sg_serial = NULL;
@@ -58,60 +63,53 @@ void *dispatchRuntime(void *arg) {
 		while (router_opts.dispatch_pause) {
 			sleep(1);
 		}
-		// FIXME: Use sgPayloadGetType, defined in payload_handlers.c
-		switch (sg_serial->payload[0]) {
-			case SG_HATCH:
-				routerHandleHatching(routing_table, sg_serial);
-				break;
-			case SG_FLY:
-				routerHandleFly(routing_table, sg_serial);
-				break;
-			case SG_EYEBALL:
-				routerHandleEyeball(routing_table, sg_serial);
-				break;
-			case SG_PECK:
-				routerHandlePeck(routing_table, sg_serial);
-				break;
-			case SG_SING_WITH_KEY:
-			case SG_SING_WITHOUT_KEY:
-				routerHandleSing(routing_table, sg_serial);
-				break;
-			case SG_MOCK_WITH_KEY:
-			case SG_MOCK_WITHOUT_KEY:
-				routerHandleMock(routing_table, sg_serial);
-				break;
-			case SG_PEACOCK:
-				routerHandlePeacock(routing_table, sg_serial);
-				break;
-			case SG_NEST:
-				routerHandleNest(routing_table, sg_serial);
-				break;
-			case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
-			case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
-			case SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE:
-			case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
-			case SG_SQUAWK_SENSOR_CHALLENGE_SERVER:
-			case SG_SQUAWK_SERVER_DENY_SENSOR:
-			case SG_SQUAWK_SERVER_RESPOND:
-			case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
-				routerHandleSquawk(routing_table, sg_serial);
-				break;
-			case SG_HEARTBEAT_ROUTER_TO_SENSOR:
-			case SG_HEARTBEAT_SENSOR_TO_ROUTER:
-				routerHandleHeartbeat(routing_table, sg_serial);
-				break;
-			case SG_SERVSTATUS:
-				routerHandleServerStatus(routing_table, sg_serial);
-				break;
-			case SG_CHIRP_COMMAND_SERVER_TO_SENSOR:
-			case SG_CHIRP_DATA_SENSOR_TO_SERVER:
-			case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
-			case SG_CHIRP_SENSOR_DISCONNECT:
-				routerHandleChirp(routing_table, sg_serial);
-				break;
-			default:
-				printf("Not found: %x\n", sg_serial->payload[0]);
-				break;
+		if (sg_serial->payload[0] == SG_SERVSTATUS) {
+			routerHandleServerStatus(routing_table, sg_serial);
+		} else {
+			gen_ptype = sgPayloadGetType(sg_serial->payload[0]);
+			switch (gen_ptype) {
+				case SG_DEVSTATUS_HATCHING:
+					exit_code = routerHandleHatching(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_FLYING:
+					exit_code = routerHandleFly(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_EYEBALLING:
+					exit_code = routerHandleEyeball(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_PECKING:
+					exit_code = routerHandlePeck(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_SINGING:
+					exit_code = routerHandleSing(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_MOCKING:
+					exit_code = routerHandleMock(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_PEACOCKING:
+					exit_code = routerHandlePeacock(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_NESTING:
+					exit_code = routerHandleNest(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_SQUAWKING:
+					exit_code = routerHandleSquawk(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_HEARTBEAT:
+					exit_code = routerHandleHeartbeat(routing_table, sg_serial);
+					break;
+				case SG_DEVSTATUS_CHIRPING:
+					exit_code = routerHandleChirp(routing_table, sg_serial);
+					break;
+				default:
+					printf("Not found: %x->%x\n", 
+							sg_serial->payload[0], gen_ptype);
+					break;
+			}
+		}
+		if (exit_code == -1) {
+			if (routingTableIsAuthStrict(routing_table) == DEV_AUTH_STRICT) 
+				routerFreeDevice(routing_table, sg_serial->ip_addr);
 		}
 	}
 	pthread_exit(arg);
@@ -141,11 +139,13 @@ void *heartbeatRuntime(void *arg) {
 	SansgridIRStatus sg_irstatus;
 	SansgridChirp sg_chirp;
 	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
-	struct timespec req, rem;
+	struct timespec req, epoch;
 	int hb_status = 0;
 	uint32_t rdid;
 	int device_lost = 0;
-	int exit_code;
+	uint32_t current_packet;
+	uint64_t nano_add = 0;
+	uint64_t sec_add = 0;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -154,32 +154,50 @@ void *heartbeatRuntime(void *arg) {
 	count = routingTableGetDeviceCount(routing_table)-1;
 	while (1) {
 		do {
+			clock_gettime(CLOCK_REALTIME, &epoch);
 			if (count == 0)
 				count = 1;
-			if (HEARTBEAT_INTERVAL/count == 0) {
+			if (router_opts.heartbeat_period/count == 0) {
 				// interval is < 1 second
 				// sleep in usecs
-				req.tv_nsec = ((HEARTBEAT_INTERVAL*1000L)/count)*1000000L;
+				req.tv_nsec = ((router_opts.heartbeat_period*1000L)/count)*1000000L;
 				req.tv_sec = 0;
-				do {
-					exit_code = nanosleep(&req, &rem);
-					if (rem.tv_nsec != 0) 
-						req.tv_nsec = rem.tv_nsec;
-					if (rem.tv_sec != 0)
-						req.tv_sec = rem.tv_sec;
-				} while (exit_code == -1);
-				//sleepMicro(HEARTBEAT_INTERVAL*1000000L / count);
 			} else {
-				sleep(HEARTBEAT_INTERVAL/count);
+				req.tv_nsec = 0;
+				req.tv_sec = router_opts.heartbeat_period / count;
 			}
+			nano_add = epoch.tv_nsec + req.tv_nsec;
+			sec_add = epoch.tv_sec + req.tv_sec;
+			if (nano_add > 1000000000L) {
+				// wrap nanoseconds into seconds
+				nano_add = (nano_add-1000000000L);
+				sec_add++;
+			}
+			req.tv_nsec = nano_add;
+			req.tv_sec = sec_add;
+			
+			sem_timedwait(&router_opts.hb_wait, &req);
 		} while ((count = (routingTableGetDeviceCount(routing_table)-1)) < 1);
 
 		while (router_opts.dispatch_pause) {
 			sleep(1);
 		}
 
+		current_packet = routingTableGetCurrentPacket(routing_table, ip_addr);
+		if ((current_packet != SG_DEVSTATUS_NESTING)
+				&& (current_packet != SG_DEVSTATUS_CHIRPING)) {
+			char name[100];
+			sgPayloadGetPayloadName(current_packet, name);
+			// device is still authenticating
+			// continue on
+			if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
+				routingTableForEachDevice(routing_table, ip_addr);
+			}
+			continue;
+		}
+
 		if (!routingTableIsDeviceLost(routing_table, ip_addr)) {
-			syslog(LOG_DEBUG, "heartbeat: sending to device %u", ip_addr[IP_SIZE-1]);
+			syslog(LOG_DEBUG, "heartbeat: sending to device %u", routingTableIPToRDID(routing_table, ip_addr));
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 			memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
@@ -211,7 +229,7 @@ void *heartbeatRuntime(void *arg) {
 			sg_serial = NULL;
 			if (device_lost) {
 				device_lost = 0;
-				//routerFreeDevice(routing_table, ip_addr);
+				routerFreeDevice(routing_table, ip_addr);
 			}
 		}
 		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
@@ -419,10 +437,12 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		 hidden_str[10],
 		 verbosity_str[20],
 		 netmask_str[50],
-		 strictness_str[10];
+		 strictness_str[10],
+		 heartbeat_str[50];
 	int hidden = 0;
 	int verbosity = 0;
 	int strictness = 0;
+	int heartbeat = 0;
 
 	int foundkey = 0,
 		foundurl = 0,
@@ -430,7 +450,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundhidden = 0,
 		foundverbosity = 0,
 		foundnetmask = 0,
-		foundstrictness = 0;
+		foundstrictness = 0,
+		foundheartbeat = 0;
 	char *str = NULL;
 	char *saveptr = NULL;
 
@@ -482,9 +503,19 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			verbosity = atoi(verbosity_str);
 			foundverbosity = 1;
 		} else if (strstr(buffer, "netmask")) {
-			sscanf(buffer, "netmask = %s", netmask_str);
+			str = strtok_r(buffer, "'", &saveptr);
+			str = strtok_r(NULL, "'", &saveptr);
+			if (str == NULL) {
+				sscanf(buffer, "netmask = %s", netmask_str);
+			} else {
+				strcpy(netmask_str, str);
+			}
 			parseIPv6(netmask_str, netmask);
 			foundnetmask = 1;
+		} else if (strstr(buffer, "heartbeat")) {
+			sscanf(buffer, "heartbeat = %s", heartbeat_str);
+			heartbeat = atoi(heartbeat_str);
+			foundheartbeat = 1;
 		}
 	}
 	fclose(FPTR);
@@ -505,6 +536,8 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	if (foundstrictness) {
 		ropts->strictness = strictness;
 	}
+	if (foundheartbeat)
+		ropts->heartbeat_period = heartbeat;
 
 	return 0;
 }	
@@ -528,6 +561,7 @@ int main(int argc, char *argv[]) {
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
+	router_opts.heartbeat_period = 1;
 	router_opts.verbosity = LOG_ERR;
 	router_opts.dispatch_pause = 0;
 	setlogmask(LOG_UPTO(router_opts.verbosity));
@@ -536,6 +570,7 @@ int main(int argc, char *argv[]) {
 	strcat(config_path, "/sansgrid.conf");
 
 	parseConfFile(config_path, &router_opts);
+	sem_init(&router_opts.hb_wait, 0, 0);
 
 	// Parse arguments with getopt
 	while (1) {
@@ -643,14 +678,6 @@ int main(int argc, char *argv[]) {
 			// get the number of devices
 			sgSocketSend("devices", 8);
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "hide-network")) {
-			// hide the network
-			sgSocketSend("hide-network", 13);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "show-network")) {
-			// show the network
-			sgSocketSend("show-network", 13);
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "is-hidden")) {
 			// check to see if the network is hidden
 			sgSocketSend("is-hidden", 10);
@@ -670,10 +697,13 @@ int main(int argc, char *argv[]) {
 		} else if (strstr(option, "key=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "strict-auth")) {
+		} else if (strstr(option, "heartbeat=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "loose-auth")) {
+		} else if (strstr(option, "auth=")) {
+			sgSocketSend(option, strlen(option));
+			exit(EXIT_SUCCESS);
+		} else if (strstr(option, "network=")) {
 			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
@@ -685,8 +715,7 @@ int main(int argc, char *argv[]) {
 				exit(EXIT_SUCCESS);
 			}
 		} else if (strstr(option, "packet=")) {
-			sprintf(payload, "packet: %s", &option[7]);
-			sgSocketSend(payload, strlen(payload));
+			sgSocketSend(option, strlen(option));
 			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
@@ -772,6 +801,7 @@ int main(int argc, char *argv[]) {
 	pthread_join(fly_thread, &arg);
 
 	// Cleanup
+	sem_destroy(&router_opts.hb_wait);
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
 
@@ -807,20 +837,23 @@ Daemon Commands\n\
       start                  start the router daemon\n\
       restart                restart the router daemon\n\
       kill                   shutdown the router daemon\n\
-      hide-network           don't broadcast essid\n\
-      show-network           broadcast essid\n\
       drop [DEVICE]          drop a device\n\
       drop all               drop all devices\n\
       pause                  don't send any packets\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
-      strict-auth            require strict adherence to authentication protocol\n\
-      loose-auth             as long as eyeball comes first, don't care about packet order\n\
+      auth=                  control adherence to authentication protocol at router level\n\
+           none                no authentication (dangerous)\n\
+           loose               device must eyeball (default)\n\
+           filtered            unexpected packets are dropped, devices stay\n\
+           strict              device must follow exact protocol or is dropped\n\
+      network={hidden,shown} control sending of essid packet\n\
       url                    get the server IP address\n\
       url=[SERVERIP]         set the server IP address\n\
       key                    get the server key\n\
       key=[SERVERKEY]        set the server key\n\
+      heartbeat=[PERIOD]     set the heartbeat period\n\
 ");
 	}
 	exit(status);

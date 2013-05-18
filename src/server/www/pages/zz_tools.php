@@ -10,7 +10,7 @@ function deleteSensorByID ($id_sensor) {
 	// Delete all I/O associated with sensor
 	$query = "DELETE FROM io WHERE id_sensor='$id_sensor'";
 	mysqli_query($db, $query) 
-		or die ("Can't execute query dsbi1\n\n$query\n\n");
+		or die ("Can't execute query dsbi1\n");
 
 	// Delete the sensor
 	$query = "DELETE FROM sensor WHERE id_sensor='$id_sensor'";

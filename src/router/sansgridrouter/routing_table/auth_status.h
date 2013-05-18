@@ -24,8 +24,16 @@
 #include <stdint.h>
 typedef struct DeviceAuth DeviceAuth;
 
+enum DeviceAuthEnum {
+	DEV_AUTH_NONE,
+	DEV_AUTH_LOOSE,
+	DEV_AUTH_FILTERED,
+	DEV_AUTH_STRICT,
+};
 
 int deviceAuthDisable(DeviceAuth *dev_auth);
+int deviceAuthEnableLoosely(DeviceAuth *dev_auth);
+int deviceAuthEnableFiltered(DeviceAuth *dev_auth);
 int deviceAuthEnable(DeviceAuth *dev_auth);
 int deviceAuthIsEnabled(DeviceAuth *dev_auth);
 DeviceAuth *deviceAuthInit(int strictness);
