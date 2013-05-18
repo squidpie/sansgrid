@@ -176,7 +176,6 @@ void *heartbeatRuntime(void *arg) {
 			req.tv_nsec = nano_add;
 			req.tv_sec = sec_add;
 			
-			//exit_code = nanosleep(&req, &rem);
 			sem_timedwait(&router_opts.hb_wait, &req);
 		} while ((count = (routingTableGetDeviceCount(routing_table)-1)) < 1);
 
@@ -230,7 +229,7 @@ void *heartbeatRuntime(void *arg) {
 			sg_serial = NULL;
 			if (device_lost) {
 				device_lost = 0;
-				//routerFreeDevice(routing_table, ip_addr);
+				routerFreeDevice(routing_table, ip_addr);
 			}
 		}
 		if (routingTableStepNextDevice(routing_table, ip_addr) == 0) {
@@ -562,6 +561,7 @@ int main(int argc, char *argv[]) {
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
+	router_opts.heartbeat_period = 1;
 	router_opts.verbosity = LOG_ERR;
 	router_opts.dispatch_pause = 0;
 	setlogmask(LOG_UPTO(router_opts.verbosity));

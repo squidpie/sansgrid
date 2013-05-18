@@ -86,7 +86,21 @@ int32_t routerFreeAllDevices(RoutingTable *routing_table) {
 	return 0;
 }
 
-	
+int32_t routerRefreshDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
+	printf("Refreshing\n");
+	SansgridIRStatus sg_irstatus;
+	SansgridSerial *sg_serial = NULL;
+	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memset(sg_serial, 0x0, sizeof(SansgridSerial));
+	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
+	sg_irstatus.datatype = 0xfd;
+	strcpy(sg_irstatus.status, "online");
+	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+	memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
+	sg_serial->control = 0xad;
+	queueEnqueue(dispatch, sg_serial);
+	return 0;
+}
 
 
 enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
@@ -407,7 +421,10 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sg_serial->ip_addr, SG_DEVSTATUS_MOCKING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
-	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+		routerRefreshDevice(routing_table, sg_serial->ip_addr);
+	}
+
 
 
 	switch (sg_mock->datatype) {
@@ -444,7 +461,9 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PEACOCKING);
-	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+		routerRefreshDevice(routing_table, sg_serial->ip_addr);
+	}
 	if (sg_peacock->additional_IO_needed == 1) {
 		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 				SG_DEVSTATUS_PEACOCKING);
@@ -468,6 +487,9 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_NESTING);
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+		routerRefreshDevice(routing_table, sg_serial->ip_addr);
+	}
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_LEASED);
 	sgSerialSend(sg_serial, sizeof(SansgridSerial));
@@ -496,7 +518,9 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_SQUAWKING);
-	routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+		routerRefreshDevice(routing_table, sg_serial->ip_addr);
+	}
 
 	switch (sg_squawk->datatype) {
 		case SG_SQUAWK_SERVER_CHALLENGE_SENSOR:
@@ -586,7 +610,9 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
-			routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+				routerRefreshDevice(routing_table, sg_serial->ip_addr);
+			}
 			break;
 		case 0xfd:
 			routerHandleServerStatus(routing_table, sg_serial);
@@ -632,7 +658,9 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Data sent from server to sensor
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_LEASED);
-			routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
+				routerRefreshDevice(routing_table, sg_serial->ip_addr);
+			}
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
@@ -667,7 +695,7 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 				|| !strcmp(sg_irstatus->status, "lost"))
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 		if (!strcmp(sg_irstatus->status, "online"))
-				routingTableHeardDevice(routing_table, sg_serial->ip_addr);
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));	
 	} else {
 		return 1;
 	}
