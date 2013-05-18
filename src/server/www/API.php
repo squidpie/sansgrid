@@ -111,6 +111,11 @@ switch ( hexdec($data["dt"]) ) {
 		// Chirp data from sensor
 		processChirpData($router_ip, $data, $db);
 		break;
+	case 37: 	// 37 = 0x25
+		// If router sends a 0x25 we drop the device and, wierdly enough,
+		// send a 0x25 back out.
+		dropSensorFromNetwork($router_ip, $data, $db);
+		break;
 	case 253: 	// 253 = 0xfd
 		// Status updates from the router
 		updateSensorStatus($router_ip, $data, $db);

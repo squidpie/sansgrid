@@ -17,52 +17,73 @@ $js_destination_signal_id_list    = "dest_sig_ids = new Array();\n";
 $js_destination_signal_label_list = "dest_sig_label = new Array();\n";
 $js_destination_signal_class_list = "dest_sig_class = new Array();\n";
 
+// ****************************************************************************
 // Is the page-load a response to a form entry?
-if ( isset ($_POST["come_from"])) {
 
-	// Is this an update?...
-	if (isset ($_POST["update"])) {
+// Is this a delete...
+if (isset ($_POST["delete"])) {
 
-		$id_com = $_POST["update"];
-		$name 	= $_POST["name"][$id_com];
-		
-		$query = "UPDATE com SET name='$name' WHERE id_com='$id_com'";
-		mysqli_query($db, $query) or die ("Couldn't execute query 2.");
-	}
+	$id_trigger = $_POST["delete"];
+	$query = "DELETE FROM triggers WHERE id_trigger='$id_trigger'";
+	mysqli_query($db, $query) or die ("Can't execute query 13\n");
+}
 
-	// ... or is this a delete?  
-	if (isset ($_POST["delete"])) {
+// ... or is this an add?
+if (isset ($_POST["add"])) {
 
-		$id_com = $_POST["delete"];
+	// That's right, the only error checking in the entire server happens
+	// right here. 
+	$errors = 0;
 
-		// What's the manid?
-		$query = "SELECT manid FROM com WHERE id_com='$id_com'";
-		$result = mysqli_query($db, $query) or die ("Couldn't execute query 4.");
-		$row = mysqli_fetch_assoc($result);
+	$id_src_sensor 	= $_POST["source_sensor"];
+	$id_src_signal 	= $_POST["source_signal"];
+	$id_dest_sensor = $_POST["destination_sensor"];
+	$id_dest_signal = $_POST["destination_signal"];
+	$trigger_type 	= $_POST["trigger_type"];
+	$dest_type 		= $_POST["dest_type"];
 
-		$manid = $row['manid'];
+	$trigger_value 	= $_POST["trigger_value"];
+	// Blanks will be treated as 0
+	$trigger_value = $trigger_value == "" ? "0" : $trigger_value;
 
-		// First delete any sensors associated with this manufacturer
-		$query = "SELECT id_sensor FROM sensor WHERE manid='$manid'";
-		$result = mysqli_query($db, $query) or die ("Couldn't execute query 5.");
+	$dest_value 	= $_POST["dest_value"];
+	// Stripping out numerical data
+	$dest_value = preg_replace ("/[^0-9]*(\d+\.\d+).*$/U", "$1", $dest_value);
+	$dest_value = preg_replace ("/[^0-9.]/", "", $dest_value);
+	// Blanks will be treated as 0
+	$dest_value = $dest_value == "" ? "0" : $dest_value;
 
-		while ($row = mysqli_fetch_assoc($result) ) {
-			$id_sensor = $row['id_sensor'];
-			deleteSensorByID($id_sensor);
-		}
+	// Here's that error checking you were warned about.
+	$errors = $id_src_sensor  == 0 		? ++$errors : $errors;
+	$errors = $id_src_signal  == "null"	? ++$errors : $errors;
+	$errors = $id_dest_sensor == 0 		? ++$errors : $errors;
+	$errors = $id_dest_signal == "null" ? ++$errors : $errors;
+	$errors = $trigger_type   == "null"	? ++$errors : $errors;
 
-		// Then delete all sensors from the compendium
-		$query = "DELETE FROM cos WHERE manid='$manid'";
-		mysqli_query($db, $query) or die ("Couldn't execute query 6.");
 
-		// Finally delete the manufacturer
-		$query = "DELETE FROM com WHERE id_com='$id_com'";
-		mysqli_query($db, $query) or die ("Couldn't execute query 7.");
-	}
+	/*
+	print "id_src_sensor: $id_src_sensor<br>\n";
+	print "id_src_signal: $id_src_signal<br>\n";
+	print "id_dest_sensor: $id_dest_sensor<br>\n";
+	print "id_dest_signal: $id_dest_signal<br>\n";
+	print "trigger_type: $trigger_type<br>\n";
+	print "trigger_value: $trigger_value<br>\n";
+	print "dest_type: $dest_type<br>\n";
+	print "dest_value: $dest_value<br>\n";
+	print "errors: $errors<br>\n";
+	*/
 
-} // End of form reponses
+	$query  = "INSERT INTO triggers ";
+	$query .= "(id_src_sensor, id_src_signal, id_dest_sensor, id_dest_signal, ";
+	$query .= " trigger_type, trigger_value, dest_type, dest_value) ";
+	$query .= " VALUES ('$id_src_sensor', '$id_src_signal', '$id_dest_sensor', ";
+	$query .= " '$id_dest_signal', '$trigger_type', '$trigger_value', ";
+	$query .= " '$dest_type', '$dest_value') ";
+	$result = mysqli_query($db, $query) or die ("Couldn't execute query 7.<br>$query");
+}
 
 // ****************************************************************************
+// This section covers the "Add New Trigger" form
 
 // Get list of all sensors that have inputs (output from server)
 $query = "SELECT DISTINCT(id_sensor) FROM io WHERE direction='0'";
@@ -91,7 +112,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 		$query2  = "SELECT * FROM io ";
 		$query2 .= "WHERE id_sensor='$id_sensor' AND direction='0'";
 		$result2 = mysqli_query($db, $query2) 
-				or die ("Couldn't execute query 2.");
+				or die ("Couldn't execute query 3.");
 
 		// Create new, second-dimension arrays within the javascript arrays
 		$tmp = "  src_sig_label[$id_sensor] = new Array();\n";
@@ -118,7 +139,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 // Now we get list of all sensors that have outputs (input from server)
 $query = "SELECT DISTINCT(id_sensor) FROM io WHERE direction='1'";
-$result = mysqli_query($db, $query) or die ("Couldn't execute query 3.");
+$result = mysqli_query($db, $query) or die ("Couldn't execute query 4.");
 
 while ($row = mysqli_fetch_assoc($result)) {
 
@@ -126,7 +147,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 	// Next we ensure that this sensor has successfully mated.
 	$query2 = "SELECT * FROM sensor WHERE id_sensor='$id_sensor'";
-	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 2.");
+	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 5.");
 	$row2 = mysqli_fetch_assoc($result2);
 
 	$has_mated	= $row2['has_mated'];
@@ -143,7 +164,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 		$query2  = "SELECT * FROM io ";
 		$query2 .= "WHERE id_sensor='$id_sensor' AND direction='1'";
 		$result2 = mysqli_query($db, $query2) 
-				or die ("Couldn't execute query 2.");
+				or die ("Couldn't execute query 6.");
 
 		// Create new, second-dimension arrays within the javascript arrays
 		$tmp = "  dest_sig_label[$id_sensor] = new Array();\n";
@@ -168,7 +189,145 @@ while ($row = mysqli_fetch_assoc($result)) {
 	}
 }
 
+// ****************************************************************************
+// This section contains the code for listing existing triggers
+$trigger_list = "";
 
+// Get all triggers
+$query = "SELECT * FROM triggers";
+$result = mysqli_query($db, $query) or die ("Couldn't execute query 8.");
+
+while ($row = mysqli_fetch_assoc($result)) {
+
+	$id_trigger 	= $row["id_trigger"];
+	$id_src_sensor 	= $row["id_src_sensor"];
+	$id_src_signal 	= $row["id_src_signal"];
+	$id_dest_sensor = $row["id_dest_sensor"];
+	$id_dest_signal = $row["id_dest_signal"];
+	$trigger_type 	= $row["trigger_type"];
+	$trigger_value 	= $row["trigger_value"];
+	$dest_type 		= $row["dest_type"];
+	$dest_value 	= $row["dest_value"];
+
+	// Get source sensor name
+	$query2 = "SELECT name FROM sensor WHERE id_sensor='$id_src_sensor'";
+	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 9.");
+	$row2 = mysqli_fetch_assoc($result2);
+
+	$src_sensor_name = $row2['name'] != "" ? $row2['name'] : "($id_src_sensor)";
+
+	// Get destination signal name
+	$query2  = "SELECT label FROM io ";
+	$query2 .= "WHERE id_sensor='$id_src_sensor' AND id_io='$id_src_signal'";
+	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 10.");
+	$row2 = mysqli_fetch_assoc($result2);
+
+	$src_signal_name = $row2['label'] != "" ? $row2['label'] : "-";
+
+	// Get destination sensor name
+	$query2 = "SELECT name FROM sensor WHERE id_sensor='$id_dest_sensor'";
+	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 11.");
+	$row2 = mysqli_fetch_assoc($result2);
+
+	$dest_sensor_name = $row2['name'] != "" ? $row2['name'] : "($id_dest_sensor)";
+
+	// Get destination signal name
+	$query2  = "SELECT label FROM io ";
+	$query2 .= "WHERE id_sensor='$id_dest_sensor' AND id_io='$id_dest_signal'";
+	$result2 = mysqli_query($db, $query2) or die ("Couldn't execute query 12.");
+	$row2 = mysqli_fetch_assoc($result2);
+
+	$dest_signal_name = $row2['label'] != "" ? $row2['label'] : "-";
+
+	// Building the table data
+
+	// Source
+	$trigger_list .= "<tr>\n";
+	$trigger_list .= "\t<th rowspan=3>\n";
+	$trigger_list .= "\t\t($id_trigger)\n";
+	$trigger_list .= "\t</th>\n";
+	$trigger_list .= "\t<td>\n";
+	$trigger_list .= "\t\tSrc:\n";
+	$trigger_list .= "\t</td>\n";
+	$trigger_list .= "\t<td>\n";
+	$trigger_list .= "\t\t$src_sensor_name&rarr;$src_signal_name\n";
+	$trigger_list .= "\t</td>\n";
+
+	// Source triggers
+	$trigger_list .= "\t<td>\n";
+	switch ($trigger_type) {
+		case "digital_0":
+			$trigger_list .= "\t\tis a digital 0\n";
+			break;
+
+		case "digital_1":
+			$trigger_list .= "\t\tis a digital 1\n";
+			break;
+
+		case "digital_change":
+			$trigger_list .= "\t\thas changed\n";
+			break;
+
+		case "greater_than":
+			$trigger_list .= "\t\t> $trigger_value\n";
+			break;
+
+		case "greater_than":
+			$trigger_list .= "\t\t> $trigger_value\n";
+			break;
+
+		case "less_than":
+			$trigger_list .= "\t\t< $trigger_value\n";
+			break;
+
+		case "equal":
+			$trigger_list .= "\t\t= $trigger_value\n";
+			break;
+
+	}
+	$trigger_list .= "\t</td>\n";
+	$trigger_list .= "</tr>\n";
+
+	// Destination
+	$trigger_list .= "<tr>\n";
+	$trigger_list .= "\t<td>\n";
+	$trigger_list .= "\t\tDest:\n";
+	$trigger_list .= "\t</td>\n";
+	$trigger_list .= "\t<td>\n";
+	$trigger_list .= "\t\t$dest_sensor_name&rarr;$dest_signal_name\n";
+	$trigger_list .= "\t</td>\n";
+	// Source triggers
+	$trigger_list .= "\t<td>\n";
+	switch ($dest_type) {
+		case "digital_0":
+			$trigger_list .= "\t\t send a 0\n";
+			break;
+
+		case "digital_1":
+			$trigger_list .= "\t\t send a 1\n";
+			break;
+
+		case "trigger_value":
+			$trigger_list .= "\t\tsend trigger value\n";
+			break;
+
+		case "user_value":
+			$trigger_list .= "\t\tsend '$dest_value'\n";
+			break;
+
+	}
+	$trigger_list .= "</tr>\n";
+	$trigger_list .= "<tr>\n";
+	$trigger_list .= "\t<td colspan=3 style=\"text-align: right;\">\n";
+	$trigger_list .= "\t\t<button type=\"submit\" "; 
+	$trigger_list .= 	"value=\"$id_trigger\" ";
+	$trigger_list .= 	"name=\"delete\">Delete Trigger #$id_trigger</button>\n";
+	$trigger_list .= "\t</td>\n";
+	$trigger_list .= "</tr>\n";
+
+}
+
+// ****************************************************************************
 ?>
 <html>
 <head>
@@ -271,17 +430,17 @@ function setTriggerCondition() {
 	// source_type = 0: Digital 
 	if ( source_type == 0) {
 		var tmp_obj = document.createElement("option");
-		tmp_obj.value = 0;
+		tmp_obj.value = "digital_0";
 		tmp_obj.text = "is 0"; 
 		trigger_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.createElement("option");
-		tmp_obj.value = 1;
+		tmp_obj.value = "digital_1";
 		tmp_obj.text = "is 1"; 
 		trigger_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.createElement("option");
-		tmp_obj.value = 2;
+		tmp_obj.value = "digital_change";
 		tmp_obj.text = "has changed"; 
 		trigger_dropdown.appendChild(tmp_obj);
 
@@ -293,18 +452,18 @@ function setTriggerCondition() {
 	// source_type = 1: Analog
 	} else {
 		var tmp_obj = document.createElement("option");
-		tmp_obj.value = 3;
+		tmp_obj.value = "equal";
 		tmp_obj.text = "="; 
 		trigger_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.createElement("option");
-		tmp_obj.value = 4;
+		tmp_obj.value = "greater_than";
 		tmp_obj.text = ">"; 
 		trigger_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.createElement("option");
-		tmp_obj.value = 5;
-		tmp_obj.text = "<"; 
+		tmp_obj.value = "less_than"; 
+		tmp_obj.text = "<";
 		trigger_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.getElementById("trigger_value");
@@ -338,7 +497,7 @@ function setTriggerOutputMenu() {
 	destination_type = dest_sig_class[id_sensor][id_signal];
 
 	// Empty current output dropdown
-	output_dropdown = document.getElementById("send_type");
+	output_dropdown = document.getElementById("dest_type");
 	while (output_dropdown.firstChild) {
 		output_dropdown.removeChild(output_dropdown.firstChild);
 	}
@@ -348,12 +507,12 @@ function setTriggerOutputMenu() {
 	// destination_type = 0: Digital 
 	if ( destination_type == 0) {
 		var tmp_obj = document.createElement("option");
-		tmp_obj.value = 0;
+		tmp_obj.value = "digital_0";
 		tmp_obj.text = "a 0"; 
 		output_dropdown.appendChild(tmp_obj);
 
 		tmp_obj = document.createElement("option");
-		tmp_obj.value = 1;
+		tmp_obj.value = "digital_1";
 		tmp_obj.text = "a 1"; 
 		output_dropdown.appendChild(tmp_obj);
 
@@ -373,12 +532,12 @@ function setTriggerOutputMenu() {
 		// If the source is digital, then we can send the value as the output
 		if ( source_type == 0) {
 			tmp_obj = document.createElement("option");
-			tmp_obj.value = 2;
+			tmp_obj.value = "trigger_value";
 			tmp_obj.text = "the trigger"; 
 			output_dropdown.appendChild(tmp_obj);
 		}
 
-		tmp_obj = document.getElementById("send_value");
+		tmp_obj = document.getElementById("dest_value");
 		tmp_obj.style.display = "none";
 
 
@@ -386,15 +545,39 @@ function setTriggerOutputMenu() {
 	// destination_type = 1: Analog
 	} else {
 		var tmp_obj = document.createElement("option");
-		tmp_obj.value = 3;
+		tmp_obj.value = "user_value";
 		tmp_obj.text = "the value:"; 
 		output_dropdown.appendChild(tmp_obj);
 
-		tmp_obj = document.getElementById("send_value");
+		tmp_obj = document.createElement("option");
+		tmp_obj.value = "trigger_value";
+		tmp_obj.text = "the trigger"; 
+		output_dropdown.appendChild(tmp_obj);
+
+		tmp_obj = document.getElementById("dest_value");
 		tmp_obj.style.display = "inline";
 
 	}
 
+}
+
+// *****************************************************************************
+
+
+function showDestValueBox() {
+		// Value of the dropbox
+		tmp  = document.getElementById("dest_type");
+		dest_type = tmp.options[tmp.selectedIndex].value;
+
+		// Reference to textbox
+		text_obj = document.getElementById("dest_value");
+
+		if (dest_type == "user_value") {
+			text_obj.style.display = "inline";
+		} else {
+			text_obj.style.display = "none";
+		}
+			
 }
 
 
@@ -425,7 +608,7 @@ function testing () {
 </script>
 
 <!-- DELETE THIS LINE BELOW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
-<? print returnRefresh(); ?>
+<? //print returnRefresh(); ?>
 </head>
 
 <body onLoad="resetForm();">
@@ -436,14 +619,14 @@ function testing () {
 <div id="main">
 
 <h2>Add New Trigger</h2>
-<form name="delete_form" method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>" >
+<form name="add_form" method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>" >
 <input type="hidden" name="come_from" value="hey_there">
 
 <table width="98%">
 <tr>
 	<td width="45%">
 		<h3>Source:</h3>
-		<select id="source_sensor" onChange="updateSourceSignals(this.value);">
+		<select name="source_sensor" id="source_sensor" onChange="updateSourceSignals(this.value);">
 		<? print $source_sensor_list; ?>
 		</select>
 	</td>
@@ -453,7 +636,7 @@ function testing () {
 
 	<td width="45%">
 		<h3>Destination:</h3>
-		<select id="destination_sensor" onChange="updateDestinationSignals(this.value);">
+		<select name="destination_sensor" id="destination_sensor" onChange="updateDestinationSignals(this.value);">
 		<? print $dest_sensor_list; ?>
 		</select>
 	</td>
@@ -468,28 +651,35 @@ function testing () {
 		<select name="trigger_type" id="trigger_type">
 		<option value="null">--</option>
 		</select>
-		<input type="textbox " name="trigger_value" id="trigger_value" size=4 style="display: none;">,
+		<input type="textbox" name="trigger_value" id="trigger_value" size=4 style="display: none;">,
 
 		send
 		<select name="destination_signal" id="destination_signal" onChange="setTriggerOutputMenu();">
 		<option value="null">--</option>
 		</select>
 
-		<select name="send_type" id="send_type">
+		<select name="dest_type" id="dest_type" onChange="showDestValueBox();">
 		<option value="null">--</option>
 		</select>
-		<input type="textbox " name="send_value" id="send_value" size=4 style="display: none;">.
+		<input type="textbox " name="dest_value" id="dest_value" size=4 style="display: none;">.
 	</td>
 </tr>
 <tr>
 	<td colspan=3 class="gen_padding" style="text-align: right;">
-		<button type="submit" value="add">Add new trigger</button>
+		<button type="submit" name="add" value="add">Add new trigger</button>
 	</td>
 </tr>
 </table>
 </form>
 
 <hr>
+
+<h2>Current Triggers</h2>
+<form name="delete_form" method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>" >
+<table class="sansgrid">
+<? print $trigger_list; ?>
+</table>
+</form>
 
 
 </div> 			<!-- end of <div id="main"> -->

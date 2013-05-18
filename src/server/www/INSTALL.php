@@ -65,6 +65,10 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'com', quitti
 $query = "CREATE TABLE cos (id_cos INT NOT NULL UNIQUE AUTO_INCREMENT, manid VARCHAR(10), modnum VARCHAR(10), name VARCHAR(250))";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'cos', quitting.");
 
+// Table: triggers
+$query = "CREATE TABLE triggers(id_trigger INT NOT NULL UNIQUE AUTO_INCREMENT, id_src_sensor INT, id_src_signal INT, id_dest_sensor INT, id_dest_signal INT, trigger_type VARCHAR(50), trigger_value VARCHAR(250), dest_type VARCHAR(50), dest_value VARCHAR(250))";
+$result = mysqli_query($db, $query) or die ("Couldn't create table 'trigger', quitting.");
+
 
 // Generate and save server_id and set other system defaults
 $server_key = generateRandomHash(128);	// 128 characters = 64 bytes
