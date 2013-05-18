@@ -421,7 +421,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sg_serial->ip_addr, SG_DEVSTATUS_MOCKING);
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 			SG_DEVSTATUS_PEACOCKING);
-	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 		routerRefreshDevice(routing_table, sg_serial->ip_addr);
 	}
 
@@ -461,7 +461,7 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PEACOCKING);
-	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 		routerRefreshDevice(routing_table, sg_serial->ip_addr);
 	}
 	if (sg_peacock->additional_IO_needed == 1) {
@@ -487,7 +487,7 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_NESTING);
-	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 		routerRefreshDevice(routing_table, sg_serial->ip_addr);
 	}
 	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
@@ -518,7 +518,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_SQUAWKING);
-	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+	if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 		routerRefreshDevice(routing_table, sg_serial->ip_addr);
 	}
 
@@ -610,7 +610,7 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 			break;
 		case SG_HEARTBEAT_SENSOR_TO_ROUTER:
 			// Heartbeat response from sensor
-			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 				routerRefreshDevice(routing_table, sg_serial->ip_addr);
 			}
 			break;
@@ -658,7 +658,7 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Data sent from server to sensor
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_LEASED);
-			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr)) {
+			if (routingTableHeardDevice(routing_table, sg_serial->ip_addr) > 0) {
 				routerRefreshDevice(routing_table, sg_serial->ip_addr);
 			}
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
