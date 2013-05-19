@@ -116,6 +116,11 @@ switch ( hexdec($data["dt"]) ) {
 		// send a 0x25 back out.
 		dropSensorFromNetwork($router_ip, $data, $db);
 		break;
+	case 38: 	// 38 = 0x26
+		// If sensor sends a 0x26 we drop the device and, wierdly enough,
+		// send a 0x25 back out.
+		dropSensorFromNetwork($router_ip, $data, $db);
+		break;
 	case 253: 	// 253 = 0xfd
 		// Status updates from the router
 		updateSensorStatus($router_ip, $data, $db);

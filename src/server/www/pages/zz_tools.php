@@ -2,25 +2,6 @@
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 /* ************************************************************************** */
-//
-function deleteSensorByID ($id_sensor) {
-	
-	$db = returnDatabaseConnection();
-
-	// Delete all I/O associated with sensor
-	$query = "DELETE FROM io WHERE id_sensor='$id_sensor'";
-	mysqli_query($db, $query) 
-		or die ("Can't execute query dsbi1\n");
-
-	// Delete the sensor
-	$query = "DELETE FROM sensor WHERE id_sensor='$id_sensor'";
-	mysqli_query($db, $query) 
-		or die ("Can't execute query dsbi2");
-}
-/* ************************************************************************** */
-
-
-/* ************************************************************************** */
 // Returns a random hex string that's $length characters long
 function generateRandomHash ($length) {
 	$tmp = "";
@@ -116,6 +97,17 @@ function countOnes ($str) {
 
 
 /* ************************************************************************** */
+//
+function appendToPayload ($current_payload, $key, $value) {
+	global $SG;
+	$current_payload .= $key . $SG['kv_del'] . $value . $SG['ff_del'];
+
+	return $current_payload;
+}
+/* ************************************************************************** */
+
+
+/* ************************************************************************** */
 // Returns a connection to the MySQL database
 function returnDatabaseConnection() {
 	global $SG;
@@ -126,17 +118,6 @@ function returnDatabaseConnection() {
 	$db = @mysqli_connect("$domain", "$db_user", "$db_pass", "sansgrid") 
 			or die ("Couldn't connect to database.<br>$query");
 	return $db;
-}
-/* ************************************************************************** */
-
-
-/* ************************************************************************** */
-//
-function appendToPayload ($current_payload, $key, $value) {
-	global $SG;
-	$current_payload .= $key . $SG['kv_del'] . $value . $SG['ff_del'];
-
-	return $current_payload;
 }
 /* ************************************************************************** */
 
@@ -157,78 +138,6 @@ function returnRefresh () {
 		return "";
 	
 	return "<meta http-equiv=\"refresh\" content=\"$refresh_rate\">";
-
-}
-/* ************************************************************************** */
-
-
-
-
-/* ************************************************************************** */
-// Get's the current refresh rate for auto-refresh'able pages (index, pipeline, /i
-// logs).
-function takeSensorOffline ($rdid) {
-
-	$db = returnDatabaseConnection();
-
-	// Let's first get the id_sensor for the log
-	$query = "SELECT id_sensor FROM sensor WHERE rdid='$rdid'";
-	$result = mysqli_query($db, $query) or die ("Couldn't execute query tso2.");
-	$row = mysqli_fetch_assoc($result);
-	$id_sensor = $row['id_sensor'];
-
-	// If we don't see this rdid, then we're done I guess.
-	if ( $id_sensor == " ")
-		return;
-
-	// Log it
-	$msg  = "Sensor ($id_sensor) now offline. ";
-	addtolog($msg);
-
-	// Now we take the sensor offline and remove the the rdid
-	$query  = "UPDATE sensor SET status='offline', rdid='' ";
-	$query .= "WHERE id_sensor='$id_sensor'";
-	$result = mysqli_query($db, $query) or die ("Couldn't execute query tso3.");
-
-
-} // End takeSensorOffline()
-
-/* ************************************************************************** */
-
-
-/* ************************************************************************** */
-//
-function xmitToRouter ($outbound_payload, $url="") {
-
-	print "This doesn't belong here (zz_tools.php) but: $outbound_payload\n";
-	#return;
-
-	# DELETE THIS! THIS IS JUST FOR DEBUGGING!!!!
-	if ($url == "10.42.0.1")
-		$url = "10.42.0.40";
-
-	#$url="10.42.0.40/API-router.php";
-	$url="$url/API-router.php";
-
-	// Make it safe to transmit via http
-
-	// Package it as HTTP data
-	$data = "payload=$outbound_payload";
-
-	//Instatiate a curl handle
-	$ch = curl_init();
-
-	//Set the router url, number of POST vars, and finally the POST data
-	curl_setopt($ch	,CURLOPT_URL, 			$url);
-	curl_setopt($ch	,CURLOPT_POST, 			1);		// Passing 1 variable
-	curl_setopt($ch	,CURLOPT_POSTFIELDS, 	$data);
-
-	//Do it!
-	$junk = curl_exec($ch);		// Ignoring anything returned
-
-	//Did it...
-	curl_close($ch);
-
 
 }
 /* ************************************************************************** */

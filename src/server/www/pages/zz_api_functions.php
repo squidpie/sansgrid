@@ -284,12 +284,12 @@ function processPeacock ($router_ip, $payload, $db) {
 	// Data from API
 	$rdid 		= $payload["rdid"];
 	$dt 		= $payload["dt"];
-	$sida		= cleanZeroes($payload["sida"]);
+	$sig_id_a	= cleanZeroes($payload["sida"]);
 	$classa		= cleanZeroes($payload["classa"]);
 	$dira		= cleanZeroes($payload["dira"]);
 	$labela		= $payload["labela"] != "" ?  $payload["labela"] : "-";
 	$unitsa		= $payload["unitsa"] != "" ?  $payload["unitsa"] : "&nsbp;";
-	$sidb		= cleanZeroes($payload["sidb"]);
+	$sig_id_b	= cleanZeroes($payload["sidb"]);
 	$classb		= cleanZeroes($payload["classb"]);
 	$dirb		= cleanZeroes($payload["dirb"]);
 	$labelb		= $payload["labelb"] != "" ?  $payload["labelb"] : "-";
@@ -298,7 +298,7 @@ function processPeacock ($router_ip, $payload, $db) {
 
 	// First we gotta find out the sensor's information from the pipeline;
 	$query = "SELECT * FROM pipeline WHERE rdid='$rdid'";
-	$result = mysqli_query ($db, $query) or die ("Can't execute query pc1.\n$query\n");
+	$result = mysqli_query ($db, $query) or die ("Can't execute query pc1.");
 	$row = mysqli_fetch_assoc($result);
 
 	// Obviously the router IP in the pipeline should be the same as the one
@@ -333,20 +333,20 @@ function processPeacock ($router_ip, $payload, $db) {
 
 	// For sure we have to have I/O 'A', so let's just blindly add that
 	$query  = "INSERT INTO io (id_sensor,sig_id, class, direction, label, units)";
-	$query .= " VALUES ('$id_sensor', '$sida', '$classa', '$dira', '$labela', '$unitsa')"; 
+	$query .= " VALUES ('$id_sensor', '$sig_id_a', '$classa', '$dira', '$labela', '$unitsa')"; 
 	mysqli_query ($db, $query) or die ("Can't execute query pc2.");
 
 	$msg  = "[$router_ip] - Peacock: Added '$labela' for sensor $id_sensor. ";
 	addToLog($msg);
 
 	// Now, do we have I/O 'B'?
-	if ( (hexdec($sidb) !=  253) && ($sidb != "") ) {  // 0xFd = 253
+	if ( (hexdec($sig_id_b) !=  253) && ($sig_id_b != "") ) {  // 0xFd = 253
 
-		print "sidb is $sidb or as a decimal it's " . hexdec($sidb) . " \n\n";
+		//print "sig_id_b is $sig_id_b or as a decimal it's " . hexdec($sig_id_b) . " \n\n";
 
 		$query  = "INSERT INTO io (id_sensor,sig_id,class,direction,label,units)";
-		$query .= " VALUES ('$id_sensor', '$sidb', '$classb', '$dirb', '$labelb', '$unitsb')"; 
-		mysqli_query ($db, $query) or die ("Can't execute query pc3.\n$query\n");
+		$query .= " VALUES ('$id_sensor', '$sig_id_b', '$classb', '$dirb', '$labelb', '$unitsb')"; 
+		mysqli_query ($db, $query) or die ("Can't execute query pc3.");
 
 		$msg  = "[$router_ip] - Peacock: Added '$labelb' for sensor $id_sensor. ";
 		addToLog($msg);
@@ -709,7 +709,7 @@ function generateNest ($router_ip, $rdid, $db) {
 	if ( $row['count'] == 0 ) {
 		$query = "INSERT INTO cos (manid, modnum) VALUES ('$manid', '$modnum')";
 		$result = mysqli_query($db, $query) 
-			or die ("Error: Couldn't execute query ne7.\n\n$query\n\n");
+			or die ("Error: Couldn't execute query ne7.");
 	}
 
 
@@ -729,7 +729,9 @@ function generateNest ($router_ip, $rdid, $db) {
 
 	// Update the sensor to indicate that it has mated and that it's now
 	// 'online'
-	$query  = "UPDATE sensor SET has_mated='y', status='online', rdid='$rdid' ";
+	$query  = "UPDATE sensor ";
+	$query .= "SET has_mated='y', status='online', rdid='$rdid', ";
+	$query .= "router_ip='$router_ip'";
 	$query .= "WHERE id_sensor='$id_sensor'";
 	$result = mysqli_query($db, $query) 
 		or die ("Error: Couldn't execute query ne1.");
@@ -744,7 +746,7 @@ function processChirpData($router_ip, $payload, $db) {
 	global $SG;
 
 	$rdid 	= $payload['rdid'];
-	$sid 	= cleanZeroes(strtolower($payload['sid']));
+	$sig_id	= cleanZeroes(strtolower($payload['sid']));
 	$data 	= strtolower($payload['data']);
 
 	// Log it
@@ -772,20 +774,16 @@ function processChirpData($router_ip, $payload, $db) {
 
 	// Finally we update
 	$query  = "UPDATE io SET value='$data' ";
-	$query .= "WHERE id_sensor='$id_sensor' AND sig_id='$sid'";
+	$query .= "WHERE id_sensor='$id_sensor' AND sig_id='$sig_id'";
 	mysqli_query($db, $query) or die ("Couldn't execute query pcd3.");
 
 	// Log it
-	$msg  = "Update signal ($sid) from ($id_sensor): $data. ";
+	$msg  = "Update signal ($sig_id) from ($id_sensor): $data. ";
 	addtolog($msg);
 
-
-	// Now we tell the router that we've updated the status successfully
-	$reply = appendToPayload($SG['ff_del'], "rdid", 	$rdid);
-	$reply = appendToPayload($reply, 		"dt", 		"fd");
-	$reply = appendToPayload($reply, 		"status", 	"ack");
-
-	xmitToRouter($reply, $router_ip);
+	// Last thing to do is send this data to the trigger manager to see if
+	// we've set off a trigger. 
+	checkTriggers ($id_sensor, $sig_id, $data);
 
 
 } // End processChirpData()
@@ -798,7 +796,7 @@ function dropSensorFromNetwork($router_ip, $payload, $db) {
 	global $SG;
 
 	$rdid 	= $payload['rdid'];
-	$sid 	= strtolower($payload['status']);
+	$sig_id	= strtolower($payload['status']);
 	$data 	= strtolower($payload['data']);
 
 	// Take sensor offline within database
@@ -822,9 +820,6 @@ function updateSensorStatus($router_ip, $payload, $db) {
 
 	$rdid 				= $payload['rdid'];
 	$new_status 		= strtolower($payload['status']);
-
-	//$msg = "DEBUG: Received:<br>&nbsp;&nbsp;rdid: $rdid<br>&nbsp;&nbsp;status: $new_status<br>&nbsp;&nbsp;payload: $payload";
-	//addtolog($msg);
 
 
 	// If the update is 'offline' then just do it

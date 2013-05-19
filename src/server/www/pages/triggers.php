@@ -625,6 +625,7 @@ function testing () {
 <table width="98%">
 <tr>
 	<td width="45%">
+		<!-- Choose sensor as source of trigger -->
 		<h3>Source:</h3>
 		<select name="source_sensor" id="source_sensor" onChange="updateSourceSignals(this.value);">
 		<? print $source_sensor_list; ?>
@@ -635,6 +636,7 @@ function testing () {
 	</td>
 
 	<td width="45%">
+		<!-- Choose sensor as destination of trigger -->
 		<h3>Destination:</h3>
 		<select name="destination_sensor" id="destination_sensor" onChange="updateDestinationSignals(this.value);">
 		<? print $dest_sensor_list; ?>
@@ -644,20 +646,24 @@ function testing () {
 <tr>
 	<td colspan=3 class="gen_padding">
 		When 
+		<!-- Choose signal for this source sensor -->
 		<select name="source_signal" id="source_signal" onChange="setTriggerCondition();">
 		<option value="null">--</option>
 		</select>
 
+		<!-- Choose trigger type for this source signal -->
 		<select name="trigger_type" id="trigger_type">
 		<option value="null">--</option>
 		</select>
 		<input type="textbox" name="trigger_value" id="trigger_value" size=4 style="display: none;">,
 
 		send
+		<!-- Choose signal for the destination sensor -->
 		<select name="destination_signal" id="destination_signal" onChange="setTriggerOutputMenu();">
 		<option value="null">--</option>
 		</select>
 
+		<!-- Choose data type for the destination signal -->
 		<select name="dest_type" id="dest_type" onChange="showDestValueBox();">
 		<option value="null">--</option>
 		</select>
