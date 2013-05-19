@@ -42,16 +42,27 @@ int old_value = 0; //previous state
 boolean button_state = false; //1 = led off, 0 = led on
 boolean led_state = true;
 
+const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
+const int analogOutPin = 9; // Analog output pin that the LED is attached to
+
+int sensorValue = 0;        // value read from the pot
+int outputValue = 0;
+int percentValue = 0;
+
+int intPin = 0;
+
 unsigned long time = 0; //when did we begin pressing the button
 
 SensorConfig sg_config;
 SansgridSerial sg_data_in;
 SansgridSerial sg_data_out;
+SansgridChirp sg_chirp;
 
 //setting up the pins to proper i/o
 void setup() {
   // initialize the button led as output:
-  pinMode(mate_led, OUTPUT);      
+  pinMode(mate_led, OUTPUT); 
+  pinMode(SLAVE_SELECT, OUTPUT);  
   // initialize led to off
   digitalWrite(mate_led, HIGH); 
   Serial.begin(9600);
@@ -97,10 +108,11 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
-        delay(1000);
-        Serial.println( "Conecting to Network");
-        sensorConnect( &sg_config , &sg_data_out );
+        sensorConnect( &sg_config , &sg_data_out );  
     }
+  
+    delay(1000);
+    Serial.println( "Connected to Network" );
     // Signal Output Code goes here
     //delay(1000);
     //Serial.println( "Connected to Network" );
@@ -136,11 +148,45 @@ void loop(){
 //need to add code to send pot value in ascii to server and then this section will be done    
 //pot input area
   // read the input on analog pin 0:
-  int potvalue = analogRead(A0);
+  
+  // read the analog in value:
+  sensorValue = analogRead(analogInPin);            
+  // map it to the range of the analog out:
+  outputValue = map(sensorValue, 0, 681, 0, 255); 
+  percentValue = map(sensorValue, 0, 681, 0, 100);
+  // change the analog out value:
+  analogWrite(analogOutPin, outputValue);
+ 
+  sg_chirp.dt [0] = (uint8_t) 0x21;
+  sg_chirp.id [0] = (uint8_t) 0x01;
+  
+  memset(sg_chirp.data, '\0', DATA_SIZE);
+  int analog_size = sizeof(percentValue);
+  char ch_array[analog_size];
+  int n;
+  n = sprintf(ch_array, "%d", percentValue);
+  for(int i = 0; i < n; i++)
+    sg_chirp.data[i] = ch_array[i];
+  Serial.println(ch_array);
+  //transmitChirp( &sg_data_out , &sg_chirp);
+  
+
+  // print the results to the serial monitor:
+  Serial.print("sensor = " );                       
+  Serial.println(sensorValue);      
+  Serial.print("percent lit up = ");
+  Serial.println(percentValue);
+
+  // wait 2 milliseconds before the next loop
+  // for the analog-to-digital converter to settle
+  // after the last reading:
+  delay(100);
+  
+  //int potvalue = analogRead(A0);
   // print out the value of the pot:
-  Serial.println(potvalue);
+  //Serial.println(potvalue);
   //need to add code to send pot value to server
-  delay(50);        // delay for better readability
+  //delay(50);        // delay for better readability
   
   
   //maybe need to declare special value to let my sensor know it wants to turn on led
@@ -153,29 +199,17 @@ void loop(){
     delay(50);
 
 }*/
+}
 
 /*void receive(){
     // Interrupt was initiated when SLAVE_READY was
-    // asserted low, call sgSerialReceive to receive
-    // SPI packet from radio MCU, and process packet
-    // with payloadHandler().
+    // asserted low, set received flag to initiate
+    // processing SPI packet
     Serial.println( "Interrupt Service Routine" );
-    sgSerialReceive( &sg_data_in, 1 );
-    payloadHandler( &sg_config , &sg_data_in );
-    // Received Squawk payload, respond to 
-    // squawk before leaving interrupt.
-    while( sg_config.squawk == true ){
-        // Received a Squawk packet, now send a Squawk back
-        Serial.println( "RETURN SQUAWKING" );
-        // Set control byte to valid data
-	sg_data_in.control[0] = (uint8_t) 0xAD;
-        // Set IP address to router ip
-	memcpy( &sg_data_in.ip_addr , &sg_config.router_ip , IP_ADDRESS );
-	// Call Payload Handler to send return squawk
-        payloadHandler( &sg_config , &sg_data_in);
-    }  
-    // Signal Input Code goes here */
-}
+    sg_config.received = true;
+    // Display value of received
+    Serial.println( sg_config.received );
+}*/
 
 void buttonpress(){
   
