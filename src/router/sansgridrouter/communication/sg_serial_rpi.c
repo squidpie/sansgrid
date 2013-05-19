@@ -42,9 +42,9 @@
 #define MHZ(freq) (1000*KHZ(freq))
 
 // EEPROM-specific defines
-#define SPI_SPEED_KHZ	500
+#define SPI_SPEED_KHZ	512
 //#define WRITE_CYCLE_M	1
-#define WRITE_CYCLE_U	1
+#define WRITE_CYCLE_U	6000
 #define WRITE_MAX_BYTES 1
 
 // What pin the slave interrupt is on
@@ -70,7 +70,7 @@ int spiTransfer(char *buffer, int size) {
 	int i;
 	// only a certain amount of byte can be written at a time. see below
 	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
-	struct timespec req = { 0, WRITE_CYCLE_U*1000 };
+	struct timespec req = { 0, WRITE_CYCLE_U*1000L };
 	struct timespec rem;
 
 	wiringPiSPIDataRW(0, (unsigned char*)buffer, bounded_size);
@@ -148,6 +148,11 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	}
 	spiTransfer(buffer, sizeof(SansgridSerial));
 	close(fd);
+	if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA) {
+		syslog(LOG_WARNING, "Bad data on SPI");
+		sleep(5);
+
+	}
 
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));

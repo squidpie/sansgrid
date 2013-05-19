@@ -257,7 +257,7 @@ void *flyRuntime(void *arg) {
 		}	
 		if (!router_opts.hidden_network)
 			routerHandleFly(routing_table, &sg_serial);
-		sleep(1);
+		sleep(10);
 	}
 
 	pthread_exit(arg);
@@ -759,7 +759,7 @@ int main(int argc, char *argv[]) {
 
 	// Initialize routing subsystem
 	dispatch = queueInit(200);
-	routing_table = routingTableInit(router_opts.netmask, "Stock ESSID");
+	routing_table = routingTableInit(router_opts.netmask, router_opts.essid);
 	void *arg;
 
 	if (router_opts.strictness == 1) {
