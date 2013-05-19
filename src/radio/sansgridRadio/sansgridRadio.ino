@@ -25,7 +25,7 @@ SansgridRadio sgRadio;
 #define SLAVE_READY 8
 #define NUM_BYTES 98
 
-char rx[sizeof(SpiData)]; //NUM_BYTES + 1];
+char rx[NUM_BYTES]; //NUM_BYTES + 1];
 volatile uint8_t pos;
 volatile uint8_t pos_b;
 
@@ -94,8 +94,14 @@ ISR (SPI_STC_vect)
   switch(spi_rw){
   case 1:
       // Receive SPI Packet from Master
-      if ( pos < NUM_BYTES ){
+      if ( pos == 0 && c != 0xAD ) {
+				spi_rw = 2;
+				break;
+			}
+			else if (pos == 0) SPDR = 0xAD;
+			if ( pos < NUM_BYTES ){
           rx[pos++] = c;
+					SPDR = 0xFD;
           // If buffer is full set process_it flag
           if ( pos >= NUM_BYTES )    
               process_flag = true; 
@@ -116,10 +122,12 @@ ISR (SPI_STC_vect)
       break;
   default:
       if ( pos < NUM_BYTES ){
-          pos++;
+          SPDR = 0xFE;
+					pos++;
           // If buffer is full set process_it flag
           if ( pos >= NUM_BYTES ) {
             pos = 0;
+						spi_rw = 1;
 						spi_err = 1;
           }
       }
@@ -135,13 +143,16 @@ void loop() {
 			digitalWrite(SLAVE_READY, HIGH);
 			spi_rw = 1;
 		}
-		else Serial.println("How do we recover?");
+		else { 
+			//Serial.println("How do we recover?");
+			spi_rw = 1;
+		}
 		spi_err = false;
 	}
 	
 	if (process_flag) {
   	// Serial.println("Process It");
-	  memcpy(&SpiData, rx, sizeof(SpiData));
+	  memcpy(&SpiData.payload, rx, sizeof(SpiData));
 		memset(rx,0,sizeof(SpiData));
 		pos = 0;
     command = 0;
@@ -153,7 +164,7 @@ void loop() {
 		sgRadio.write();
 		sgRadio.loadFrame(1);
 		sgRadio.write();
-		Serial.println("Packet written");
+		//Serial.println("Packet written");
              
 	}
 	if (!spi_active) {
@@ -169,7 +180,7 @@ void loop() {
 
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
-        Serial.println("throwing out the bath water");
+        //Serial.println("throwing out the bath water");
         delay(50);
 				while (Serial.available() > 0) { Serial.read(); }
 				goto loop_head;

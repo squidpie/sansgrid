@@ -51,7 +51,7 @@ bool SansgridRadio::setDestAddr(uint64_t addr) {
 
 void SansgridRadio::processSpi() {
 	SansgridDataTypeEnum type;
- 
+	//Radio->println("Process Spi"); 
 	if (payload == NULL) {
 		Radio->println("Payload is invalid");
 		delay(50);
@@ -66,21 +66,21 @@ void SansgridRadio::processSpi() {
 		case SG_EYEBALL:
 			if(MODE(SENSOR)) {
 				// Set Destination to Broadcast
-				setDestAddr(0x0);
+				// setDestAddr(0x0);
 			}
 			break;
 			
 		case SG_FLY:
 			if(MODE(ROUTER)) {
 				// Set Destination to Broadcast
-				//setDestAddr(BROADCAST);			
+				// setDestAddr(BROADCAST);			
 			}
 			break;
 			
 		case SG_PECK:
 			if(MODE(ROUTER)) {
 				// Set Destination to Broadcast
-				//setDestAddr(BROADCAST);
+				// setDestAddr(BROADCAST);
 				sn_table->snipInsertIp(&payload[PECK_A_IP], &payload[PECK_SN]);		// store IP at device key for XBsn
 			}
 			break;
@@ -153,11 +153,11 @@ bool SansgridRadio::defrag() {
 		//	Radio->write((unsigned int)addr); delay(100);
 			//Radio->write(0xFF);
 			if (frag_buffer[i][FRAG_PENDING] && !memcmp(&frag_buffer[i][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN)){
-				Radio->println("Frame 2 received"); delay(100);
+				//Radio->println("Frame 2 received"); delay(100);
 				frag_buffer[i][FRAG_PENDING] = 0;
 				memcpy(&frag_buffer[i][FRAG_F1], &incoming_packet[PKT_PYLD],F1_PYLD_SZ);
-				memcpy(&packet_buffer[0], &frag_buffer[i][FRAG_F0],SG_PACKET_SZ);
-				memcpy(&origin_xbsn, &frag_buffer[i][FRAG_SN], XB_SN_LN); // TODO check for correctness
+				memcpy(packet_buffer, &frag_buffer[i][FRAG_F0],SG_PACKET_SZ);
+				memcpy(origin_xbsn, &frag_buffer[i][FRAG_SN], XB_SN_LN); // TODO check for correctness
 				rv = true;
 				break;
 			}
@@ -179,7 +179,7 @@ void SansgridRadio::processPacket() {
 		case SG_EYEBALL:
 			if(MODE(ROUTER)) {
 				// insert assigned ip at matched key  entry
-		sn_table->snipInsertSn(origin_xbsn, packet_buffer[EYEBALL_SN]);
+				sn_table->snipInsertSn(origin_xbsn, packet_buffer[EYEBALL_SN]);
 			}
 			break;
 	
