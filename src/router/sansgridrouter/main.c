@@ -561,16 +561,21 @@ int main(int argc, char *argv[]) {
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
-	router_opts.heartbeat_period = 1;
-	router_opts.verbosity = LOG_ERR;
 	router_opts.dispatch_pause = 0;
+	strcpy(router_opts.essid, "SansGrid");
+	router_opts.heartbeat_period = 10;
+	router_opts.hidden_network = 0;
+	router_opts.netmask[IP_SIZE-1] = 0x1;
+	strcpy(router_opts.serverip, "127.0.0.1");
+	router_opts.strictness = DEV_AUTH_LOOSE;
+	router_opts.verbosity = LOG_ERR;
 	setlogmask(LOG_UPTO(router_opts.verbosity));
+	sem_init(&router_opts.hb_wait, 0, 0);
 
 	getSansgridConfDir(config_path);
 	strcat(config_path, "/sansgrid.conf");
 
 	parseConfFile(config_path, &router_opts);
-	sem_init(&router_opts.hb_wait, 0, 0);
 
 	// Parse arguments with getopt
 	while (1) {
@@ -762,10 +767,19 @@ int main(int argc, char *argv[]) {
 	routing_table = routingTableInit(router_opts.netmask, router_opts.essid);
 	void *arg;
 
-	if (router_opts.strictness == 1) {
-		routingTableRequireStrictAuth(routing_table);
-	} else if (router_opts.strictness == 0) {
-		routingTableAllowLooseAuth(routing_table);
+	switch(router_opts.strictness) {
+		case DEV_AUTH_LOOSE:
+			routingTableAllowLooseAuth(routing_table);
+			break;
+		case DEV_AUTH_FILTERED:
+			routingTableSetAuthFiltered(routing_table);
+			break;
+		case DEV_AUTH_STRICT:
+			routingTableRequireStrictAuth(routing_table);
+			break;
+		default:
+			routingTableSetAuthFiltered(routing_table);
+			break;
 	}
 
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
@@ -843,8 +857,7 @@ Daemon Commands\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
-      auth=                  control adherence to authentication protocol at router level\n\
-           none                no authentication (dangerous)\n\
+      auth=                  control adherence to auth protocol at router\n\
            loose               device must eyeball (default)\n\
            filtered            unexpected packets are dropped, devices stay\n\
            strict              device must follow exact protocol or is dropped\n\
@@ -861,21 +874,30 @@ Daemon Configuration\n\
 
 
 
-void getSansgridConfDir(char wd[150]) {
+int getSansgridConfDir(char wd[150]) {
 	// Get the .sansgrid directory path
 	// Return success or failure
 	// pass the path back in wd
 	char *home_path = getenv("HOME");
+	struct stat buffer;
 
-	if (!home_path) {
-		syslog(LOG_NOTICE, "Didn't get home directory");
-		sprintf(wd, "/home/pi/.sansgrid");
-	} else {
+	if (home_path) {
 		snprintf(wd, 120, "%s/.sansgrid", home_path);
+		if (stat(wd, &buffer) >= 0) {
+			// found an existing dir
+			return 0;
+		}
+	} 
+	// didn't find sansgrid dir in $HOME 
+	// or couln't find $HOME
+	// Try /etc/sansgrid
+	sprintf(wd, "/etc/sansgrid");
+	if (stat(wd, &buffer) >= 0) {
+		// found dir in /etc
+		return 0;
+	} else {
+		return -1;
 	}
-	// FIXME: check to see if dir exists
-	// 			if not, get config from /etc/sansgrid
-
 }
 
 void getSansgridControlDir(char wd[150]) {
