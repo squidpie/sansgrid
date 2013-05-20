@@ -142,10 +142,10 @@ int32_t hbRefresh(HeartbeatStatus *hb) {
 		return -1;
 	}
 	device_before = hbIsDeviceStale(hb);
-	device_before = (hbIsDeviceLost(hb) << 1);
+	device_before |= (hbIsDeviceLost(hb) << 1);
 	hb->device_health = hb->ping_thres;
 	device_after = hbIsDeviceStale(hb);
-	device_after = (hbIsDeviceLost(hb) << 1);
+	device_after |= (hbIsDeviceLost(hb) << 1);
 
 	return (device_before ^ device_after);
 }
