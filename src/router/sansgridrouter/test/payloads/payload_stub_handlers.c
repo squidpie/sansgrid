@@ -25,6 +25,7 @@
 
 void payloadMkSerial(SansgridSerial *sg_serial) {
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
+	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	sg_serial->ip_addr[IP_SIZE-1] = 0x2;
 	return;
 }

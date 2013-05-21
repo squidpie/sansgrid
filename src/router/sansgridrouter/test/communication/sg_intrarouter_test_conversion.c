@@ -28,6 +28,9 @@ int checkSerialDiff(const char *testname,
 		uint32_t rdid, uint32_t rdid_orig) {
 	// Check to see if sg_serial and sg_serial_orig are the same
 	mark_point();
+	fail_if((sg_serial->control != sg_serial_orig->control),
+			"Control Byte mismatch: expected %u, got %u", 
+			sg_serial_orig->control, sg_serial->control);
 	fail_if(memcmp(sg_serial->payload, 
 				sg_serial_orig->payload, 
 				sizeof(SansgridNest)),
@@ -58,6 +61,7 @@ START_TEST(testEyeballConversion) {
 			 rdid_orig = 0;
 	uint8_t base[IP_SIZE];
 	memset(base, 0x0, IP_SIZE);
+	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	routing_table = routingTableInit(base, "Test ESSID");
 
 	mark_point();
@@ -71,11 +75,10 @@ START_TEST(testEyeballConversion) {
 
 	mark_point();
 	memcpy(sg_serial.payload, &sg_eyeball, sizeof(SansgridEyeball));
-	mark_point();
-	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
 	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
 	mark_point();
