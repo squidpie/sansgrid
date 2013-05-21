@@ -371,7 +371,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 			exit_code = -1;
 			break;
 	}
-	printf("Exiting with %i\n", exit_code);
+	//printf("Exiting with %i\n", exit_code);
 
 	return exit_code;
 }

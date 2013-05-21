@@ -45,17 +45,6 @@ static int devauthAssertValid(DeviceAuth *dev_auth) {
 	}
 }
 
-int deviceAuthDisable(DeviceAuth *dev_auth) {
-	// don't authenticate devices
-	if (devauthAssertValid(dev_auth) == -1) {
-		syslog(LOG_INFO, "NULL in deviceAuthDisable");
-		return -1;
-	}
-	int old_strictness = dev_auth->strictness;
-	dev_auth->strictness = DEV_AUTH_NONE;
-	return old_strictness;
-}
-
 int deviceAuthEnableLoosely(DeviceAuth *dev_auth) {
 	// make sure devices at least eyeball first
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -133,9 +122,10 @@ int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
 		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
 		return -1;
 	}
-	if (dev_auth->strictness == DEV_AUTH_NONE) {
-		// always valid
-		return 1;
+	if (dev_auth->strictness == DEV_AUTH_ERROR) {
+		// internal error
+		// always invalid
+		return -1;
 	} else if (dev_auth->strictness == DEV_AUTH_LOOSE) {
 		// only valid if device has eyeballed
 		if (dev_auth->auth_place != SG_DEVSTATUS_NULL) {
