@@ -102,6 +102,13 @@ struct RoutingTable {
 
 
 
+/**
+ * \brief Make sure the table is valid
+ *
+ * This makes sure the table has a nonnull address.
+ * If the table isn't allocated, the program exits 
+ * with EXIT_FAILURE status
+ */
 static int tableAssertValid(RoutingTable *table) {
 	// Exit if the table isn't allocated
 	if (table == NULL) {
@@ -168,11 +175,15 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
 }
 
 
-
+/**
+ * \brief Converts an array of words to an array of bytes
+ *
+ * This function converts an array containing uint32_t members
+ * into an array of uint8_t, respecting endianness.
+ * This is an unsafe function. It does no bounds checking.
+ * bytes[] isn't size-checked. it must be 4x the size of wordsize.
+ */
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
-	// converts an array of words to an array of bytes
-	// This is an unsafe function. It does no bounds checking.
-	// bytes[] isn't size-checked. it must be 4x the size of wordsize.
 
 	uint32_t i;
 	uint32_t endianconv;
@@ -188,11 +199,15 @@ void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
 
 
 
+/** \brief converts an array of bytes into an array of words
+ * 
+ * This function converts an array containing uint8_t bytes
+ * into an array of uint32_t, respecting endianness.
+ * This is an unsafe function. It does no bounds checking.
+ * bytesize must be a multiple of 4.
+ * words[] isn't size-checked. it must be >= (bytesize/4)+1.
+ */
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
-	// converts an array of bytes into an array of words
-	// This is an unsafe function. It does no bounds checking.
-	// bytesize must be a multiple of 4.
-	// words[] isn't size-checked. it must be >= (bytesize/4)+1.
 	
 	uint32_t i;
 	uint32_t endianconv;
@@ -210,7 +225,10 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 
 
 
-
+/** \brief Initialize the Routing Table
+ *
+ * Initializes the routing table with a base subnet and an essid.
+ */
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	// Initialize the routing table
 	
@@ -250,6 +268,13 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 }
 
 
+
+/**
+ * \brief Free all resources from the routing table
+ *
+ * Note that this does not send any disconnect signals.
+ * For that you want to use [routerFreeDevice](@ref routerFreeDevice)
+ */
 RoutingTable *routingTableDestroy(RoutingTable *table) {
 	// Free any memory associated with the routing table
 	
@@ -268,6 +293,11 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
 	return table;
 }
 
+/**
+ * \brief Get the network ESSID
+ *
+ * Stores the network ESSID in essid
+ */
 void routingTableGetEssid(RoutingTable *table, char essid[80]) {
 
 	tableAssertValid(table);
@@ -275,6 +305,15 @@ void routingTableGetEssid(RoutingTable *table, char essid[80]) {
 	return;
 }
 
+
+/**
+ * \brief Try to assign ip_addr
+ *
+ * This will statically assign ip_addr IP address if possible.
+ * \n
+ * \returns
+ * If successful, return 0. Otherwise return -1.
+ */
 int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Statically assign IP Address if possible
 	// return 0 if success, -1 if failure
@@ -316,6 +355,12 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 
 
 
+/**
+ * \brief Assign an IP
+ *
+ * \param[in,out]	ip_addr		A requested IP address, also contains the actual allocated IP address
+ * \returns 0 if successful, -1 on failure
+ */
 int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Allocate the next available block and give it an IP address
 
@@ -341,6 +386,15 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 
 
 
+/**
+ * \brief Remove ip_addr from the table
+ *
+ * \param[in]     ip_addr		IP address to remove
+ * \returns
+ * On successful removal, return 0.
+ * \n
+ * Otherwise return -1.
+ */
 int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Release IP Address
 	
@@ -369,6 +423,13 @@ int32_t routingTableFreeIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+/**
+ * \brief Remove all devices from the table
+ *
+ * Removes all IP addresses from the table, except for the router entry.
+ * \returns
+ * always 0
+ */
 int32_t routingTableFreeAllIPs(RoutingTable *table) {
 	// Release all IP addresses
 	
@@ -387,10 +448,16 @@ int32_t routingTableFreeAllIPs(RoutingTable *table) {
 	return 0;
 }
 
-	
-	
 
 
+/**
+ * \brief Check for existence of RDID in Routing Table
+ *
+ * Queries the routing table for existence of rdid
+ * \returns
+ * 1 if a match is found \n
+ * 0 if a match is not found
+ */
 int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid) {
 	// Lookup an RDID in the table
 	// return true if found, false if not found
@@ -415,6 +482,14 @@ int32_t routingTableLookupRDID(RoutingTable *table, uint32_t rdid) {
 
 
 
+/**
+ * \brief Check for existence of ip_addr in Routing Table
+ *
+ * Queries the routing table for existence of IP address ip_addr
+ * \returns
+ * 1 if a match is found \n
+ * 0 if a match is not found
+ */
 int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Lookup an IP Address in the table
 	// return true if found, false if not found
@@ -439,6 +514,15 @@ int32_t routingTableLookup(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+
+/**
+ * \brief Converts an IP address to an rdid
+ *
+ * Looks up ip_addr in table and, if found, returns the rdid of that device.
+ * \returns
+ * Matching device rdid if found \n
+ * 0 if device is not found
+ */
 uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Lookup an IP address in the table
 	// return a unique identifier if found,
@@ -454,6 +538,16 @@ uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	return table->routing_table[index]->rdid;
 }
 
+
+
+/**
+ * \brief Converts an rdid into an IP address
+ * \param[in]	rdid		device rdid to lookup
+ * \param[out]	ip_addr		matched device IP address
+ * \returns
+ * 0 if device was matched \n
+ * -1 if device was not matched
+ */
 int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]) {
 	// convert an rdid to an IP address
 	for (uint32_t i=0; i<ROUTING_ARRAYSIZE; i++) {
@@ -468,12 +562,29 @@ int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr
 	return -1;
 }
 
+
+
+/**
+ * \brief Gets Broadcast IP for the routing table
+ *
+ * Note that IPv6 does not normally do broadcast. \n
+ * This is akin to Ethernet's Broadcast address, so the packet is 
+ * sent to all connected devices.
+ * \param[out]	broadcast		The Routing Table's Broadcast IP address
+ */
 void routingTableGetBroadcast(RoutingTable *table, uint8_t broadcast[IP_SIZE]) {
 	// get the broadcast address
 	memcpy(broadcast, table->broadcast, IP_SIZE);
 	return;
 }
 
+
+
+/**
+ * \brief Returns the Router's IP address
+ *
+ * \param[out]	ip_addr			The Router's IP address
+ */
 void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Get the router's IP address
 	maskip(ip_addr, table->base, 1);
@@ -481,6 +592,16 @@ void routingTableGetRouterIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+
+/**
+ * \brief Check to see if this is a valid packet to get from this IP address
+ *
+ * \param		ip_addr			The device IP address
+ * \param		dt				The Sansgrid Packet datatype
+ * \returns
+ * 1 if valid. \n
+ * 0 if invalid.
+ */
 int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZE],
 		enum SansgridDataTypeEnum dt) {
 	// check to see if this datatype is valid
@@ -495,6 +616,20 @@ int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZ
 	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
 }
 
+
+
+/**
+ * \brief Set Router Authentication to strict
+ *
+ * The Sansgrid Router can make sure a packet received
+ * from a device is expected; that is, if the device is still 
+ * authenticating, a Chirp would violate the authentication path. \n
+ * Strict Authentication means that if an unexpected packet is received,
+ * the offending device is dropped from the network. This function enables
+ * that functionality.
+ * \returns
+ * DEV_AUTH_STRICT always
+ */
 int32_t routingTableRequireStrictAuth(RoutingTable *table) {
 	// require strict adherence to routing protocol
 	tableAssertValid(table);
@@ -504,9 +639,23 @@ int32_t routingTableRequireStrictAuth(RoutingTable *table) {
 		}
 	}
 	table->default_strictness = DEV_AUTH_STRICT;
-	return 1;
+	return DEV_AUTH_STRICT;
 }
 
+
+
+/**
+ * \brief Set Router Authentication to filtered
+ *
+ * The Sansgrid Router can make sure a packet received
+ * from a device is expected; that is, if the device is still 
+ * authenticating, a Chirp would violate the authentication path. \n
+ * Filtered Authentication means that if an unexpected packet is received,
+ * the unexpected packet is dropped, while the offending device remains on the network.
+ * This function enables that functionality.
+ * \returns
+ * DEV_AUTH_FILTERED always
+ */
 int32_t routingTableSetAuthFiltered(RoutingTable *table) {
 	// If we get an unexpected packet, drop it
 	// don't drop the offending device though
@@ -519,7 +668,20 @@ int32_t routingTableSetAuthFiltered(RoutingTable *table) {
 	table->default_strictness = DEV_AUTH_FILTERED;
 	return 0;
 }
-	
+
+
+
+/**
+ * \brief Set Router Authentication to loose
+ *
+ * The Sansgrid Router can make sure a packet received
+ * from a device is expected; that is, if the device is still 
+ * authenticating, a Chirp would violate the authentication path. \n
+ * Loose Authentication turns most of that functionality off. \n
+ * The only requirement is that the device eyeballs first.
+ * \returns
+ * DEV_AUTH_LOOSE always
+ */
 int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 	// allow loose adherence to routing protocol
 	tableAssertValid(table);
@@ -532,6 +694,11 @@ int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 	return 0;
 }
 
+
+
+/**
+ * \brief Returns the Routing Table's strictness level
+ */
 int32_t routingTableIsAuthStrict(RoutingTable *table) {
 	// check to see if authentication is strict
 	tableAssertValid(table);
@@ -539,6 +706,12 @@ int32_t routingTableIsAuthStrict(RoutingTable *table) {
 	return table->default_strictness;
 }
 
+
+/**
+ * \brief Lookup the next expected generic packet from a device
+ *
+ * Returns what general packet we're expecting to get next from a device.
+ */
 enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
@@ -556,6 +729,15 @@ enum SansgridDeviceStatusEnum routingTableLookupNextExpectedPacket(
 }
 
 
+/**
+ * \brief Set the next expected packet for device with IP address ip_addr
+ *
+ * \param	ip_addr		The device's IP address
+ * \param	nextstatus	The Sansgrid Datatype we're expecting next
+ * \returns
+ * 0 on success \n
+ * -1 on error
+ */
 int32_t routingTableSetNextExpectedPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE],
@@ -574,6 +756,15 @@ int32_t routingTableSetNextExpectedPacket(
 			nextstatus);
 }
 
+
+/**
+ * \brief Set what general packet was just seen from IP address ip_addr
+ * \param		ip_addr			The device's IP address
+ * \param		thisstatus		The General datatype of the packet we just saw
+ * \returns
+ * -1 on error \n
+ *  0 on success
+ */
 int32_t routingTableSetCurrentPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE],
@@ -593,6 +784,14 @@ int32_t routingTableSetCurrentPacket(
 }
 
 
+
+/**
+ * \brief Return the general packet datatype that was just seen from device
+ * \param		ip_addr		the IP address of the device
+ * \returns
+ * -1 on error \n
+ *  The general packet datatype on success
+ */
 uint32_t routingTableGetCurrentPacket(
 		RoutingTable *table,
 		uint8_t ip_addr[IP_SIZE]) {
@@ -608,6 +807,16 @@ uint32_t routingTableGetCurrentPacket(
 
 
 
+/**
+ * \brief Decrement the Heartbeat Counter and return device status change
+ *
+ * The routing table keeps a counter that tracks how long ago we heard a device.
+ * This function decrements that counter.
+ * \returns
+ * If a device has just gone stale, or if a device has just been lost, the device's status
+ * has just changed. Then return will be a nonzero value. \n
+ * Otherwise 0.
+ */
 int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Device is being heartbeat'd
 	// This function doesn't actually handle packets, only the heartbeat status
@@ -623,6 +832,14 @@ int32_t routingTableHeartbeatDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE
 	return hbDecrement(table->routing_table[index]->hb);
 }
 
+
+/**
+ * \brief Reset the Heartbeat Counter to full
+ * \returns
+ * If the device status has changed (ie if the device was stale or lost),
+ * then return will be a nonzero value. \n
+ * Otherwise return 0
+ */
 int32_t routingTableHeardDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Heard from device
 	// Refresh device health
@@ -638,6 +855,13 @@ int32_t routingTableHeardDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	
 
 
+/**
+ * \brief Check whether device has been lost
+ *
+ * \returns
+ * 1 if the heartbeat counter is at 0
+ * 0 if the heartbeat counter != 0
+ */
 int32_t routingTableIsDeviceLost(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Check to see if device at ip address has been lost
 	
@@ -653,6 +877,13 @@ int32_t routingTableIsDeviceLost(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) 
 
 
 
+/**
+ * \brief Check whether device is stale
+ *
+ * \returns
+ * 1 if the heartbeat counter is below the stale threshold
+ * 0 if the heartbeat counter is above the stale threshold
+ */
 int32_t routingTableIsDeviceStale(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// Check to see if device at ip address is stale
 	
@@ -668,6 +899,9 @@ int32_t routingTableIsDeviceStale(RoutingTable *table, uint8_t ip_addr[IP_SIZE])
 
 
 
+/**
+ * \brief Return the number of devices allocated in the table
+ */
 int32_t routingTableGetDeviceCount(RoutingTable *table) {
 	// Return the number of devices that are authenticated
 	tableAssertValid(table);
@@ -675,6 +909,12 @@ int32_t routingTableGetDeviceCount(RoutingTable *table) {
 }
 
 
+
+/**
+ * \brief Return the status of the routing table
+ * \param[in]	devnum		Device to get status on
+ * \param[out]	str			formatted information of device status
+ */
 int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	// Print table status
 	uint32_t i, j;
@@ -740,6 +980,17 @@ int32_t routingTableGetStatus(RoutingTable *table, int devnum, char *str) {
 	return 0;
 }
 
+
+/**
+ * \brief Increment the internal loop pointer
+ *
+ * To easily look at all devices in the table, use this function 
+ * to iterate through each device.
+ * \param[out]		ip_addr		The next IP address
+ * \returns
+ * 1 if ip_addr has a valid device
+ * 0 if we've reached the end of the list
+ */
 int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	tableAssertValid(table);
 
@@ -757,6 +1008,19 @@ int routingTableStepNextDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 }
 
 
+
+/**
+ * \brief Initialize the internal loop pointer
+ *
+ * To easily look at all devices in the table, use this function
+ * to start at the beginning of the table, and 
+ * [routingTableStepNextDevice](@ref routingTableStepNextDevice) to
+ * increment through devices in the table.
+ * \param[out]		ip_addr		the IP address of the first device in the table
+ * \returns
+ * 1 if ip_addr has a valid IP address
+ * 0 if there are no devices in the table
+ */
 int routingTableForEachDevice(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	// setup a loop through all the devices in the table
 	tableAssertValid(table);
