@@ -144,14 +144,17 @@ void loop() {
 			spi_rw = 1;
 		}
 		else { 
-			//Serial.println("How do we recover?");
+			Serial.println("How do we recover?");
 			spi_rw = 1;
 		}
 		spi_err = false;
 	}
 	
 	if (process_flag) {
-  	// Serial.println("Process It");
+		Serial.write(0xDEAD);
+		Serial.write((const uint8_t *)rx, sizeof(rx));
+		Serial.write(0xBABE);
+		goto loop_head;
 	  memcpy(&SpiData.payload, rx, sizeof(SpiData));
 		memset(rx,0,sizeof(SpiData));
 		pos = 0;
@@ -165,7 +168,6 @@ void loop() {
 		sgRadio.loadFrame(1);
 		sgRadio.write();
 		//Serial.println("Packet written");
-             
 	}
 	if (!spi_active) {
 // put your main code here, to run repeatedly: 
@@ -181,11 +183,10 @@ void loop() {
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
         //Serial.println("throwing out the bath water");
-        delay(50);
+        //delay(50);
 				while (Serial.available() > 0) { Serial.read(); }
 				goto loop_head;
 			}
-			
 			sgRadio.read();
                         
 			if(sgRadio.defrag()) {
