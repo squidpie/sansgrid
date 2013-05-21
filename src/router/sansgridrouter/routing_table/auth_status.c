@@ -30,11 +30,21 @@
 
 static int global_strictness = DEV_AUTH_LOOSE;
 
+/**
+ * \brief Storage for Device Authentication Status
+ *
+ * This structure stores the authentication status
+ * for a device that is tracked in the Routing Table.
+ */
 struct DeviceAuth {
-	enum SansgridDeviceStatusEnum auth_place,
-							  next_expected_packet;	  
+	/// The last general payload received from the device
+	enum SansgridDeviceStatusEnum auth_place;
+	/// The next expected general payload to be received from the device
+	enum SansgridDeviceStatusEnum next_expected_packet;	  
+	/// The authentication strictness of the device
 	int strictness;
 };
+
 
 static int devauthAssertValid(DeviceAuth *dev_auth) {
 	if (dev_auth == NULL) {
@@ -45,6 +55,15 @@ static int devauthAssertValid(DeviceAuth *dev_auth) {
 	}
 }
 
+
+
+/**
+ * \brief Enable Loose device authentication for device
+ *
+ * Loose authentication means an eyeball must be received
+ * from a device and then no more authentication checks
+ * are done.
+ */
 int deviceAuthEnableLoosely(DeviceAuth *dev_auth) {
 	// make sure devices at least eyeball first
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -57,6 +76,14 @@ int deviceAuthEnableLoosely(DeviceAuth *dev_auth) {
 }
 
 
+
+/**
+ * \brief Enable Filtered device authentication for device
+ *
+ * Filtered authentication means that any unexpected
+ * packet received is dropped; the device is kept on
+ * the network.
+ */
 int deviceAuthEnableFiltered(DeviceAuth *dev_auth) {
 	// If we get an unexpected packet, drop it
 	// don't drop the offending device though
@@ -68,7 +95,16 @@ int deviceAuthEnableFiltered(DeviceAuth *dev_auth) {
 	dev_auth->strictness = DEV_AUTH_FILTERED;
 	return old_strictness;
 }
-	
+
+
+
+/**
+ * \brief Enable Strict device authentication for device
+ *
+ * Strict authentication means that any unexpected
+ * packet received is dropped. The offending device
+ * is then disconnected from the network.
+ */
 int deviceAuthEnable(DeviceAuth *dev_auth) {
 	// authenticate devices
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -80,6 +116,13 @@ int deviceAuthEnable(DeviceAuth *dev_auth) {
 	return old_strictness;
 }
 
+
+
+/**
+ * \brief Get authentication level for device
+ *
+ * Returns the strictness level for a device
+ */
 int deviceAuthIsEnabled(DeviceAuth *dev_auth) {
 	// check to see if strict authentication is enabled
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -89,6 +132,15 @@ int deviceAuthIsEnabled(DeviceAuth *dev_auth) {
 	return dev_auth->strictness;
 }
 
+
+/**
+ * \brief Initialize a data structure for device authentication
+ *
+ * \param	strictness		Device strictness
+ * \returns
+ * On success, a pointer to the structure is returned. \n
+ * On failure, NULL is returned and a warning is logged
+ */
 DeviceAuth *deviceAuthInit(int strictness) {
 	// Initialize authentication tracking with strictness
 	DeviceAuth *dev_auth;
@@ -106,6 +158,9 @@ DeviceAuth *deviceAuthInit(int strictness) {
 
 
 
+/**
+ * \brief Destroy a device authentication structure
+ */
 void deviceAuthDestroy(DeviceAuth *dev_auth) {
 	// Destroy authentication tracking object
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -117,6 +172,15 @@ void deviceAuthDestroy(DeviceAuth *dev_auth) {
 }
 
 
+/**
+ * \brief Check whether a general payload is valid input from device
+ *
+ * \param		gdt		A general payload type
+ * \returns
+ * If the general payload is a valid payload, return 1 \n
+ * If the general payload is not a valid payload, return 0 \n
+ * On error, return -1
+ */
 int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
@@ -144,6 +208,16 @@ int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
 }
 
 
+
+/**
+ * \brief Check whether a Sansgrid Payload is valid input from device
+ *
+ * \param		dt		A Sansgrid Payload type
+ * \returns
+ * If the Sansgrid Payload is a valid payload, return 1 \n
+ * If the Sansgrid Payload is not a valid payload, return 0 \n
+ * On error, return -1
+ */
 int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
 	// check a payload type against the next expected packet
 	// return 1 if it is valid
@@ -161,6 +235,16 @@ int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
 	return deviceAuthIsGeneralPayloadTypeValid(dev_auth, gdt);
 }
 
+
+
+/**
+ * \brief Set the next expected general payload type
+ *
+ * \param		gdt		A general payload type
+ * \returns
+ * 0 on success \n
+ * -1 on error
+ */
 int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
 	// Set the next expected payload 
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -171,6 +255,11 @@ int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
 	return 0;
 }
 
+
+
+/**
+ * \brief Get the next expected general payload type
+ */
 uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
 	// Get the next expected payload
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -181,6 +270,10 @@ uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
 }
 
 
+
+/**
+ * \brief Get the current general payload for device
+ */
 uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
 	// Get the current general payload
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -191,6 +284,10 @@ uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
 }
 
 
+
+/**
+ * \brief Set the current general payload for device
+ */
 int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
 	// Set the current general payload
 	if (devauthAssertValid(dev_auth) == -1) {
