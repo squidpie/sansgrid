@@ -53,6 +53,7 @@
 #define PEACOCK_PADDING 1
 #define NEST_PADDING 80
 #define HEARTBEAT_PADDING 80
+#define SID 1
 
 
 typedef struct SansgridSensor{
@@ -155,6 +156,7 @@ typedef struct SansgridHeartbeat{
 
 typedef struct SansgridChirp{
     uint8_t dt[ DT ];
+	uint8_t sid[ SID ];
     uint8_t data[ DATA];
 } SansgridChirp;
 

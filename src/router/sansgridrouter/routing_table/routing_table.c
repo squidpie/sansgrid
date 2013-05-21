@@ -498,19 +498,6 @@ int32_t routingTableAllowLooseAuth(RoutingTable *table) {
 	return 0;
 }
 
-int32_t routingTableDisableAuth(RoutingTable *table) {
-	// Don't care about any type of auth
-	// WARNING: this is dangerous
-	tableAssertValid(table);
-	for (int i=0; i<ROUTING_ARRAYSIZE; i++) {
-		if (table->routing_table[i]) {
-			deviceAuthDisable(table->routing_table[i]->auth);
-		}
-	}
-	table->default_strictness = DEV_AUTH_NONE;
-	return 0;
-}
-
 int32_t routingTableIsAuthStrict(RoutingTable *table) {
 	// check to see if authentication is strict
 	tableAssertValid(table);

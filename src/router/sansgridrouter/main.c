@@ -292,9 +292,6 @@ int socketDoReceive(int s, char *str) {
 
 
 
-
-
-
 int sgSocketSend(const char *data, const int size) {
 	int s, t;
 	socklen_t len;
@@ -343,17 +340,14 @@ int sgSocketSend(const char *data, const int size) {
 	while ((t = socketDoReceive(s, str)) > 0) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
-		if (!strcmp(str, "kill")) {
-			syslog(LOG_NOTICE, "sansgrid client: Shutting down daemon...\n");
-		} else {
-			printf("%s\n", str);
-		}
+		printf("%s\n", str);
 	}
 	// cleanup
 	close(s);
 
 	return 0;
 }
+
 
 
 int sgStorePID(pid_t pid) {
@@ -376,6 +370,8 @@ int sgStorePID(pid_t pid) {
 
 	return 0;
 }
+
+
 
 int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 	uint8_t hexarray[16];
@@ -423,6 +419,7 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 
 	return base;
 }
+
 
 
 int parseConfFile(const char *path, RouterOpts *ropts) {
@@ -543,6 +540,7 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 }	
 
 
+
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch
@@ -561,16 +559,21 @@ int main(int argc, char *argv[]) {
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
-	router_opts.heartbeat_period = 1;
-	router_opts.verbosity = LOG_ERR;
 	router_opts.dispatch_pause = 0;
+	strcpy(router_opts.essid, "SansGrid");
+	router_opts.heartbeat_period = 10;
+	router_opts.hidden_network = 0;
+	router_opts.netmask[IP_SIZE-1] = 0x1;
+	strcpy(router_opts.serverip, "127.0.0.1");
+	router_opts.strictness = DEV_AUTH_LOOSE;
+	router_opts.verbosity = LOG_ERR;
 	setlogmask(LOG_UPTO(router_opts.verbosity));
+	sem_init(&router_opts.hb_wait, 0, 0);
 
 	getSansgridConfDir(config_path);
 	strcat(config_path, "/sansgrid.conf");
 
 	parseConfFile(config_path, &router_opts);
-	sem_init(&router_opts.hb_wait, 0, 0);
 
 	// Parse arguments with getopt
 	while (1) {
@@ -654,15 +657,27 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Stock commands that don't require extra parsing to send
+	char *commands[] = {
+		"kill",
+		"status",
+		"devices",
+		"is-hidden",
+		"url", "url=",
+		"key", "key=",
+		"heartbeat=",
+		"auth=",
+		"network=",
+		"packet=", "packet:",
+		"pause", "resume",
+	};
+
 	// Parse remaining commands
 	while (optind < argc) {
 		// deal with non-option argv elements
+		// Do some checking so we don't have to bother the daemon as much
 		option = argv[optind++];
-		if (!strcmp(option, "kill")) {
-			// kill daemon
-			sgSocketSend("kill", 4);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "start")) {
+		if (!strcmp(option, "start")) {
 			// daemonize
 			no_daemonize = 0;
 		} else if (!strcmp(option, "restart")) {
@@ -670,42 +685,6 @@ int main(int argc, char *argv[]) {
 			sgSocketSend("kill", 4);
 			sleep(1);
 			no_daemonize = 0;
-		} else if (!strcmp(option, "status")) {
-			// print the status of the router daemon
-			sgSocketSend("status", 7);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "devices")) {
-			// get the number of devices
-			sgSocketSend("devices", 8);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "is-hidden")) {
-			// check to see if the network is hidden
-			sgSocketSend("is-hidden", 10);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "url")) {
-			// get the url
-			sgSocketSend("url", 4);
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "url=")) {
-			// set the url
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "key")) {
-			// get the key
-			sgSocketSend("key", 4);
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "key=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "heartbeat=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "auth=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "network=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
 			if (optind < argc) {
@@ -714,9 +693,6 @@ int main(int argc, char *argv[]) {
 				sgSocketSend(doDrop, strlen(doDrop));
 				exit(EXIT_SUCCESS);
 			}
-		} else if (strstr(option, "packet=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -725,15 +701,18 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "pause")) {
-			// pause sending packets
-			sgSocketSend("pause", 6);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "resume")) {
-			// resume sending packets
-			sgSocketSend("resume", 7);
-			exit(EXIT_SUCCESS);
 		} else {
+			int sizecap;
+			for (uint32_t i=0; i<sizeof(commands)/sizeof(commands[0]); i++) {
+				if (!strncmp(commands[i], option, strlen(commands[i]))) {
+					sizecap = strlen(option);
+					if (sizecap > SG_SOCKET_BUFF_SIZE) {
+						sizecap = SG_SOCKET_BUFF_SIZE-1;
+					}
+					sgSocketSend(option, sizecap);
+					exit(EXIT_SUCCESS);
+				}
+			}
 			// bad option
 			printf("Unknown Arg: %s\n", option);
 			exit(EXIT_FAILURE);
@@ -762,10 +741,19 @@ int main(int argc, char *argv[]) {
 	routing_table = routingTableInit(router_opts.netmask, router_opts.essid);
 	void *arg;
 
-	if (router_opts.strictness == 1) {
-		routingTableRequireStrictAuth(routing_table);
-	} else if (router_opts.strictness == 0) {
-		routingTableAllowLooseAuth(routing_table);
+	switch(router_opts.strictness) {
+		case DEV_AUTH_LOOSE:
+			routingTableAllowLooseAuth(routing_table);
+			break;
+		case DEV_AUTH_FILTERED:
+			routingTableSetAuthFiltered(routing_table);
+			break;
+		case DEV_AUTH_STRICT:
+			routingTableRequireStrictAuth(routing_table);
+			break;
+		default:
+			routingTableSetAuthFiltered(routing_table);
+			break;
 	}
 
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
@@ -808,6 +796,8 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+
+
 void usage(int status) {
 	if (status != EXIT_SUCCESS)
 		printf("Try sansgridrouter -h\n");
@@ -843,8 +833,7 @@ Daemon Commands\n\
       resume                 continue sending packets\n\
 \n\
 Daemon Configuration\n\
-      auth=                  control adherence to authentication protocol at router level\n\
-           none                no authentication (dangerous)\n\
+      auth=                  control adherence to auth protocol at router\n\
            loose               device must eyeball (default)\n\
            filtered            unexpected packets are dropped, devices stay\n\
            strict              device must follow exact protocol or is dropped\n\
@@ -861,22 +850,33 @@ Daemon Configuration\n\
 
 
 
-void getSansgridConfDir(char wd[150]) {
+int getSansgridConfDir(char wd[150]) {
 	// Get the .sansgrid directory path
 	// Return success or failure
 	// pass the path back in wd
 	char *home_path = getenv("HOME");
+	struct stat buffer;
 
-	if (!home_path) {
-		syslog(LOG_NOTICE, "Didn't get home directory");
-		sprintf(wd, "/home/pi/.sansgrid");
-	} else {
+	if (home_path) {
 		snprintf(wd, 120, "%s/.sansgrid", home_path);
+		if (stat(wd, &buffer) >= 0) {
+			// found an existing dir
+			return 0;
+		}
+	} 
+	// didn't find sansgrid dir in $HOME 
+	// or couln't find $HOME
+	// Try /etc/sansgrid
+	sprintf(wd, "/etc/sansgrid");
+	if (stat(wd, &buffer) >= 0) {
+		// found dir in /etc
+		return 0;
+	} else {
+		return -1;
 	}
-	// FIXME: check to see if dir exists
-	// 			if not, get config from /etc/sansgrid
-
 }
+
+
 
 void getSansgridControlDir(char wd[150]) {
 	// Get the location of the unix pipe and the .pid file

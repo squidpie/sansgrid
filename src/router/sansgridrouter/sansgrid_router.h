@@ -59,7 +59,7 @@ uint8_t router_base[IP_SIZE];
 
 
 int sgStorePID(pid_t pid);
-void getSansgridConfDir(char wd[150]);
+int getSansgridConfDir(char wd[150]);
 void getSansgridControlDir(char wd[150]);
 int socketDoReceive(int s, char *str);
 int socketDoSend(int s, const char *str);

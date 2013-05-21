@@ -33,13 +33,20 @@ START_TEST (testAuthStrictness) {
 	// Test loose/strict authentication
 	DeviceAuth *dev_auth = NULL;
 
-	dev_auth = deviceAuthInit(0);
+	// init as loose
+	dev_auth = deviceAuthInit(DEV_AUTH_LOOSE);
 	fail_if((dev_auth == NULL), "Device Auth wasn't initialized");
-	fail_if((deviceAuthIsEnabled(dev_auth) != 0), "Device Auth wasn't initialized to \"loose\"");
+	fail_if((deviceAuthIsEnabled(dev_auth) != DEV_AUTH_LOOSE), "Device Auth wasn't initialized to \"loose\"");
+	// Set to strict
 	deviceAuthEnable(dev_auth);
-	fail_if((deviceAuthIsEnabled(dev_auth) != 1), "Device Auth wasn't set to \"strict\"");
-	deviceAuthDisable(dev_auth);
-	fail_if((deviceAuthIsEnabled(dev_auth) != 0), "Device Auth wasn't set to \"loose\"");
+	fail_if((deviceAuthIsEnabled(dev_auth) != DEV_AUTH_STRICT), "Device Auth wasn't set to \"strict\"");
+	// Set to filtered
+	deviceAuthEnableFiltered(dev_auth);
+	fail_if((deviceAuthIsEnabled(dev_auth) != DEV_AUTH_FILTERED), "Device Auth wasn't set to \"filtered\"");
+	// Finally, set back to loose
+	deviceAuthEnableLoosely(dev_auth);
+	fail_if((deviceAuthIsEnabled(dev_auth) != DEV_AUTH_LOOSE), "Device Auth wasn't set to \"loose\"");
+
 	deviceAuthDestroy(dev_auth);
 } END_TEST
 

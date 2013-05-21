@@ -23,24 +23,25 @@
 #include <Arduino.h>
 #include "sgSerial.h"
 
-//#define DUE 1
+#define DUE 1
 #define DELAY 6
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
 uint8_t sgSerialOpen(void){
+    Serial.println( "Opening SPI" );
     // Initialize Sensor SPI communication
     SPI.begin();
     // Set order bits are shifted onto the SPI bus
-    SPI.setBitOrder( MSBFIRST ); 
+    SPI.setBitOrder( MSBFIRST );
     // Set SPI Baud Rate to 500 KHz
     // 84 MHz / 252 = 500 KHz
-    //#ifdef DUE
-    //SPI.setClockDivider( 252 );
-    //#else
+    #ifdef DUE
+    SPI.setClockDivider( 252 );
+    #else
     SPI.setClockDivider( SPI_CLOCK_DIV32 );
-    //#endif // DUE
+    #endif // DUE
     // Set SPI Mode 0-3
     SPI.setDataMode( SPI_MODE0 );
     return 0;
@@ -64,20 +65,20 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     uint8_t data_out[ NUM_BYTES ];
     // Copy SansgridSerial data to buffer
     memcpy( data_out , sg_serial->control, CONTROL );
-	memcpy( data_out + CONTROL , sg_serial->ip_addr, IP_ADDRESS  );
-	memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
+    memcpy( data_out + CONTROL , sg_serial->ip_addr, IP_ADDRESS  );
+    memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
     sgSerialOpen();
     delayMicroseconds(DELAY);
-	// Send dummy byte to Set command on Slave
+    // Send dummy byte to Set command on Slave
     //Serial.println( "First Byte" );
     SPI.transfer( data_out[0] );
-	delayMicroseconds(DELAY);
+    delayMicroseconds(DELAY);
     // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
         SPI.transfer( data_out[i] );
-		delayMicroseconds(DELAY);
+        delayMicroseconds(DELAY);
         //Serial.println( data_out[i] );
     }
     // Close SPI bus - NOT USED
@@ -89,28 +90,37 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // Array of size NUM_BYTES to store SPI packet
     uint8_t data_in[NUM_BYTES];
+    // Test data_in
+    data_in[0] = 0xfd;
+    for( int i = 1 ; i < 18 ; i++ )
+        data_in[i] = 0xF0;
     // Dummy byte sent to slave 
     uint8_t rec = 0xFD;
     // Open SPI bus
     sgSerialOpen();
+    delayMicroseconds(DELAY);
     // First dummy transfer defines the command 
     // for valid or not valid data
+    SPI.transfer( rec );
     delayMicroseconds(DELAY);
-	SPI.transfer( rec );
-	delayMicroseconds(DELAY);
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
     // in SPDR register and will be stored on the
     // next SPI.transfer() in the for Loop.
     SPI.transfer( rec );
-	delayMicroseconds(DELAY);
+    delayMicroseconds(DELAY);
     // Loop through receiving bytes the length 
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI and store
         // byte received in data_in buffer
         data_in[i] = SPI.transfer( rec );
-		delayMicroseconds(DELAY);
+        delayMicroseconds(DELAY);
+    }
+    for( int i = 0 ; i < NUM_BYTES ; i++){
+        // Send a byte over SPI and store
+        // byte received in data_in buffer
+        Serial.println( data_in[i] );
     }
     // Close SPI bus - NOT USED
     //sgSerialClose();
@@ -118,8 +128,8 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     // containing Control byte, IP address, and Payload
     // Copy SansgridSerial data to buffer
     memcpy( sg_serial->control , data_in , CONTROL );
-	memcpy( sg_serial->ip_addr , data_in + CONTROL , IP_ADDRESS  );
-	memcpy( sg_serial->payload , data_in + CONTROL + IP_ADDRESS , PAYLOAD );
+    memcpy( sg_serial->ip_addr , data_in + CONTROL , IP_ADDRESS  );
+    memcpy( sg_serial->payload , data_in + CONTROL + IP_ADDRESS , PAYLOAD );
     return 0;
 }
 
