@@ -19,6 +19,7 @@
 
 #ifndef __SG_DISPATCH_H__
 #define __SG_DISPATCH_H__
+/** \file */
 
 #include <stdint.h>
 
