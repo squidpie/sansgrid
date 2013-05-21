@@ -39,30 +39,65 @@
 
 
 
+/**
+ * \brief Tracking for an authenticating/authenticated device
+ *
+ * This is a node that tracks information on a device
+ * that is authenticating, or has been authenticated.
+ * It contains heartbeat information, and authentication status.
+ */
 typedef struct RoutingNode {
-	// A device that has an assigned IP address
-	// For now, this is separate from properties.
-	// Later, it may be combined with DeviceProperties
-	//struct DeviceProperties properties;
+	/** 
+	 * \brief Device Identifier
+	 * 
+	 * This is the identifier that the server uses to track devices.
+	 * Currently, due to how a device requests connection to the network,
+	 * it very closely corresponds to the device IP address.
+	 */
 	uint32_t rdid;
+	/**
+	 * \brief Device health
+	 *
+	 * Tracks how long ago the device was heard from
+	 */
 	HeartbeatStatus *hb;
+	/**
+	 * \brief Device Authentication Status
+	 *
+	 * Tracks the place the device is in the authentication path,
+	 * what the next expected packet type is, and the device's
+	 * strictness.
+	 */
 	DeviceAuth *auth;
 } RoutingNode;
 	
 
+/**
+ * \brief Routing Table Structure
+ *
+ * The routing table tracks connected devices.
+ */
 struct RoutingTable {
-	uint32_t tableptr;			// index, used for alloc
-	uint32_t feach_index;
-	uint32_t rdid_pool;			// identifier pool
+	/// Index, used for alloc
+	uint32_t tableptr;			
+	/// For each index, used for stepping through nodes
+	uint32_t feach_index;		
+	/// Identifier pool
+	uint32_t rdid_pool;			
+	/// Number of devices being tracked
 	uint32_t table_alloc;
+	/// The table of devices
 	RoutingNode *routing_table[ROUTING_ARRAYSIZE];
+	/// What strictness a device is assigned when it is allocated
 	int default_strictness;	
 
-	char essid[80];				// network name
+	/// Network name that is sent out on a fly
+	char essid[80];
+	
+	/// IP submask partition
 	uint8_t base[IP_SIZE];
+	/// Broadcast IP address
 	uint8_t broadcast[IP_SIZE];
-
-	uint32_t hbptr;				// index, used for heartbeat
 };
 
 
@@ -189,7 +224,6 @@ RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	table->rdid_pool = 1;
 	table->tableptr = 0;
 	table->table_alloc = 0;
-	table->hbptr = 0;
 	table->default_strictness = 1;
 	while (unmasked_bits > 0) {
 		if (unmasked_bits >= 8) {
