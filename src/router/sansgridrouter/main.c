@@ -659,15 +659,27 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Stock commands that don't require extra parsing to send
+	char *commands[] = {
+		"kill",
+		"status",
+		"devices",
+		"is-hidden",
+		"url", "url=",
+		"key", "key=",
+		"heartbeat=",
+		"auth=",
+		"network=",
+		"packet=", "packet:",
+		"pause", "resume",
+	};
+
 	// Parse remaining commands
 	while (optind < argc) {
 		// deal with non-option argv elements
+		// Do some checking so we don't have to bother the daemon as much
 		option = argv[optind++];
-		if (!strcmp(option, "kill")) {
-			// kill daemon
-			sgSocketSend("kill", 4);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "start")) {
+		if (!strcmp(option, "start")) {
 			// daemonize
 			no_daemonize = 0;
 		} else if (!strcmp(option, "restart")) {
@@ -675,42 +687,6 @@ int main(int argc, char *argv[]) {
 			sgSocketSend("kill", 4);
 			sleep(1);
 			no_daemonize = 0;
-		} else if (!strcmp(option, "status")) {
-			// print the status of the router daemon
-			sgSocketSend("status", 7);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "devices")) {
-			// get the number of devices
-			sgSocketSend("devices", 8);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "is-hidden")) {
-			// check to see if the network is hidden
-			sgSocketSend("is-hidden", 10);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "url")) {
-			// get the url
-			sgSocketSend("url", 4);
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "url=")) {
-			// set the url
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "key")) {
-			// get the key
-			sgSocketSend("key", 4);
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "key=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "heartbeat=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "auth=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
-		} else if (strstr(option, "network=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "drop")) {
 			// drop a device
 			if (optind < argc) {
@@ -719,9 +695,6 @@ int main(int argc, char *argv[]) {
 				sgSocketSend(doDrop, strlen(doDrop));
 				exit(EXIT_SUCCESS);
 			}
-		} else if (strstr(option, "packet=")) {
-			sgSocketSend(option, strlen(option));
-			exit(EXIT_SUCCESS);
 		} else if (!strcmp(option, "running")) {
 			// check to see if the daemon is running
 			if ((sgpid = isRunning()) != 0) {
@@ -730,16 +703,19 @@ int main(int argc, char *argv[]) {
 				printf("sansgridrouter is not running\n");
 			}
 			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "pause")) {
-			// pause sending packets
-			sgSocketSend("pause", 6);
-			exit(EXIT_SUCCESS);
-		} else if (!strcmp(option, "resume")) {
-			// resume sending packets
-			sgSocketSend("resume", 7);
-			exit(EXIT_SUCCESS);
 		} else {
 			// bad option
+			int sizecap;
+			for (uint32_t i=0; i<sizeof(commands)/sizeof(commands[0]); i++) {
+				if (!strncmp(commands[i], option, strlen(commands[i]))) {
+					sizecap = strlen(option);
+					if (sizecap > SG_SOCKET_BUFF_SIZE) {
+						sizecap = SG_SOCKET_BUFF_SIZE-1;
+					}
+					sgSocketSend(option, sizecap);
+					exit(EXIT_SUCCESS);
+				}
+			}
 			printf("Unknown Arg: %s\n", option);
 			exit(EXIT_FAILURE);
 		}
