@@ -292,9 +292,6 @@ int socketDoReceive(int s, char *str) {
 
 
 
-
-
-
 int sgSocketSend(const char *data, const int size) {
 	int s, t;
 	socklen_t len;
@@ -352,6 +349,7 @@ int sgSocketSend(const char *data, const int size) {
 }
 
 
+
 int sgStorePID(pid_t pid) {
 	FILE *PIDFILE;
 	char config_path[150];
@@ -372,6 +370,8 @@ int sgStorePID(pid_t pid) {
 
 	return 0;
 }
+
+
 
 int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 	uint8_t hexarray[16];
@@ -419,6 +419,7 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 
 	return base;
 }
+
 
 
 int parseConfFile(const char *path, RouterOpts *ropts) {
@@ -537,6 +538,7 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 
 	return 0;
 }	
+
 
 
 int main(int argc, char *argv[]) {
@@ -794,6 +796,8 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+
+
 void usage(int status) {
 	if (status != EXIT_SUCCESS)
 		printf("Try sansgridrouter -h\n");
@@ -871,6 +875,8 @@ int getSansgridConfDir(char wd[150]) {
 		return -1;
 	}
 }
+
+
 
 void getSansgridControlDir(char wd[150]) {
 	// Get the location of the unix pipe and the .pid file

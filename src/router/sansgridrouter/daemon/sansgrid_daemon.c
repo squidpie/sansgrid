@@ -44,7 +44,6 @@
 
 
 
-
 int isRunning(void) {
 	// Check to see if the sansgrid daemon is running
 	pid_t sgpid;
@@ -75,6 +74,7 @@ int isRunning(void) {
 	fclose(FPTR);
 	return sgpid;
 }
+
 
 
 int daemon_init(void) {
@@ -124,6 +124,7 @@ int daemon_init(void) {
 }
 
 
+
 int sgConfigInsertPacket(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Interpret an intrarouter packet and enqueue it for processing
 	char *packet;
@@ -151,6 +152,7 @@ int sgConfigInsertPacket(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return exit_code;
 }
+
 
 
 int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
@@ -185,12 +187,14 @@ int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 }
 
 
+
 int sgConfigGetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// return the url
 	strcpy(str, router_opts.serverip);
 	socketDoSend(s2, str);
 	return 0;
 }
+
 
 
 int sgConfigGetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
@@ -204,6 +208,8 @@ int sgConfigGetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return 0;
 }
+
+
 
 int sgConfigSetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Set a new server URL
@@ -220,6 +226,8 @@ int sgConfigSetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	return exit_code;
 }
 
+
+
 int sgConfigSetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Set a new server key
 	int exit_code = 0;
@@ -233,6 +241,7 @@ int sgConfigSetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return exit_code;
 }
+
 
 
 int sgConfigSetHeartbeat(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
@@ -252,6 +261,8 @@ int sgConfigSetHeartbeat(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return 0;
 }
+
+
 
 int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// change authentication
@@ -278,6 +289,7 @@ int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 }
 
 
+
 int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	int exit_code = 0;
 	if (strstr(str, "hidden")) {
@@ -293,6 +305,7 @@ int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return exit_code;
 }
+
 
 
 int sgConfigGetStatus(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
@@ -362,6 +375,7 @@ rdid                IP address                 status  Last Packet\n");
 }
 
 
+
 int sgConfigGetDevices(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Get the number of devices
 	syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
@@ -369,6 +383,8 @@ int sgConfigGetDevices(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	socketDoSend(s2, str);
 	return 0;
 }
+
+
 
 int sgConfigCheckNetworkHidden(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// return if the network is hidden (not broadcasting)
@@ -382,6 +398,7 @@ int sgConfigCheckNetworkHidden(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 }
 
 
+
 int sgConfigPauseDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// pause packet sending
 	if (!router_opts.dispatch_pause) {
@@ -391,6 +408,7 @@ int sgConfigPauseDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	router_opts.dispatch_pause = 1;
 	return 0;
 }
+
 
 
 int sgConfigResumeDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
@@ -404,6 +422,7 @@ int sgConfigResumeDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 }
 
 
+
 int sgSocketListen(void) {
 	// Wait for a command from a client
 	uint32_t i;
@@ -412,9 +431,13 @@ int sgSocketListen(void) {
 	socklen_t len;							// socket lengths
 	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
 	char socket_path[150];					// socket locations
+	int shutdown_server = 0;				// break-out for main loop
 
 	struct Command {
+		// Key-value pair for matching a command to a function
 		char *token;
+		// the integer is an open socket,
+		// the char* is data to pass into the function
 		int(*callback)(int, char*);
 	};
 
@@ -441,6 +464,7 @@ int sgSocketListen(void) {
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
+	// Make sure everyone can write to the socket
 	chmod(socket_path, 0777);
 
 	// listen for socket connections
@@ -448,22 +472,8 @@ int sgSocketListen(void) {
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
-	int shutdown_server = 0;
 
 	do {
-		// Block until a connection appears
-		// Then Accept the connection
-		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
-			perror("accept");
-			exit(EXIT_FAILURE);
-		}
-		// Receive and interpret the data
-		if (socketDoReceive(s2, str) == -1) {
-			syslog(LOG_WARNING, "sansgrid daemon: receive error");
-			break;
-		}
-		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
-
 		// Normal commands that can be called 
 		struct Command command[] = {
 			{ "packet=",		sgConfigInsertPacket },
@@ -482,6 +492,20 @@ int sgSocketListen(void) {
 			{ "pause",			sgConfigPauseDispatch },
 			{ "resume",			sgConfigResumeDispatch },
 		};
+
+		// Block until a connection appears
+		// Then Accept the connection
+		if ((s2 = accept(s, (struct sockaddr*)&remote, &len)) == -1) {
+			perror("accept");
+			exit(EXIT_FAILURE);
+		}
+		// Receive and interpret the data
+		if (socketDoReceive(s2, str) == -1) {
+			syslog(LOG_WARNING, "sansgrid daemon: receive error");
+			break;
+		}
+		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
+
 
 		// Interpret command
 		if (!strcmp(str, "kill")) {
@@ -508,7 +532,6 @@ int sgSocketListen(void) {
 
 	return 0;
 }
-
 
 
 
