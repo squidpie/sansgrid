@@ -406,11 +406,17 @@ int sgConfigResumeDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 int sgSocketListen(void) {
 	// Wait for a command from a client
+	uint32_t i;
 	int s, s2;								// socket info
 	struct sockaddr_un local, remote;		// socket addresses
 	socklen_t len;							// socket lengths
 	char str[SG_SOCKET_BUFF_SIZE];			// socket transmissions
 	char socket_path[150];					// socket locations
+
+	struct Command {
+		char *token;
+		int(*callback)(int, char*);
+	};
 
 	getSansgridControlDir(socket_path);
 
@@ -458,57 +464,40 @@ int sgSocketListen(void) {
 		}
 		syslog(LOG_DEBUG, "sansgrid daemon: received data: %s", str);
 
+		// Normal commands that can be called 
+		struct Command command[] = {
+			{ "packet=",		sgConfigInsertPacket },
+			{ "packet:", 		sgConfigInsertPacket },
+			{ "drop ", 			sgConfigDropDevice },
+			{ "url=", 			sgConfigSetURL },
+			{ "url", 			sgConfigGetURL },
+			{ "key=", 			sgConfigSetKey },
+			{ "key", 			sgConfigGetKey },
+			{ "heartbeat=",		sgConfigSetHeartbeat },
+			{ "auth=",			sgConfigSetAuth },
+			{ "network=",		sgConfigSetNetwork },
+			{ "status",			sgConfigGetStatus },
+			{ "devices",		sgConfigGetDevices },
+			{ "is-hidden",		sgConfigCheckNetworkHidden },
+			{ "pause",			sgConfigPauseDispatch },
+			{ "resume",			sgConfigResumeDispatch },
+		};
 
 		// Interpret command
 		if (!strcmp(str, "kill")) {
 			// Kill the server
 			shutdown_server = 1;
 			syslog(LOG_NOTICE, "sansgrid daemon: shutting down");
+			strcpy(str, "Shutting down daemon...");
 			routerFreeAllDevices(routing_table);
 			socketDoSend(s2, str);
-		} else if (strstr(str, "packet=")
-				|| strstr(str, "packet:")) {
-			// insert a packet into the system
-			sgConfigInsertPacket(s2, str);
-		} else if (strstr(str, "drop") != NULL) {
-			// drop a device from the network
-			sgConfigDropDevice(s2, str);
-		} else if (!strcmp(str, "url")) {
-			// get the server URL
-			sgConfigGetURL(s2, str);
-		} else if (!strcmp(str, "key")) {
-			// get the router's key (for interfacing with the server)
-			sgConfigGetKey(s2, str);
-		} else if (strstr(str, "url=")) {
-			// set the server URL
-			sgConfigSetURL(s2, str);
-		} else if (strstr(str, "key=")) {
-			// set the router key
-			sgConfigSetKey(s2, str);
-		} else if (strstr(str, "heartbeat=")) {
-			// set the heartbeat interval
-			sgConfigSetHeartbeat(s2, str);
-		} else if (strstr(str, "auth=")) {
-			// set the authentication level 
-			sgConfigSetAuth(s2, str);
-		} else if (strstr(str, "network=")) {
-			// set whether the network is hidden or shown
-			sgConfigSetNetwork(s2, str);
-		} else if (!strcmp(str, "status")) {	
-			// get the router's status
-			sgConfigGetStatus(s2, str);
-		} else if (!strcmp(str, "devices")) {
-			// get the number of devices tracked
-			sgConfigGetDevices(s2, str);
-		} else if (!strcmp(str, "is-hidden")) {
-			// return if the network is currently hidden
-			sgConfigCheckNetworkHidden(s2, str);
-		} else if (!strcmp(str, "pause")) {
-			// pause payload handling
-			sgConfigPauseDispatch(s2, str);
-		} else if (!strcmp(str, "resume")) {
-			// resume payload handling
-			sgConfigResumeDispatch(s2, str);
+		} else {
+			for (i=0; i<sizeof(command)/sizeof(command[0]); i++) {
+				if (!strncmp(command[i].token, str, strlen(command[i].token))) {
+					command[i].callback(s2, str);
+					break;
+				}
+			}
 		}
 		syslog(LOG_INFO, "sansgrid daemon: sending back: %s", str);
 

@@ -343,11 +343,7 @@ int sgSocketSend(const char *data, const int size) {
 	while ((t = socketDoReceive(s, str)) > 0) {
 		// check to see if the server got the kill message
 		// Tell the user that the daemon is shutting down
-		if (!strcmp(str, "kill")) {
-			syslog(LOG_NOTICE, "sansgrid client: Shutting down daemon...\n");
-		} else {
-			printf("%s\n", str);
-		}
+		printf("%s\n", str);
 	}
 	// cleanup
 	close(s);
@@ -704,7 +700,6 @@ int main(int argc, char *argv[]) {
 			}
 			exit(EXIT_SUCCESS);
 		} else {
-			// bad option
 			int sizecap;
 			for (uint32_t i=0; i<sizeof(commands)/sizeof(commands[0]); i++) {
 				if (!strncmp(commands[i], option, strlen(commands[i]))) {
@@ -716,6 +711,7 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_SUCCESS);
 				}
 			}
+			// bad option
 			printf("Unknown Arg: %s\n", option);
 			exit(EXIT_FAILURE);
 		}
