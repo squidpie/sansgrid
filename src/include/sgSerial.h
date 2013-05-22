@@ -21,6 +21,7 @@
 
 #ifndef __SG_SERIAL_H__
 #define __SG_SERIAL_H__
+/** \file */
 
 #include <stdint.h>
 //#include <arpa/inet.h>
