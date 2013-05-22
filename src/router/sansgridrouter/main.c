@@ -39,10 +39,20 @@
 #include <errno.h>
 #include <time.h>
 #include <semaphore.h>
-
+/// \file
 
 void usage(int status);
 
+
+/**
+ * \brief Write/Action Thread
+ *
+ * This is one of two threads that is allowed to modify state in the router.
+ * It takes a packet from the ring buffer dispatch, modifies internal
+ * state appropriately, and forwards the payload toward its destination.
+ *
+ * \param[in,out]	arg		Not used
+ */
 void *dispatchRuntime(void *arg) {
 	SansgridSerial *sg_serial = NULL;
 	enum SansgridDeviceStatusEnum gen_ptype;
@@ -115,6 +125,14 @@ void *dispatchRuntime(void *arg) {
 	pthread_exit(arg);
 }
 
+
+/**
+ * \brief SPI Listener/Receive Thread
+ *
+ * This thread listens on the serial line and enqueues data received.
+ *
+ * \param[in,out]	arg		Not used
+ */
 void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
 	uint32_t size;
@@ -129,6 +147,12 @@ void *spiReaderRuntime(void *arg) {
 }
 
 
+/**
+ * \brief Heartbeat Thread
+ *
+ * This thread sends out a heartbeat to devices periodically
+ * \param[in,out]	arg		Not used
+ */
 void *heartbeatRuntime(void *arg) {
 	// handle pings
 
@@ -240,6 +264,11 @@ void *heartbeatRuntime(void *arg) {
 	pthread_exit(arg);
 }
 
+
+/** \brief Sends out a fly ESSID periodically
+ *
+ * \param[in,out]	arg		Not used
+ */
 void *flyRuntime(void *arg) {
 	// handle broadcast of ESSID
 	SansgridFly sg_fly;
@@ -265,6 +294,15 @@ void *flyRuntime(void *arg) {
 	
 
 
+/**
+ * \brief Convenience function to send data to a socket
+ *
+ * \param[in]	s	an open socket
+ * \param[in]	str	null-terminated string
+ * \returns
+ * On success, return 0. \n
+ * Otherwise (on error), return 0
+ */
 int socketDoSend(int s, const char *str) {
 	if (send(s, str, strlen(str), 0) == -1) {
 		return -1;
@@ -273,6 +311,20 @@ int socketDoSend(int s, const char *str) {
 	}
 }
 
+
+
+/**
+ * \brief Convenience funtion to receive data on a socket
+ *
+ * \param[in]	s	an open socket
+ * \param[out]	str	a null-terminated string
+ *
+ * This function also strips off trailing newlines.
+ *
+ * \returns
+ * On success, this function returns 0
+ * Otherwise, on error, returns -1
+ */
 int socketDoReceive(int s, char *str) {
 	int t;
 	if ((t = recv(s, str, SG_SOCKET_BUFF_SIZE, 0)) > 0) {
@@ -292,6 +344,16 @@ int socketDoReceive(int s, char *str) {
 
 
 
+/**
+ * \brief Create a socket and send data to a receiver
+ *
+ * \param[in]	data	A null-terminated string to send
+ * \param[in]	size	Size of the data to send
+ *
+ * \returns
+ * On success, return 0
+ * On failure, return -1
+ */
 int sgSocketSend(const char *data, const int size) {
 	int s, t;
 	socklen_t len;
@@ -350,6 +412,9 @@ int sgSocketSend(const char *data, const int size) {
 
 
 
+/**
+ * \brief Store the PID of the running process
+ */
 int sgStorePID(pid_t pid) {
 	FILE *PIDFILE;
 	char config_path[150];
@@ -373,6 +438,12 @@ int sgStorePID(pid_t pid) {
 
 
 
+/**
+ * \brief Extract an IPv6 address from a null-terminated string
+ *
+ * \param[in]	ip_str	null-terminated string containing an IP address
+ * \param[out]	ip_addr	IP address
+ */
 int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 	uint8_t hexarray[16];
 	uint8_t ip_right[16];
@@ -422,6 +493,9 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 
 
 
+/**
+ * \brief Get configuration from a Config File
+ */
 int parseConfFile(const char *path, RouterOpts *ropts) {
 	// parse a config file
 	FILE *FPTR;
@@ -850,6 +924,9 @@ Daemon Configuration\n\
 
 
 
+/**
+ * \brief Get the Sansgrid Configuration Directory
+ */
 int getSansgridConfDir(char wd[150]) {
 	// Get the .sansgrid directory path
 	// Return success or failure
@@ -878,6 +955,9 @@ int getSansgridConfDir(char wd[150]) {
 
 
 
+/**
+ * \brief Get the Sansgrid Control Directory
+ */
 void getSansgridControlDir(char wd[150]) {
 	// Get the location of the unix pipe and the .pid file
 	struct stat buffer;
