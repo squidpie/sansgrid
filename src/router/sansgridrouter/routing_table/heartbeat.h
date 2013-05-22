@@ -22,20 +22,14 @@
 
 #ifndef __SG_ROUTING_HEARTBEAT_H__
 #define __SG_ROUTING_HEARTBEAT_H__
+/** \file */
 
-//#define HEARTBEAT_INTERVAL 1		// interval, in seconds, between device heartbeats
-#define PING_THRESHOLD 8			// number of lost pings before device is considered lost
-#define STALE_THRESHOLD 4			// number of lost pings before device is considered stale
+/// number of lost pings before device is considered lost
+#define PING_THRESHOLD 8			
+/// number of lost pings before device is considered stale
+#define STALE_THRESHOLD 4			
 
 #include <payloads.h>
-
-enum __attribute__((deprecated))SansgridHeartbeatStatusEnum {
-	SG_DEVICE_NOT_PRESENT,
-	SG_DEVICE_PRESENT,
-	SG_DEVICE_PINGING,
-	SG_DEVICE_STALE,
-	SG_DEVICE_LOST
-};
 
 typedef struct HeartbeatStatus HeartbeatStatus;
 
