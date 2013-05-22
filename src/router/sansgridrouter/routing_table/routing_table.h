@@ -22,16 +22,20 @@
  * facilitates creating/moving/deleting IP addresses.
  */
 
+/** \file */
+
 
 #ifndef __SG_ROUTING_H__
 #define __SG_ROUTING_H__
 
-#define ROUTING_UNIQUE_BITS	8			// Number of unique bits for the IP address
+/// Number of unique bits for the IP address
+#define ROUTING_UNIQUE_BITS	8			
 
 #if ROUTING_UNIQUE_BITS > 20			// Don't let the routing table be too big
 #error "Routing Table too Large!"
 #endif
 
+/// Number of entries in the routing table
 #define ROUTING_ARRAYSIZE		(1 << ROUTING_UNIQUE_BITS)
 
 #include <stdint.h>

@@ -41,6 +41,14 @@ static int32_t chkValidCTRLPath(RoutingTable *routing_table,
 	}
 }
 
+
+
+/**
+ * \brief Send a disconnect signal and deallocate a device
+ *
+ * This function sends a NETWORK_DISCONNECT_SENSOR signal 
+ * and frees the device with IP address ip_addr
+ */
 int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 	// Something went wrong. Transmit NETWORK_DISCONNECT_SENSOR to ip_addr
 	SansgridSerial sg_serial;
@@ -68,6 +76,14 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 	return 0;
 }
 
+
+
+/**
+ * \brief Disconnect all devices
+ *
+ * This function sends a NETWORK_DISCONNECT_SENSOR signal
+ * to all devices, then frees all devices (except the router)
+ */
 int32_t routerFreeAllDevices(RoutingTable *routing_table) {
 	// Transmit NETWORK_DISCONNECT_SENSOR to all devices on network
 	uint8_t ip_addr[IP_SIZE];
@@ -86,6 +102,13 @@ int32_t routerFreeAllDevices(RoutingTable *routing_table) {
 	return 0;
 }
 
+
+
+/**
+ * \brief Send a message to the server that device has come back online
+ *
+ * Used when a stale device is heard from.
+ */
 int32_t routerRefreshDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) {
 	printf("Refreshing\n");
 	SansgridIRStatus sg_irstatus;
@@ -103,6 +126,18 @@ int32_t routerRefreshDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE
 }
 
 
+
+/**
+ * \brief Translate a Sansgrid datatype into a generic datatype
+ *
+ * The Sansgrid datatypes are verbose; sometimes it's more desirable
+ * to reduce the many types for each payload into one parameter to check.
+ * That is the idea of this function. For instance, a Chirp has many
+ * different types. This function reduces that to SG_DEVSTATUS_CHIRPING.
+ * \param	dt		A Sansgrid Payload Datatype
+ * \returns
+ * A Generic Payload type is returned
+ */
 enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 	// Return the generic data type of the payload
 	// e.g SG_DEVSTATUS_EYEBALLING, SG_DEVSTATUS_PECKING, etc
@@ -170,6 +205,16 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 }
 
 
+
+/**
+ * \brief returns the name of a generic data type in a null-terminated string
+ *
+ * \param[in]	devstatus		A General payload type
+ * \param[out]	name			A null-terminated string the name is returned in
+ * \returns
+ * 0 when the datatype was found \n
+ * -1 on error
+ */
 int32_t sgPayloadGetPayloadName(enum SansgridDeviceStatusEnum devstatus, char *name) {
 	// Get the name of a payload
 	switch(devstatus) {
@@ -218,6 +263,11 @@ int32_t sgPayloadGetPayloadName(enum SansgridDeviceStatusEnum devstatus, char *n
 }
 
 
+/**
+ * \brief Handle a SansgridHatching payload
+ *
+ * Sends a Hatch to the radio
+ */
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
@@ -234,6 +284,12 @@ int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial)
 }
 
 
+
+/**
+ * \brief Handle a SansgridFly payload
+ *
+ * Sends a Fly to the radio to be broadcast on the network
+ */
 int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Fly data type
 	// Send a SansgridFly from router to radio
@@ -257,6 +313,12 @@ int routerHandleFly(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Handle a SansgridEyeball payload
+ *
+ * Sends an Eyeball to the server
+ */
 int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle an Eyeball data type
 	// Assign tentative IP Address 
@@ -311,6 +373,12 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 }
 
 
+
+/**
+ * \brief Handle a SansgridPeck payload
+ *
+ * Sends a Peck over the radio to a sensor
+ */
 int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peck data type
 	// Send SansgridPeck from server to sensor
@@ -362,6 +430,12 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Handle a SansgridSing Payload
+ *
+ * Sends a Sing to the radio
+ */
 int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Sing data type
 	// Send a SansgridSing payload from server to sensor
@@ -401,6 +475,12 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Handle a SansgridMock payload
+ *
+ * Sends a Mock to the server
+ */
 int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Mock data type
 	// Send a SansgridMock payload from server to sensor
@@ -444,6 +524,12 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Handle a SansgridPeacock payload
+ *
+ * Sends a Peacock to the server
+ */
 int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Peacock data type
 	// Send a SansgridPeacock from sensor to server
@@ -477,6 +563,12 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 }
 
 
+
+/**
+ * \brief Handle a SansgridNest payload
+ *
+ * Sends a Nest over the radio to the sensor
+ */
 int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Nest data type
 	// Send a SansgridNest from server to sensor
@@ -498,6 +590,11 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+/**
+ * \brief Handle a SansgridSquawk payload
+ *
+ * Sends a Squawk either to the server, or to the sensor
+ */
 int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Squawk data type
 	// Send a SansgridSquawk 	from server to sensor
@@ -581,6 +678,15 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	return 0;
 }
 
+
+/**
+ * \brief Handle a SansgridHeartbeat payload
+ *
+ * Sends a Heartbeat to the radio, which will forward the payload
+ * to a sensor radio \n
+ * Or refresh a device if a heartbeat response has been received
+ * from a sensor radio
+ */
 int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Heartbeat data type
 	// Send a SansgridHeartbeat from router to sensor
@@ -626,6 +732,13 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	return 0;
 }
 
+
+/** 
+ * \brief Handle a SansgridChirp payload
+ *
+ * Forwards a chirp either from the sensor to server,
+ * or from server to sensor
+ */
 int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Chirp data type
 	// Send a SansgridChirp from server to sensor
@@ -681,6 +794,12 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Handle a Server Status payload
+ *
+ * Used for status updates between the router and server
+ */
 int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a server<-->router status command
 	SansgridIRStatus *sg_irstatus;

@@ -36,17 +36,34 @@
 
 
 
+/**
+ * \brief An atomic ring buffer implementation
+ *
+ * The Queue is a ring buffer whose entries
+ * are pointers to blocks of memory. \n
+ * Note that queue and dequeue operations are atomic,
+ * but the data stored on the queue is not protected.
+ * Therefore data should be dynamically allocated before
+ * being enqueued.
+ */
 struct Queue {
-	void **list;					// actual data storage
-	uint32_t size;					// number of indeces in the list
-	// Head/Tail points
-	uint32_t queue_index_end;		// where data is added
-	uint32_t queue_index_start;		// where data is taken
+	/// Storage
+	void **list;
+	/// Number of indeces in the list
+	uint32_t size;
+	/// index that data is added at
+	uint32_t queue_index_end;
+	/// index that data is taken from
+	uint32_t queue_index_start;
 	// Synchronization Primitives
+	/// Queue entry lock
 	pthread_mutex_t queue_lock;		// make all queue access atomic
-	sem_t queue_empty_lock;			// lock that triggers on empty queue
-	sem_t queue_full_lock;			// lock that triggers on full queue
+	/// Lock that blocks when the queue is empty
+	sem_t queue_empty_lock;
+	/// Lock that blocks when the queue is full
+	sem_t queue_full_lock;
 };
+
 
 static void modInc(uint32_t *a, uint32_t m) {
 	// increment and take the modulo.
@@ -99,6 +116,14 @@ static int dequeue(Queue *queue, void **serial_data, int (*sem_fn)(sem_t*)) {
 
 /* Visible Functions */
 
+/**
+ * \brief Initialize the queue
+ * \param	size	Max number of entries that can be stored \n
+ * Note that the size must be greater than 1.
+ * \returns
+ * On Success, returns a pointer to the queue
+ * On Failure, returns NULL
+ */
 Queue *queueInit(uint32_t size) {
 	// Create a queue with size elements
 
@@ -133,6 +158,11 @@ Queue *queueInit(uint32_t size) {
 
 
 
+/**
+ * \brief Free queue resources 
+ *
+ * The entries on the queue are not freed
+ */
 Queue *queueDestroy(Queue *queue) {
 	// Free up a queue
 
@@ -147,6 +177,9 @@ Queue *queueDestroy(Queue *queue) {
 
 
 
+/**
+ * \brief Return the number of elements in the queue
+ */
 int queueSize(Queue *queue) {
 	// Get the number of elements in the queue
 
@@ -161,6 +194,9 @@ int queueSize(Queue *queue) {
 
 
 
+/**
+ * \brief Return the max number of elements in the queue
+ */
 int queueMaxSize(Queue *queue) {
 	// Get the max number of elements we can enqueue
 	
@@ -169,7 +205,11 @@ int queueMaxSize(Queue *queue) {
 
 
 
-
+/**
+ * \brief Try to enqueue data, fail if data can't be enqueued
+ *
+ * If data can't be enqueued, return right away with a failure
+ */
 int queueTryEnqueue(Queue *queue, void *serial_data) {
 	// try to put data onto the queue
 	// If the queue is full, return an error
@@ -179,6 +219,12 @@ int queueTryEnqueue(Queue *queue, void *serial_data) {
 
 
 
+/**
+ * \brief Enqueue data, block if data can't be enqueued
+ *
+ * If data can't be enqueued, block until there is a slot
+ * available.
+ */
 int queueEnqueue(Queue *queue, void *serial_data) {
 	// Put data onto the queue
 	// If the queue is full, block until space is available
@@ -188,6 +234,11 @@ int queueEnqueue(Queue *queue, void *serial_data) {
 
 
 
+/**
+ * \brief Try to dequeue data, fail if data can't be dequeued
+ *
+ * If data can't be dequeued, return right away with a failure
+ */
 int queueTryDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.
 	// If the queue is empty, return an error
@@ -197,6 +248,12 @@ int queueTryDequeue(Queue *queue, void **serial_data) {
 
 
 
+/**
+ * \brief Dequeue data, block if data can't be dequeued
+ *
+ * If data can't be dequeued, block until there is 
+ * data in the queue
+ */
 int queueDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.
 	// If the queue is empty, block until data is available

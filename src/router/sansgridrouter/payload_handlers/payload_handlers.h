@@ -18,6 +18,8 @@
  *
  *
  */
+
+/** \file */
 #ifndef __SG_ROUTER_HANDLERS_H__
 #define __SG_ROUTER_HANDLERS_H__
 

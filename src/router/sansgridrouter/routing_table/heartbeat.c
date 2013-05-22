@@ -29,15 +29,31 @@
 #include <time.h>
 #include <syslog.h>
 
-struct HeartbeatStatus {
-	int32_t device_health;	// starts at ping_thres, 
-							// drops every time we ping
-							// goes back up to ping_thres
-							// when we hear from device
-	int32_t stale_thres;	// when a device goes stale
 
-	int32_t ping_thres;		// how many lost pings we can get
-							// before the device is lost
+/**
+ * \brief Data structure for managing device heartbeats
+ *
+ * Keeps track of when the device was last heard,
+ * when to consider the device stale, and when to drop
+ * the device
+ */
+struct HeartbeatStatus {
+	/**
+	 * \brief Current status of device
+	 *
+	 * starts at ping_thres, 
+	 * drops every time we ping
+	 * goes back up to ping_thres
+	 * when we hear from device
+	 */
+	int32_t device_health;	
+	/// when a device goes stale
+	int32_t stale_thres;
+	/**
+	 * how many lost pings we can have 
+	 * before the device is considered lost
+	 */
+	int32_t ping_thres;
 };
 
 
@@ -52,9 +68,14 @@ static int hbAssertValid(HeartbeatStatus *hb) {
 	return 0;
 }
 
+
+
+/**
+ * \brief Return whether or not the device is stale
+ *
+ * also signal device stale if device is lost
+ */
 int32_t hbIsDeviceStale(HeartbeatStatus *hb) {
-	// return whether or not the device is stale
-	// also signal device stale if device is lost
 	if (hbAssertValid(hb) == -1) {
 		syslog(LOG_INFO, "NULL in hbIsDeviceStale");
 		return -1;
@@ -66,8 +87,11 @@ int32_t hbIsDeviceStale(HeartbeatStatus *hb) {
 }
 
 
+
+/**
+ * \brief Return whether or not the device is lost
+ */
 int32_t hbIsDeviceLost(HeartbeatStatus *hb) {
-	// return whether or not the device is lost
 	if (hbAssertValid(hb) == -1) {
 		syslog(LOG_INFO, "NULL in hbIsDeviceLost");
 		return -1;
@@ -76,6 +100,16 @@ int32_t hbIsDeviceLost(HeartbeatStatus *hb) {
 	return hb->device_health <= 0;
 }
 
+
+/**
+ * \brief Initialize Heartbeat Data Structure
+ *
+ * Initializes to start at the ping_thres,
+ * \param	ping_thres		How many pings can pass before device is lost
+ * \param	stale_thres		At what device_health level the device is stale
+ * \returns
+ * A pointer to a block of memory containing the heartbeat data structure
+ */
 HeartbeatStatus *hbInit(int32_t ping_thres, int32_t stale_thres) {
 	// init with a nonstandard ping threshold for the device
 	HeartbeatStatus *hb;
@@ -91,12 +125,25 @@ HeartbeatStatus *hbInit(int32_t ping_thres, int32_t stale_thres) {
 	return hb;
 }
 
+
+
+/**
+ * \brief Initialize Heartbeat Data Structure to Default values
+ *
+ * Use defined values for ping threshold and stale threshold
+ * \returns
+ * A pointer to a block of memory containing the heartbeat data structure
+ */
 HeartbeatStatus *hbInitDefault(void) {
 	// Init with standard ping threshold for the device
 	return hbInit(ping_thres_default, stale_thres_default);
 }
 
 
+
+/**
+ * \brief Free allocated resources contained in Heartbeat Data structure
+ */
 void hbDestroy(HeartbeatStatus *hb) {
 	free(hb);
 	return;
@@ -104,12 +151,17 @@ void hbDestroy(HeartbeatStatus *hb) {
 
 
 
+/**
+ * \brief Decrement the device health and return if status changed
+ *
+ * Note that this doesn't send a status update
+ * \returns
+ * return -1 on error
+ * return 1 if device just went stale
+ * return 3 if device was just lost
+ * otherwise return 0 (state didn't change)
+ */
 int32_t hbDecrement(HeartbeatStatus *hb) {
-	// Decrement the device health
-	// return -1 on error
-	// return 1 if device just went stale
-	// return 2 if device was just lost
-	// otherwise return 0 (state didn't change)
 	int32_t device_before = 0;
 	int32_t device_after = 0;
 
@@ -128,12 +180,18 @@ int32_t hbDecrement(HeartbeatStatus *hb) {
 }
 
 
+
+/**
+ * \brief Device was just heard from
+ *
+ * Note that this doesn't send a status update
+ * \returns
+ * return -1 on error
+ * return 1 if device was stale
+ * return 2 if device was lost
+ * otherwise return 0 (state didn't change)
+ */
 int32_t hbRefresh(HeartbeatStatus *hb) {
-	// Device was just heard from
-	// return -1 on error
-	// return 1 if device was stale
-	// return 2 if device was lost
-	// otherwise return 0 (state didn't change)
 	int32_t device_before = 0;
 	int32_t device_after = 0;
 

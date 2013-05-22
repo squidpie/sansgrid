@@ -49,6 +49,8 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
+
 enum CommReadDirEnum {
 	SG_TEST_COMM_WRITE_NONE,
 	SG_TEST_COMM_WRITE_SPI,

@@ -31,9 +31,18 @@
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
 #include "../sansgrid_router.h"
+/** \file */
 
 
 
+/**
+ * \brief Send a Sansgrid Payload to the Server
+ *
+ * Translate a SansgridPayload into a null-terminated key-value string
+ * and send it to the server.
+ * \param[in]	sg_serial	data to send
+ * \param[in]	size		size of structure. Not currently used.
+ */
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	if (!size) 
@@ -74,18 +83,6 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	}
 
 	return 0;
-}
-
-int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	// Receive serialdata, size of packet stored in size
-	sem_t blocker;
-
-	sem_init(&blocker, 0, 0);
-	sem_wait(&blocker);
-
-	sem_destroy(&blocker);
-
-	return -1;
 }
 
 

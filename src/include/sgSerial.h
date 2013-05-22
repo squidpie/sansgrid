@@ -21,25 +21,36 @@
 
 #ifndef __SG_SERIAL_H__
 #define __SG_SERIAL_H__
+/** \file */
 
 #include <stdint.h>
-//#include <arpa/inet.h>
 #include "payloads.h"
 
+/**
+ * \brief SPI structure
+ *
+ * Used to send data over the wire
+ */
 typedef struct SansgridSerial {
-	uint8_t control;				// control byte
-	uint8_t ip_addr[IP_SIZE];		// Overloaded IP Field
-									// contains origin or destination IP address
-	uint8_t payload[81];			// payload
+	uint8_t control;				///< \brief control byte
+	/// Overloaded IP field, contains origin or destination IP address
+	uint8_t ip_addr[IP_SIZE];	
+	uint8_t payload[81];			///< payload
 } SansgridSerial;
 
 
+/**
+ * \brief Control Byte for SPI
+ *
+ * Used to denote if data is valid afterward
+ */
 enum SGSerialCtrlByte {
+	/// No data is contained
 	SG_SERIAL_CTRL_NO_DATA 			= 0xFD,
+	/// Valid data is contained
 	SG_SERIAL_CTRL_VALID_DATA 		= 0xAD,
-	SG_SERIAL_CTRL_SETAS_SENSOR 	= 0x10,
-	SG_SERIAL_CTRL_SETAS_ROUTER 	= 0x11,
-	SG_SERIAL_CTRL_DEV_NOT_READY	= 0xDD,
+	/// Error
+	SG_SERIAL_CTRL_DEV_NOT_READY	= 0xFE,
 };
 
 // initialize serial connection
@@ -53,7 +64,6 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size);
 // Get data from serial in. Data size will be in size.
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size);
 // Finish serial connection
-// WARNING: This function will change
 int8_t sgSerialClose(void);
 
 

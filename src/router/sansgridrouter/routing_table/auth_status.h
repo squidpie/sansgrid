@@ -20,6 +20,7 @@
  */
 #ifndef __SG_AUTH_STATUS_H__
 #define __SG_AUTH_STATUS_H__
+/** \file */
 
 #include <stdint.h>
 typedef struct DeviceAuth DeviceAuth;

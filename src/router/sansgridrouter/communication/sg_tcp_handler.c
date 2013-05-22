@@ -29,17 +29,26 @@
 #include "sg_tcp.h"
 #include "../payload_handlers/payload_handlers.h"
 #include "../sansgrid_router.h"
+/** \file */
 
 
 
+/**
+ * \brief Extract a keyvalue from a string
+ *
+ * \param[in]	str		Null-terminated string to parse
+ * \param[out]	key		Extracted Key
+ * \param[out]	value	Extracted Value
+ * \param[out]	saved	Used to make the function Re-entrant/thread-safe
+ *
+ * \returns
+ * This function only returns 0 when both the key and the value are null.
+ * This is to catch empty values but still return the key. \n
+ * Notes:
+ * No checks are done for empty keys. \n
+ * The saved argument should start initialized as a pointer to NULL.
+ */
 int extract_keyvalue(char *str, char **key, char **value, char **saved) {
-	// Get key and value from string
-	// Notes:
-	// 	Function returns 0 only if both the key and value are null.
-	// 		This is to catch empty values but still return the key
-	// 	No checks are done for empty keys
-	// 	saved should start initialized as a ptr to NULL
-
 	*key = (*saved == NULL) ? strtok_r(&str[1],	DELIM_VAL,	saved) : 
 				  strtok_r(NULL,	DELIM_VAL,	saved);
 
@@ -65,6 +74,13 @@ int extract_keyvalue(char *str, char **key, char **value, char **saved) {
 
 
 
+/**
+ * \brief Convert the full string of hex values into an array
+ *
+ * \param[out]	hexarray	An array of 8-bit values
+ * \param[in]	str			A null-terminated string of ASCII hex values
+ * \param[in]	hexsize		Number of hex values (not used)
+ */
 void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	// convert the full string of hex values into an array
 	uint32_t i_str, i_hex = 0;
@@ -105,6 +121,16 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 
 
 
+/**
+ * \brief Get a value from a dictionary
+ *
+ * \param[in]	dict	A populated dictionary
+ * \param[in]	size	Size of the dictionary
+ * \param[in]	key		Key to match against
+ * \returns
+ * A match is returned if found. \n
+ * If no match is found, NULL is returned.
+ */
 char *match(Dictionary dict[], int size, char *key) {
 	// Return the value at key.
 	int i;
@@ -125,11 +151,15 @@ char *match(Dictionary dict[], int size, char *key) {
 }
 
 
+/**
+ * \brief Find the rdid from the dictionary
+ */
 static int32_t translateRdid(Dictionary dict[], int size) {
 	uint32_t rdid_return;
 	rdid_return = atoi(match(dict, size, "rdid"));
 	return rdid_return;
 }
+
 
 
 static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
@@ -149,6 +179,8 @@ static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_se
 
 	return translateRdid(dict, size);
 }
+
+
 
 static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peck datatype from the payload
@@ -182,6 +214,8 @@ static int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial
 	return translateRdid(dict, size);
 }
 
+
+
 static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a mock datatype from the payload
 	SansgridMock sg_mock;
@@ -193,6 +227,8 @@ static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial
 	
 	return translateRdid(dict, size);
 }
+
+
 
 static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
@@ -253,6 +289,8 @@ static int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial
 	return translateRdid(dict, size);
 }
 
+
+
 static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
 	SansgridSquawk sg_squawk;
@@ -264,6 +302,8 @@ static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_seri
 
 	return translateRdid(dict, size);
 }
+
+
 
 static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a chirp datatype from the payload
@@ -278,6 +318,8 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 
 	return translateRdid(dict, size);
 }
+
+
 
 static int8_t convertIRStatus(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get an router<-->server datatype from the payload
@@ -297,6 +339,16 @@ static int8_t convertIRStatus(Dictionary dict[], int size, SansgridSerial *sg_se
 
 
 
+/**
+ * \brief Convert an intrarouter null-terminated key-value string 
+ * into formatted data
+ *
+ * \param[in]	payload		Null-terminated key-value string
+ * \param[out]	sg_serial	Sansgrid Serial Formatted String
+ * \returns
+ * On success, return 0 \n
+ * On failure, return -1
+ */
 int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	// Take a payload, 	return the translated serial packet,
 	// 					return the device identifier (rdid)
@@ -377,6 +429,17 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 }
 
 
+
+/**
+ * \brief Add a Hex field to a null-terminated key-value string.
+ *
+ * \param[in]	key		A key to add to the null-terminated string
+ * \param[in]	value	A value to add to the null-terminated string
+ * \param[in]	size	Size of the key field
+ * \param[out]	payload	The null-terminated key-value string
+ * \returns
+ * 0 always
+ */
 int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
 	int i;
@@ -420,7 +483,14 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 
 
 
-
+/**
+ * \brief Add an integer value to the null-terminated key-value string
+ *
+ * \param[in]	key		The key match
+ * \param[in]	value	An integer stored in value
+ * \param[in]	size	The number of entries in value
+ * \param[out]	payload	A null-terminated key-value string
+ */
 int addIntField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	// Add a field to the payload
 	uint32_t i;
@@ -439,6 +509,16 @@ int addIntField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 }
 
 
+
+/**
+ * \brief Add a value directly to the null-terminated key-value string
+ *
+ *
+ * \param[in]	key		The key match
+ * \param[in]	value	A null-terminated string stored in value
+ * \param[in]	size	The size of the string in value
+ * \param[out]	payload	A null-terminated key-value string
+ */
 int addCharField(const char *key, char *value, uint32_t size, char *payload) {
 	// Add a field to the payload
 	const char *delim_key = DELIM_KEY;
@@ -450,6 +530,17 @@ int addCharField(const char *key, char *value, uint32_t size, char *payload) {
 
 
 
+/**
+ * \brief Translate a SansgridSerial Packet into a null-terminated key-value
+ * intrarouter payload
+ *
+ * \param[in]	sg_serial	A SansgridSerial Data Structure with data to send
+ * \param[out]	payload		A null-terminated key-value string
+ * \returns
+ * On Error, returns -1
+ * Errors will be noted in the log if verbosity is allows LOG_WARNING
+ * if the conversion was successful, returns 0
+ */
 int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	// translate the SansgridSerial packet into an intrarouter payload
 	SansgridEyeball 	sg_eyeball;
