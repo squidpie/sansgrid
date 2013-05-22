@@ -30,6 +30,7 @@
 #include "sg_communication_stubs.h"
 
 
+int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 
 Suite *intraRouterTestAtox(void);
 

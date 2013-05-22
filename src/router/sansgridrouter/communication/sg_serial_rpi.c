@@ -36,24 +36,45 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 #include <syslog.h>
+/** \file */
 
 
 #define KHZ(freq) (1000*freq)
 #define MHZ(freq) (1000*KHZ(freq))
 
-// EEPROM-specific defines
+/// SPI Clock Speed, in KHz
 #define SPI_SPEED_KHZ	512
-//#define WRITE_CYCLE_M	1
+/**
+ * \brief Write Cycle Time, in us
+ *
+ * After transferring WRITE_MAX_BYTES,
+ * wait for this period of time before
+ * continuing.
+ */
 #define WRITE_CYCLE_U	6000
+/// The max number of bytes we can write before cycling
 #define WRITE_MAX_BYTES 1
 
-// What pin the slave interrupt is on
-// wiringPi pin number
+/**
+ * \brief What pin the slave interrupt is on
+ * 
+ * Uses wiringPi pin number 
+ */
 #define SLAVE_INT_PIN 	2
 
 static sem_t wait_on_slave;
 static int sem_initd = 0;
 
+/**
+ * \brief Prepare for impending SPI Transaction
+ *
+ * Called before every SPI transaction.
+ * \returns
+ * On success, a file descriptor is returned. You can write to
+ * the file descriptor using Linux syscalls read and write. \n
+ * You do have to close the file descriptor using the close() syscall
+ * once you are done.
+ */
 int spiSetup(void) {
 	int fd;
 	// Set up SPI
@@ -66,6 +87,16 @@ int spiSetup(void) {
 }
 
 
+/**
+ * \brief Transfer data full-duplex over SPI
+ *
+ * Transfer raw data full-duplex over a wire.
+ * \param[in,out] buffer	Data to send. Received data is returned here.
+ * \param 		size		Size of data to send.
+ * \returns
+ * Data is returned in the buffer. \n
+ * return 0 always.
+ */
 int spiTransfer(char *buffer, int size) {
 	int i;
 	// only a certain amount of byte can be written at a time. see below
@@ -87,11 +118,20 @@ int spiTransfer(char *buffer, int size) {
 	return 0;
 }
 
+
 int8_t sgSerialOpen(void) {
 	return 0;
 }
 
 
+/**
+ * \brief Send data over SPI
+ *
+ * The SansgridSerial structure is converted into raw bytes
+ * and transferred over a serial wire. 
+ * \param sg_serial[in]		Data to be sent. Contains a Sansgrid Payload
+ * \param size[in]			Size of data. Not currently used.
+ */
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	int fd;
@@ -111,10 +151,27 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	return 0;
 }
 
+
+/**
+ * \brief Interrupt handler: waits until slave wants to send data
+ *
+ * An interrupt is set up in sgSerialReceive on a GPIO pin.
+ * When that pin is asserted, this function allows a read transaction
+ * to commence.
+ */
 void sgSerialSlaveSending(void) {
 	sem_post(&wait_on_slave);
 }
 
+
+/**
+ * \brief Receive data over SPI
+ *
+ * Data is received over serial wire and then converted
+ * into a SansgridSerial structure.  
+ * \param sg_serial[out]		Where received data is placed. 
+ * \param size[out]				Size of the returned payload
+ */
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	// Code from
