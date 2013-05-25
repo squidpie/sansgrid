@@ -845,7 +845,7 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
-	int old_dispatch = router_opts.dispatch_pause;
+	//int old_dispatch = router_opts.dispatch_pause;
 
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
@@ -857,9 +857,8 @@ int main(int argc, char *argv[]) {
 	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
 	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
-	router_opts.dispatch_pause = 1;
+	//router_opts.dispatch_pause = 1;
 	queueEnqueue(dispatch, sg_serial);
-	//routerHandleHatching(routing_table, sg_serial);
 
 
 	// Spin off readers/writers
@@ -868,7 +867,7 @@ int main(int argc, char *argv[]) {
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
 
-	router_opts.dispatch_pause = old_dispatch;
+	//router_opts.dispatch_pause = old_dispatch;
 
 	// Listen for commands or data from the server
 	sgSocketListen();
