@@ -43,7 +43,8 @@
 #define MHZ(freq) (1000*KHZ(freq))
 
 /// SPI Clock Speed, in KHz
-#define SPI_SPEED_KHZ	512
+//#define SPI_SPEED_KHZ	512
+#define SPI_SPEED_KHZ	4000L
 /**
  * \brief Write Cycle Time, in us
  *
@@ -64,6 +65,7 @@
 
 static sem_t wait_on_slave;
 static int sem_initd = 0;
+static int g_fd = 0;
 
 /**
  * \brief Prepare for impending SPI Transaction
@@ -76,14 +78,13 @@ static int sem_initd = 0;
  * once you are done.
  */
 int spiSetup(void) {
-	int fd;
-	// Set up SPI
-	if ((fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_KHZ))) < 0) {
-		syslog(LOG_ERR, "SPI Setup failed: %s\n", strerror (errno));
-		return -1;
-	} else {
-		return fd;
-	}
+	FILE *FPTR;
+	FPTR = popen("gpio load spi", "r");
+	fclose(FPTR);
+	// FIXME: use SLAVE_INT_PIN here
+	FPTR = popen("gpio export 2 in", "r");
+	fclose(FPTR);
+	return 0;
 }
 
 
@@ -118,11 +119,26 @@ int spiTransfer(char *buffer, int size) {
 	return 0;
 }
 
-
 int8_t sgSerialOpen(void) {
+	// Set up SPI
+	if ((g_fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_KHZ))) < 0) {
+		syslog(LOG_ERR, "SPI Setup failed: %s\n", strerror (errno));
+		return -1;
+	} else {
+		return 0;
+	}
 	return 0;
 }
 
+int spiOpen(void) {
+	// Wrapper to setup SPI
+	int8_t exit_code;
+	if ((exit_code = sgSerialOpen()) < 0) {
+		return exit_code;
+	} else {
+		return g_fd;
+	}
+}
 
 /**
  * \brief Send data over SPI
@@ -139,7 +155,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 	syslog(LOG_INFO, "Sending data over Serial");
 
-	if ((fd = spiSetup()) == -1) {
+	if ((fd = spiOpen()) == -1) {
 		return -1;
 	}
 
@@ -184,7 +200,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		exit(EXIT_FAILURE);
 	}
 	//syslog(LOG_DEBUG, "Using pin %i", SLAVE_INT_PIN);
-	if (wiringPiISR(SLAVE_INT_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
+	if (wiringPiISR(wpiPinToGpio(SLAVE_INT_PIN), INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
 		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
 		exit(EXIT_FAILURE);
 	}
@@ -196,10 +212,14 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 
 	// receive data
+	int val = 0;
 	sem_wait(&wait_on_slave);
+	sem_getvalue(&wait_on_slave, &val);
+	while (sem_trywait(&wait_on_slave) == 0);
+	printf("Value = %i\n", val);
 
 	// Slave wants to send data
-	if ((fd = spiSetup()) == -1) {
+	if ((fd = spiOpen()) == -1) {
 		syslog(LOG_ERR, "setting up SPI failed");
 		exit(EXIT_FAILURE);
 	}
@@ -208,7 +228,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA) {
 		syslog(LOG_WARNING, "Bad data on SPI");
 		sleep(5);
-
+		return -1;
 	}
 
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));

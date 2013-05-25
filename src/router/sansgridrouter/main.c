@@ -42,6 +42,7 @@
 /// \file
 
 void usage(int status);
+int spiSetup(void);
 
 
 /**
@@ -137,6 +138,10 @@ void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
 	uint32_t size;
 	SansgridSerial *sg_serial;
+	if (spiSetup() < 0) {
+		syslog(LOG_ERR, "Couldn't initialize SPI");
+		exit(EXIT_FAILURE);
+	}
 	while (1) {
 		while (sgSerialReceive(&sg_serial, &size) == -1) {
 			sched_yield();
@@ -272,20 +277,24 @@ void *heartbeatRuntime(void *arg) {
 void *flyRuntime(void *arg) {
 	// handle broadcast of ESSID
 	SansgridFly sg_fly;
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial = NULL;
 	memset(&sg_fly, 0x0, sizeof(SansgridFly));
-	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	sg_fly.datatype = SG_FLY;
 	while (1) {
-		routingTableGetEssid(routing_table, sg_fly.network_name);
-		memcpy(sg_serial.payload, &sg_fly, sizeof(SansgridFly));
-		sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
-		routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
-		while (router_opts.dispatch_pause) {
-			sleep(1);
-		}	
-		if (!router_opts.hidden_network)
-			routerHandleFly(routing_table, &sg_serial);
+		if (!router_opts.hidden_network) {
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+			memset(sg_serial, 0x0, sizeof(SansgridSerial));
+			routingTableGetEssid(routing_table, sg_fly.network_name);
+			memcpy(sg_serial->payload, &sg_fly, sizeof(SansgridFly));
+			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
+			routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
+			while (router_opts.dispatch_pause) {
+				sleep(1);
+			}	
+			queueEnqueue(dispatch, sg_serial);
+			sg_serial = NULL;
+			//routerHandleFly(routing_table, &sg_serial);
+		}
 		sleep(10);
 	}
 
@@ -629,7 +638,7 @@ int main(int argc, char *argv[]) {
 	char payload[400];
 	uint8_t ip_addr[IP_SIZE];
 	SansgridHatching sg_hatch;
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial;
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
@@ -830,16 +839,21 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
+	int old_dispatch = router_opts.dispatch_pause;
+
+	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
-	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	memset(sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
 	ip_addr[IP_SIZE-1] = 0x1;
 	sg_hatch.datatype = SG_HATCH;
 	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
-	memcpy(&sg_serial.payload, &sg_hatch, sizeof(SansgridHatching));
-	sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
-	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
-	routerHandleHatching(routing_table, &sg_serial);
+	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
+	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
+	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+	router_opts.dispatch_pause = 1;
+	queueEnqueue(dispatch, sg_serial);
+	//routerHandleHatching(routing_table, sg_serial);
 
 
 	// Spin off readers/writers
@@ -847,6 +861,8 @@ int main(int argc, char *argv[]) {
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
+
+	router_opts.dispatch_pause = old_dispatch;
 
 	// Listen for commands or data from the server
 	sgSocketListen();
