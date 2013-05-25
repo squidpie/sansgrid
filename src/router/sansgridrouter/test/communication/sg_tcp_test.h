@@ -28,6 +28,7 @@
 #include "../tests.h"
 #include "../../communication/sg_tcp.h"
 #include "sg_communication_stubs.h"
+/// \file
 
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);

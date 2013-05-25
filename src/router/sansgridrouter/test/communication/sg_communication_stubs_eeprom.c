@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 #define _POSIX_C_SOURCE 200809L          // Required for nanosleep()
+/** \file */
 
 #include <time.h>
 #include <stdio.h>
@@ -50,12 +51,29 @@ static char eeprom_slots[EEPROM_SLOTS][50];
 #define MHZ(freq) (1000*KHZ(freq))
 
 // EEPROM-specific defines
+/// SPI clock speed, in MHz
 #define SPI_SPEED_MHZ	2
+/// Write command
 #define WRITE 			0x02
+/// Read command
 #define READ			0x03
+/// Write enable command
 #define WRITE_ENABLE 	0x06
+/// Write cycle time, in usecs
 #define WRITE_CYCLE		5000
 
+
+/**
+ * \brief Send data to an EEPROM chip
+ *
+ * This sends data to an EEPROM using SPI BUS protocol
+ * \param[in]	buffer	Data to send
+ * \param[in]	address	EEPROM address to write to
+ * \param[in]	size	Number of bytes to write
+ * \returns
+ * On error, returns -1. \n
+ * Otherwise returns 0
+ */
 static int eepromSendData(uint8_t *buffer, uint16_t address, int size) { 
 	// Set up SPI
 	int i;
@@ -111,6 +129,14 @@ static int eepromSendData(uint8_t *buffer, uint16_t address, int size) {
 
 
 
+/**
+ * \brief Send formatted data to an EEPROM chip
+ *
+ * This sends an sg_serial structure to an EEPROM chip.
+ * \param[in]	sg_serial	Sansgrid data to send
+ * \param[in]	size		Size of data to send
+ * \param[in]	ts			Stub configuration to use
+ */
 int eepromSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
 
 	SANSGRID_UNION(SansgridSerial, SGSU) sg_serial_union;
@@ -170,6 +196,15 @@ int eepromSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
 }
 
 
+
+/**
+ * \brief Receive data from an EEPROM chip
+ *
+ * This receives data from an EEPROM using SPI BUS protocol
+ * \param[out]	sg_serial	Sansgrid data received
+ * \param[out]	size		Size of data received
+ * \param[in]	ts			Stub configuration to use
+ */
 int eepromReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts) {
 	// Read from an EEPROM chip over SPI
 	int fd;

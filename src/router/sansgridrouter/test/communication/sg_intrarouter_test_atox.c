@@ -18,7 +18,11 @@
  */
 
 #include "sg_tcp_test.h"
+/// \file
 
+/**
+ * Test atox() one byte at a time
+ */
 START_TEST (testAtoxOneByte) {
 	uint16_t expected;
 	uint8_t hexarray;
@@ -33,6 +37,10 @@ START_TEST (testAtoxOneByte) {
 }
 END_TEST
 
+
+/**
+ * test atox() with multiple types
+ */
 START_TEST (testAtoxMulti) {
 	int i, j;
 	uint16_t incrementor;
@@ -104,6 +112,12 @@ END_TEST
 
 
 
+/**
+ * \brief atox() function testing
+ *
+ * atox() is a complex function. Thus, there is a testsuite specifically
+ * dedicated to it. The tests make sure the conversions are correct.
+ */
 Suite *intraRouterTestAtox(void) {
 	Suite *s = suite_create("Hex String Conversion Tests");
 	TCase *tc_core = tcase_create("Core");

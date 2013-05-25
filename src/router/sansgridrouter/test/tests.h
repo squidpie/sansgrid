@@ -19,12 +19,15 @@
 
 #ifndef __SANSGRID_ROUTER_TESTS_H__
 #define __SANSGRID_ROUTER_TESTS_H__
+/// \file
 
 #include <check.h>
 #include <stdint.h>
 
+/// Amount of debug information to print to console
 #define TESTS_DEBUG_LEVEL 0
-uint32_t num_devices;				// number of devices being tested
+/// Number of devices being tested
+uint32_t num_devices;
 
 
 // General Debug

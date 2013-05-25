@@ -32,10 +32,21 @@
 #include <sgSerial.h>
 #include "sg_communication_stubs.h"
 #include <sys/stat.h>
+/** \file */
 
 /*
  * Generic Send/Receive functions.
  * These hook into both serial and TCP stubs
+ */
+
+/**
+ * \brief Send data over a Unix Pipe
+ *
+ * \param[in]	sg_serial	data to send
+ * \param[in]	size		size of data (not used)
+ * \param[in]	ts			Stub control data
+ * \returns
+ * 0 always
  */
 int8_t unixpipeSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
 	// Send size bytes of serialdata
@@ -76,6 +87,16 @@ int8_t unixpipeSend(SansgridSerial *sg_serial, uint32_t size, TalkStub *ts) {
 
 
 
+/**
+ * \brief Receive data from a Unix pipe
+ *
+ * \param[out]	sg_serial	data to receive
+ * \param[out]	size		size of data
+ * \param[in]	ts			Stub control data
+ * \returns
+ * If there is no data to receive over the pipe, 1 is returned. \n
+ * Otherwise return 0
+ */
 int8_t unixpipeReceive(SansgridSerial **sg_serial, uint32_t *size, TalkStub *ts) {
 	// Receive serialdata, size of packet stored in size
 	uint32_t i;

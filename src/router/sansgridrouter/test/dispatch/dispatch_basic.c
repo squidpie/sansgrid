@@ -36,6 +36,7 @@
  */
 
 #define _POSIX_C_SOURCE 200809L
+/// \file
 
 
 #include <stdio.h>					// I/O operations
@@ -49,13 +50,14 @@
 #include "../tests.h"
 
 
-#define NUM_DATA 		100			// Amount of data to send through
-#define QUEUE_SIZE 		10			// number of entries in the queue
-#define DATA_LENGTH 	32 			// Size of the raw data used (in bytes)
+#define NUM_DATA 		100			///< Amount of data to send through
+#define QUEUE_SIZE 		10			///< number of entries in the queue
+#define DATA_LENGTH 	32 			///< Size of the raw data used (in bytes)
 
 
 
 
+/// Thread that writes to the queue
 static void *writerFunc(void *arg) {
 	// thread that writes to the queue
 	int i;
@@ -92,6 +94,9 @@ static void *writerFunc(void *arg) {
 
 
 
+/**
+ * Thread that does a heartbeat every 1 msec
+ */
 static void *heartbeatFunc(void *arg) {
 	// thread that does a heartbeat every 1 msec
 	// This uses timediffs to calculate when to send
@@ -129,6 +134,10 @@ static void *heartbeatFunc(void *arg) {
 
 
 
+/**
+ * Thread that reads the queue. Blocks until data is ready.
+ * Doesn't exit on its own.
+ */
 static void *readerFunc(void *arg) {
 	// Thread that reads the queue.
 	// Blocks until data is ready
@@ -172,6 +181,9 @@ static void *readerFunc(void *arg) {
 
 
 
+/**
+ * Basic Dispatch testing with few threads
+ */
 START_TEST (testDispatchBasic) {
 	// Simple tests for the queue
 	int i;
@@ -202,9 +214,12 @@ START_TEST (testDispatchBasic) {
 	queueDestroy(queue);
 
 }
-END_TEST
+END_TEST;
 
 
+/**
+ * Basic Dispatch testing with lots of threads
+ */
 START_TEST (testDispatchWithLotsOfThreads) {
 	// Throw a lot of threads at the queue
 	
@@ -255,10 +270,16 @@ START_TEST (testDispatchWithLotsOfThreads) {
 	queueDestroy(queue);
 	
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * \brief Basic Dispatch Testing
+ *
+ * This does some basic dispatch testing, doing reading/writing
+ * to a dispatch to test.
+ */
 Suite *dispatchBasicTesting (void) {
 	Suite *s = suite_create("Basic Dispatch testing");
 

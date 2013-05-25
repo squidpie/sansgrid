@@ -22,9 +22,7 @@
 
 #ifndef __SG_ROUTER_MAIN_H__
 #define __SG_ROUTER_MAIN_H__
-
-// choose whether or not we should enforce packet order
-#define SG_ROUTER_ENFORCE_PKT_ORD	1
+/// \file
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -34,28 +32,41 @@
 #include "routing_table/routing_table.h"
 #include "daemon/sansgrid_daemon.h"
 
+/// Socket Buffer size
 #define SG_SOCKET_BUFF_SIZE 1000
 
+/**
+ * \brief Router Options Structure
+ *
+ * Storage for router options. These can be given at initialization as args,
+ * or from a config file.
+ */
 typedef struct RouterOpts {
 	// options to pull out of a config file
 	// or to grab from command-line arguments
+	/// Router ESSID
 	char essid[80];
+	/// IP Address for the server
 	char serverip[20];
+	/// Key to use for the server
 	char serverkey[512];
+	/// Base IP address
 	uint8_t netmask[IP_SIZE];
-	int hidden_network;		// whether or not to broadcast essid
-	int verbosity;			// how loud we should be
-	int strictness;
-	int dispatch_pause;		// whether the dispatch should dequeue
-	int heartbeat_period;	// how often a device should be pinged
-	sem_t hb_wait;			// post this to interrupt heartbeat sleep
+	int hidden_network;		///< whether or not to broadcast essid
+	int verbosity;			///< how loud we should be
+	int strictness;			///< How strict authentication should be
+	int dispatch_pause;		///< whether the dispatch should dequeue
+	int heartbeat_period;	///< how often a device should be pinged
+	sem_t hb_wait;			///< post this to interrupt heartbeat sleep
 } RouterOpts;
 
 
+/// Router options instantiation
 RouterOpts router_opts;
+/// Global Ring buffer dispatch system
 Queue *dispatch;
+/// Global Routing Table 
 RoutingTable *routing_table;
-uint8_t router_base[IP_SIZE];
 
 
 int sgStorePID(pid_t pid);

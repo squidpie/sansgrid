@@ -20,6 +20,7 @@
  * This dispatch test uses a named pipe as a stub to read from.
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
+/// \file
 
 #include <stdio.h>
 #include <unistd.h>
@@ -38,14 +39,22 @@
 #include "../../dispatch/dispatch.h"
 #include "../tests.h"
 
+/**
+ * Arguments to be passed to a thread
+ */
 struct ThreadArgs {
+	/// Stub Configuration structure
 	TalkStub *ts_serial;
+	/// ring buffer dispatch system
 	Queue *queue;
 };
 
 void payloadMkSerial(SansgridSerial *sg_serial);
 
 
+/**
+ * Runtime for reading to / writing from a routing table
+ */
 static void *routingTableRuntime(void *arg) {
 	// Dispatch read/execute
 	int i;
@@ -76,6 +85,9 @@ static void *routingTableRuntime(void *arg) {
 }
 
 
+/**
+ * SPI reading thread
+ */
 static void *spiReader(void *arg) {
 	// reads from a serial connection and enqueues data
 	int i;
@@ -113,6 +125,9 @@ static void *spiReader(void *arg) {
 
 
 
+/**
+ * SPI writing thread
+ */
 static void *spiWriter(void *arg) {
 	// Writes to a serial connection
 
@@ -147,6 +162,9 @@ static void *spiWriter(void *arg) {
 	
 
 
+/**
+ * Unit test for advanced dispatch testing
+ */
 START_TEST (testAdvancedDispatch) {
 	// unit test code for more dispatch testing
 	pthread_t spi_read_thread,
@@ -185,10 +203,16 @@ START_TEST (testAdvancedDispatch) {
 
 	talkStubDestroy(thr_args.ts_serial);
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * \brief Advanced Dispatch Testing
+ *
+ * This does more advanced dispatch testing, instantiating more of the system
+ * than the basic dispatch testing.
+ */
 Suite *dispatchAdvancedTesting (void) {
 	Suite *s = suite_create("Advanced Dispatch testing");
 
