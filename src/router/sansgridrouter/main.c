@@ -138,10 +138,6 @@ void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
 	uint32_t size;
 	SansgridSerial *sg_serial;
-	if (spiSetup() < 0) {
-		syslog(LOG_ERR, "Couldn't initialize SPI");
-		exit(EXIT_FAILURE);
-	}
 	while (1) {
 		while (sgSerialReceive(&sg_serial, &size) == -1) {
 			sched_yield();
@@ -849,7 +845,10 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
-	//int old_dispatch = router_opts.dispatch_pause;
+	if (spiSetup() < 0) {
+		syslog(LOG_ERR, "Couldn't initialize SPI");
+		exit(EXIT_FAILURE);
+	}
 
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
@@ -862,7 +861,6 @@ int main(int argc, char *argv[]) {
 	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
 	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
-	//router_opts.dispatch_pause = 1;
 	queueEnqueue(dispatch, sg_serial);
 
 
@@ -872,7 +870,6 @@ int main(int argc, char *argv[]) {
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
 
-	//router_opts.dispatch_pause = old_dispatch;
 
 	// Listen for commands or data from the server
 	sgSocketListen();
