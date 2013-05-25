@@ -17,8 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
+/// Sing payload testing
 int testSingPayload(PayloadTestStruct *test_struct) {
 	// Call Sing tests with all options
 	int exit_code;
@@ -51,7 +53,7 @@ int testSingPayload(PayloadTestStruct *test_struct) {
 }
 
 
-
+/// Unit test for sing payloads
 START_TEST (testSing) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Singing\n");
@@ -63,10 +65,10 @@ START_TEST (testSing) {
 	printf("Successfully Sung\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
-
+/// Unit tests for sing payloads
 Suite *payloadTestSing(void) {
 	Suite *s = suite_create("Sing Payload Tests");
 	TCase *tc_core = tcase_create("Core");

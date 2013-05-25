@@ -27,6 +27,7 @@
  */
 #ifndef __SG_PAYLOAD_STUBS_H__
 #define __SG_PAYLOAD_STUBS_H__
+/// \file
 
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +52,11 @@
 
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size);
 
+/**
+ * \brief Communication Write Direction
+ *
+ * Choose whether to write to SPI, TCP, neither or both
+ */
 enum CommReadDirEnum {
 	SG_TEST_COMM_WRITE_NONE,
 	SG_TEST_COMM_WRITE_SPI,
@@ -58,46 +64,76 @@ enum CommReadDirEnum {
 	SG_TEST_COMM_WRITE_BOTH
 };
 
+/**
+ * \brief Test state
+ */
 typedef struct PayloadTestNode {
+	/// Read direction
 	enum CommReadDirEnum read_dir;
+	/// Next expected packet
 	enum SansgridDeviceStatusEnum next_packet;
+	/// Expected exit code
 	int expected_exit_code;
 } PayloadTestNode;
 
+
+/// Test structure
 typedef struct PayloadTestStruct {
 	// eyeball
+	/// Eyeball mode
 	enum SansgridEyeballModeEnum eyeball_mode;
+	/// Eyeball test state
 	PayloadTestNode *eyeball;
 	// peck
+	/// Peck Mode
 	enum SansgridPeckRecognitionEnum peck_mode;
+	/// Peck test state
 	PayloadTestNode *peck;
 	// sing
+	/// Sing Mode
 	enum SansgridDataTypeEnum sing_mode;
+	/// Sing test state
 	PayloadTestNode *sing;
 	// mock
+	/// Mock Mode
 	enum SansgridDataTypeEnum mock_mode;
+	/// Mock test state
 	PayloadTestNode *mock;
 	// peacock
+	/// Peacock Mode
 	enum SansgridDataTypeEnum peacock_mode;
+	/// Peacock test state
 	PayloadTestNode *peacock;
 	// nest
+	/// Nest Mode
 	enum SansgridDataTypeEnum nest_mode;
+	/// Nest test state
 	PayloadTestNode *nest;
 	// squawk
+	/// Squawk Server Mode
 	enum SansgridDataTypeEnum squawk_server_mode;
+	/// Squawk Sensor Mode
 	enum SansgridDataTypeEnum squawk_sensor_mode;
+	/// Squawk server test state
 	PayloadTestNode *squawk_server;
+	/// Squawk sensor test state
 	PayloadTestNode *squawk_sensor;
 	// heartbeat
+	/// Heartbeat Mode
 	enum SansgridDataTypeEnum heartbeat_mode;
+	/// Heartbeat test state
 	PayloadTestNode *heartbeat;
 	// chirp
+	/// Chirp Mode
 	enum SansgridDataTypeEnum chirp_mode;
+	/// Chirp test state
 	PayloadTestNode *chirp;
 } PayloadTestStruct;
 
 
+/// Global dispatch
 Queue *dispatch;
+/// Global routing table
 RoutingTable *routing_table;
 
 // Payload Test Structure functions

@@ -17,9 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
 
+/// Test a mock payload
 int testMockPayload(PayloadTestStruct *test_struct) {
 	// Call mock tests with all options
 	int exit_code;
@@ -40,6 +42,7 @@ int testMockPayload(PayloadTestStruct *test_struct) {
 
 
 
+/// Unit test for a mock payload
 START_TEST (testMock) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Mocking\n");
@@ -51,9 +54,10 @@ START_TEST (testMock) {
 	printf("Successfully Mocked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Mock unit testing
 Suite *payloadTestMock(void) {
 	Suite *s = suite_create("Mock Payload Tests");
 	TCase *tc_core = tcase_create("Core");

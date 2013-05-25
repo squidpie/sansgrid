@@ -20,14 +20,19 @@
  * This dispatch test uses a named pipe as a stub to read from.
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
+/// \file
 
 #include "payload_tests.h"
-pthread_t serial_reader_thr,
-  		  tcp_reader_thr;
+/// Thread for reading from SPI
+pthread_t serial_reader_thr;
+/// Thread for reading from TCP
+pthread_t tcp_reader_thr;
 
+// Number of times allocated
 static int payload_ref_count = 0;
 
 
+/// Make sure size is sane
 void checkSize(const char *pkname, size_t pksize) {
 	fail_unless((pksize == PAYLOAD_SIZE), 
 			"\n%s is wrong size: \
@@ -37,6 +42,7 @@ void checkSize(const char *pkname, size_t pksize) {
 
 
 
+/// SPI reader runtime
 void *spiPayloadReader(void *arg) {
 	// Reads from a serial connection
 	SansgridSerial *sg_serial = NULL;
@@ -66,6 +72,7 @@ void *spiPayloadReader(void *arg) {
 }
 
 
+/// TCP reader runtime
 void *tcpPayloadReader(void *arg) {
 	// Reads from a TCP connection
 	SansgridSerial *sg_serial = NULL;
@@ -93,6 +100,7 @@ void *tcpPayloadReader(void *arg) {
 
 
 
+/// Initialize dispatch, routing, etc
 int32_t payloadRoutingInit(void) {
 	uint8_t base[IP_SIZE];
 
@@ -111,6 +119,7 @@ int32_t payloadRoutingInit(void) {
 }
 
 
+/// Free resources like dispatch, routing, etc
 int32_t payloadRoutingDestroy(void) {
 	mark_point();
 	queueDestroy(dispatch);
@@ -120,6 +129,7 @@ int32_t payloadRoutingDestroy(void) {
 }
 
 
+/// Initialize if system hasn't been yet. Add a reference
 int32_t payloadRoutingAddReference(void) {
 	if (++payload_ref_count > 1)
 		return 0;
@@ -127,12 +137,15 @@ int32_t payloadRoutingAddReference(void) {
 }
 
 
+/// Free resources if no more references exist
 int32_t payloadRoutingRemoveReference(void) {
 	if (--payload_ref_count > 0)
 		return 0;
 	return payloadRoutingDestroy();
 }
 
+
+/// Spin off threads
 int32_t payloadStateInit(void) {
 	// initialize routing table, dispatch,
 	// and file descriptors, and threads for
@@ -148,7 +161,7 @@ int32_t payloadStateInit(void) {
 }
 
 
-
+/// Join threads back in, do some tests 
 int32_t payloadStateCommit(SansgridSerial **sg_serial_read, int packets) {
 	// Close writing file descriptors, join threads, remove pipes
 	void *arg;
@@ -176,8 +189,6 @@ int32_t payloadStateCommit(SansgridSerial **sg_serial_read, int packets) {
 	mark_point();
 	return 0;
 }
-
-
 
 
 

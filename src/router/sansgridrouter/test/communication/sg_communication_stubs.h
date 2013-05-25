@@ -27,6 +27,7 @@
 
 #ifndef __COMMUNICATION_STUBS_H__
 #define __COMMUNICATION_STUBS_H__
+/** \file */
 // Allow a 64K EEPROM Chip in addition to named pipes
 //#define SG_TEST_USE_EEPROM
 
@@ -41,27 +42,41 @@
 #include <sgSerial.h>
 #include "../tests.h"
 
+/**
+ * \brief Communication Type Enumerated Type
+ *
+ * Used to choose which stub type to use.
+ * This allows a choice between what stub to use 
+ */
 enum CommTypeEnum {
 	COMM_TYPE_NONE,
 	COMM_TYPE_UNIX_PIPE,
 	COMM_TYPE_EEPROM,
 };
 
+/**
+ * \brief Configuration for stubs
+ *
+ * This allows fine control over how communication stubs are used.
+ */
 typedef struct TalkStub {
+	/// Name of the stub
 	char name[50];
 #ifdef SG_TEST_USE_EEPROM
-	// Only used when using EEPROM
+	/// Address to write to, Only used when using EEPROM
 	uint16_t eeprom_address;
 #endif
 	// Used with named pipes
-	FILE *FPTR_PIPE_WRITE,		// Writing file descriptor
-		 *FPTR_PIPE_READ;		// Reading file descriptor
-	int valid_read;				// Only return valid data if we're reading
-	sem_t writelock,			// A write is in progress
-		  readlock;				// A read is in progress
-	int use_barrier;			// Whether or not to use write/read_in_progress
+	FILE *FPTR_PIPE_WRITE;		///< Writing file descriptor
+	FILE *FPTR_PIPE_READ;		///< Reading file descriptor
+	int valid_read;				///< Only return valid data if we're reading
+	sem_t writelock,			///< A write is in progress
+		  readlock;				///< A read is in progress
+	int use_barrier;			///< Whether or not to use write/read_in_progress
 	// Callbacks to be registered
+	/// Receive callback
 	int8_t (*receive)(SansgridSerial**, uint32_t*, struct TalkStub*);
+	/// Sending callback
 	int8_t (*send)(SansgridSerial*, uint32_t, struct TalkStub*);
 } TalkStub;
 

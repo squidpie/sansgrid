@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+/// \file
 
 #include <stdio.h>
 #include <stdint.h>
@@ -26,12 +27,13 @@
 #include "../tests.h"
 
 
-
+/**
+ * Tests endianness
+ * Returns 1 if little endian
+ * Returns 0 if big endian
+ */
 int32_t littleEndian(void) {
 	// Tests endianness
-	// Returns 1 if little endian
-	// Returns 0 if big endian
-
 	int i = 1;
 	char *p = (char*)&i;
 
@@ -40,8 +42,12 @@ int32_t littleEndian(void) {
 
 
 
+/**
+ * \brief unit test code for checking endianness of the machine
+ *
+ * this is a quick test to check for endianness
+ */
 START_TEST (testEndianness) {
-	// unit test code for checking endianness of the machine
 #if TESTS_DEBUG_LEVEL > 0
 	if (littleEndian()) {
 		printf("Machine is Little Endian\n");
@@ -55,6 +61,9 @@ START_TEST (testEndianness) {
 END_TEST
 
 
+/**
+ * Test adding a device to the routing table
+ */
 START_TEST (testRoutingTableAdd) {
 	int i;
 	uint8_t ip_addr[IP_SIZE];
@@ -80,6 +89,9 @@ END_TEST
 
 
 
+/**
+ * Test looking up a device in the routing table
+ */
 START_TEST (testRoutingTableLookup) {
 	int i;
 	uint8_t ip_addr[IP_SIZE];
@@ -112,6 +124,9 @@ END_TEST
 
 
 
+/**
+ * Test the routing table
+ */
 Suite *routingBasicTestSuite (void) {
 	Suite *s = suite_create("Basic route testing");
 

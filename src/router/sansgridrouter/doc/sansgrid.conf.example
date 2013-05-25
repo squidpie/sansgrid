@@ -1,0 +1,7 @@
+key = ''
+url = 127.0.0.1
+essid = 'SansGrid'
+hidden = '0'
+strictness = 1
+netmask = 'fe80::864b:f5ff:fe7c:24b'
+heartbeat = 20

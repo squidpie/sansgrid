@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+/// \file
 #define _POSIX_C_SOURCE 200809L          // Required for nanosleep()
 
 #include <time.h>
@@ -49,6 +50,9 @@ static TalkStub *ts_serial = NULL,
 				*ts_tcp = NULL;
 
 
+/**
+ * Initialize a stub configuration structure
+ */
 TalkStub *talkStubInit(char *name) {
 	mark_point();
 	TalkStub *ts = (TalkStub*)malloc(sizeof(TalkStub));
@@ -73,31 +77,55 @@ TalkStub *talkStubInit(char *name) {
 /*
  * Enable/Disable functions
  */
+
+/**
+ * Set this Stub Config Structure to be SPI
+ */
 void talkStubUseAsSPI(TalkStub *ts) {
 	mark_point();
 	ts_serial = ts;
 	return;
 }
 
+/**
+ * Set this Stub Config Structure to be TCP
+ */
 void talkStubUseAsTCP(TalkStub *ts) {
 	mark_point();
 	ts_tcp = ts;
 	return;
 }
 
+
+/**
+ * Return the SPI Stub configuration structure
+ */
 TalkStub *talkStubGetSPI(void) {
 	return ts_serial;
 }
 
+/**
+ * Return the TCP Stub configuration structure
+ */
 TalkStub *talkStubGetTCP(void) {
 	return ts_tcp;
 }
 
 
+/**
+ * \brief Allow reads/writes using the Stub Config
+ *
+ * Use this if you are expecting data to pass through
+ * this stub. 
+ */
 void talkStubAssertValid(TalkStub *ts) {
 	ts->valid_read = 1;
 }
 
+
+/**
+ * Don't allow reads/writes using the Stub Config
+ */
 void talkStubAssertInvalid(TalkStub *ts) {
 	ts->valid_read = 0;
 }
@@ -107,6 +135,9 @@ void talkStubAssertInvalid(TalkStub *ts) {
  * File Descriptor setup
  */
 #ifdef SG_TEST_USE_EEPROM
+/**
+ * Set what address will be written to / read from on the EEPROM
+ */
 void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address) {
 	mark_point();
 	ts->eeprom_address = address;
@@ -114,29 +145,44 @@ void talkStubSetEEPROMAddress(TalkStub *ts, uint32_t address) {
 #endif
 
 
+/**
+ * Set the read file descriptor
+ */
 void talkStubSetReader(TalkStub *ts, FILE *FPTR) {
 	mark_point();
 	ts->FPTR_PIPE_READ = FPTR;
 }
 
+/**
+ * Set the write file descriptor
+ */
 void talkStubSetWriter(TalkStub *ts, FILE *FPTR) {
 	mark_point();
 	ts->FPTR_PIPE_WRITE = FPTR;
 }
 
 
+/**
+ * Close the reading file descriptor
+ */
 void talkStubCloseReader(TalkStub *ts) {
 	fclose(ts->FPTR_PIPE_READ);
 	ts->FPTR_PIPE_READ = NULL;
 }
 
 
+/**
+ * Close the writing file descriptor
+ */
 void talkStubCloseWriter(TalkStub *ts) {
 	fclose(ts->FPTR_PIPE_WRITE);
 	ts->FPTR_PIPE_WRITE = NULL;
 }
 
 
+/**
+ * Set up what stub will be used for reading and writing
+ */
 void talkStubRegisterReadWriteFuncs(TalkStub *ts, enum CommTypeEnum comm_type) {
 	switch(comm_type) {
 		case COMM_TYPE_NONE: 
@@ -166,6 +212,9 @@ void talkStubRegisterReadWriteFuncs(TalkStub *ts, enum CommTypeEnum comm_type) {
 
 
 
+/**
+ * Free all references to the Stub Configuration Structure
+ */
 void talkStubDestroy(TalkStub *ts) {
 	if (ts_serial == ts)
 		ts_serial = NULL;
@@ -178,6 +227,10 @@ void talkStubDestroy(TalkStub *ts) {
 /* Serial/TCP API Definitions
  * These hook directly into the send/receive stubs
  */
+
+/**
+ * Send data using the specified Stub Configuration Structure
+ */
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	mark_point();
 	if (!ts_serial->send) {
@@ -187,6 +240,9 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	return ts_serial->send(sg_serial, size, ts_serial);
 }
 
+/**
+ * Receive data using the specified Stub Configuration Structure
+ */
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	int8_t exit_code;
 	mark_point();
@@ -199,6 +255,9 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	return exit_code;
 }
 
+/**
+ * Send data using the specified Stub Configuration Structure
+ */
 int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	mark_point();
 	if (!ts_tcp->send) {
@@ -208,6 +267,9 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	return ts_tcp->send(sg_serial, size, ts_tcp);
 }
 
+/**
+ * Receive data using the specified Stub Configuration Structure
+ */
 int8_t sgTCPReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	int8_t exit_code;
 	mark_point();

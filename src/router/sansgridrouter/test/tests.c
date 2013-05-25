@@ -27,10 +27,14 @@
 #include "tests.h"
 #include "../routing_table/routing_table.h"
 #include "communication/sg_communication_stubs.h"
+/// \file
 
 int usage(int exit_code);
 
 
+/**
+ * \brief Pretty Print the IP address
+ */
 void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
 	// Print the IP address like an IPv6 address
 	int i;
@@ -45,6 +49,9 @@ void routingTablePrint(uint8_t ip_addr[IP_SIZE]) {
 
 
 
+/**
+ * \brief Setup check unit testing
+ */
 Suite *makeMasterSuite (void) {
 	Suite *s = suite_create("Master Testing Suite");
 
@@ -54,6 +61,9 @@ Suite *makeMasterSuite (void) {
 
 
 
+/**
+ * \brief check.h unit test runtime
+ */
 int main(int argc, char *argv[]) {
 	int number_failed;
 	int c;
@@ -135,6 +145,9 @@ int main(int argc, char *argv[]) {
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/**
+ * \brief check.h unit testing usage
+ */
 int usage(int status) {
 	if (status != EXIT_SUCCESS)
 		printf("Try sgtest -h\n");

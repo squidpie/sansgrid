@@ -21,7 +21,19 @@
 #include "../payloads/payload_tests.h"
 #include "../../communication/sg_tcp.h"
 #include "../../routing_table/routing_table.h"
+/// \file
 
+/**
+ * \brief Bitwise compare two serial structures for differences
+ *
+ * This checks to make sure a SansgridSerial structure is the same after being
+ * converted to and from an intrarouter null-terminated string.
+ * \param	testname	Name of the test
+ * \param	sg_serial	Converted SansgridSerial structure
+ * \param	sg_serial_orig	Original SansgridSerial structure
+ * \param	rdid	new identifier
+ * \param	rdid_orig	original identifier
+ */
 int checkSerialDiff(const char *testname, 
 		SansgridSerial *sg_serial, 
 		SansgridSerial *sg_serial_orig,
@@ -49,6 +61,10 @@ int checkSerialDiff(const char *testname,
 
 }
 
+
+/**
+ * Test conversion using Eyeball Sansgrid Structure
+ */
 START_TEST(testEyeballConversion) {
 	// Test the eyeball conversion for the intrarouter communication system
 	int exit_code;
@@ -95,9 +111,12 @@ START_TEST(testEyeballConversion) {
 	checkSerialDiff("Eyeball", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
+/**
+ * Test conversion using Peck Sansgrid Structure
+ */
 START_TEST(testPeckConversion) {
 	// Test the peck conversion for the intrarouter communication system
 	int exit_code;
@@ -146,8 +165,12 @@ START_TEST(testPeckConversion) {
 	mark_point();
 
 }
-END_TEST
+END_TEST;
 
+
+/**
+ * Test conversion using Sing Sansgrid Structure
+ */
 START_TEST(testSingConversion) {
 	// Test the sing conversion for the intrarouter communication system
 	int exit_code;
@@ -195,9 +218,12 @@ START_TEST(testSingConversion) {
 	checkSerialDiff("Sing", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
+/**
+ * Test conversion using Mock Sansgrid Structure
+ */
 START_TEST(testMockConversion) {
 	// Test the mock conversion for the intrarouter communication system
 	int exit_code;
@@ -246,10 +272,13 @@ START_TEST(testMockConversion) {
 	checkSerialDiff("Mock", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * Test conversion using Peacock Sansgrid Structure
+ */
 START_TEST(testPeacockConversion) {
 	// Test the peacock conversion for the intrarouter communication system
 	int exit_code;
@@ -300,10 +329,13 @@ START_TEST(testPeacockConversion) {
 	checkSerialDiff("Peacock", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * Test conversion using Nest Sansgrid Structure
+ */
 START_TEST(testNestConversion) {
 	// Test the nest conversion for the intrarouter communication system
 	int exit_code;
@@ -352,10 +384,13 @@ START_TEST(testNestConversion) {
 	checkSerialDiff("Nest", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * Test conversion using Squawk Sansgrid Structure
+ */
 START_TEST(testSquawkConversion) {
 	// Test the squawk conversion for the intrarouter communication system
 	int exit_code;
@@ -404,10 +439,16 @@ START_TEST(testSquawkConversion) {
 	checkSerialDiff("Squawk", &sg_serial, &sg_serial_orig, rdid, rdid_orig);
 	mark_point();
 }
-END_TEST
+END_TEST;
 
 
 
+/**
+ * \brief Intrarouter Conversion Unit tests
+ *
+ * Tests to check the integrity of conversion to/from a null-terminated
+ * Sansgrid intrarouter string
+ */
 Suite *intraRouterTestConversion(void) {
 	Suite *s = suite_create("Intrarouter Conversion Tests");
 	TCase *tc_core = tcase_create("Core");

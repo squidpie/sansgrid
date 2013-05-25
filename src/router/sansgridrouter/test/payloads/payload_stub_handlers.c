@@ -20,9 +20,11 @@
  * This dispatch test uses a named pipe as a stub to read from.
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
+/// \file
 
 #include "payload_tests.h"
 
+/// Create a serial packet with sane options
 void payloadMkSerial(SansgridSerial *sg_serial) {
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
 	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
@@ -30,6 +32,7 @@ void payloadMkSerial(SansgridSerial *sg_serial) {
 	return;
 }
 
+/// Make an eyeball using specs from test_specs
 void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs) {
 	int i;
 
@@ -51,6 +54,7 @@ void payloadMkEyeball(SansgridEyeball *sg_eyeball, PayloadTestStruct *test_specs
 }
 
 
+/// Make a peck using specs from test_specs
 void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 	int i;
 	SansgridEyeball sg_eyeball;
@@ -73,6 +77,7 @@ void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 }
 
 
+/// Make a sing using specs from test_specs
 void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs) {
 	int i;
 
@@ -84,6 +89,7 @@ void payloadMkSing(SansgridSing *sg_sing, PayloadTestStruct *test_specs) {
 }
 
 
+/// Make a mock using specs from test_specs
 void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 	int i;
 
@@ -95,6 +101,7 @@ void payloadMkMock(SansgridMock *sg_mock, PayloadTestStruct *test_specs) {
 }
 
 
+/// Make a peacock using specs from test_specs
 void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs) {
 	sg_peacock->datatype = test_specs->peacock_mode;
 	sg_peacock->IO_A_id = 0x0;
@@ -121,6 +128,7 @@ void payloadMkPeacock(SansgridPeacock *sg_peacock, PayloadTestStruct *test_specs
 }
 
 
+/// Make a nest using specs from test_specs
 void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
 	sg_nest->datatype = test_specs->nest_mode;
 	memset(sg_nest->padding, 0x0, 80*sizeof(uint8_t));
@@ -129,6 +137,7 @@ void payloadMkNest(SansgridNest *sg_nest, PayloadTestStruct *test_specs) {
 }
 
 
+/// Make a squawk from server using specs from test_specs
 void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
 	int i;
 	sg_squawk->datatype = test_specs->squawk_server_mode;
@@ -139,6 +148,7 @@ void payloadMkSquawkServer(SansgridSquawk *sg_squawk, PayloadTestStruct *test_sp
 }
 
 
+/// Make a squawk from sensor using specs from test_specs
 void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_specs) {
 	int i;
 	sg_squawk->datatype = test_specs->squawk_sensor_mode;
@@ -149,6 +159,7 @@ void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_sp
 }
 
 
+/// Make a chirp using specs from test_specs
 void payloadMkChirp(SansgridChirp *sg_chirp, PayloadTestStruct *test_specs) {
 	sg_chirp->datatype = test_specs->chirp_mode;
 	sg_chirp->datasize = 79;

@@ -18,6 +18,7 @@
  *
  *
  */
+/// \file
 
 #include <sys/stat.h>		// umask()
 #include <stdlib.h>			// exit()
@@ -44,6 +45,13 @@
 
 
 
+/** 
+ * \brief Check to see if the daemon is running
+ *
+ * \returns
+ * if the daemon is running, return the PID. \n
+ * Otherwise return 0.
+ */
 int isRunning(void) {
 	// Check to see if the sansgrid daemon is running
 	pid_t sgpid;
@@ -77,6 +85,7 @@ int isRunning(void) {
 
 
 
+/// Initialize and fork off the daemon
 int daemon_init(void) {
 	pid_t pid;
 	pid_t sid;
@@ -125,6 +134,12 @@ int daemon_init(void) {
 
 
 
+/**
+ * \brief Insert a packet into the Sansgrid System
+ *
+ * \param[in]	s2	Opened Socket
+ * \param[in]	str	Packet in a null-terminated string
+ */
 int sgConfigInsertPacket(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Interpret an intrarouter packet and enqueue it for processing
 	char *packet;
@@ -155,6 +170,12 @@ int sgConfigInsertPacket(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/**
+ * \brief Drop a device from the routing table
+ *
+ * \param[in]	s2	An open socket
+ * \param[in]	str	device to drop, or "all" to drop all devices
+ */
 int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// drop a device
 	uint32_t device = 0;
@@ -188,6 +209,9 @@ int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/**
+ * Get the URL of the server
+ */
 int sgConfigGetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// return the url
 	strcpy(str, router_opts.serverip);
@@ -196,7 +220,9 @@ int sgConfigGetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 }
 
 
-
+/**
+ * Get the key for the router-->server
+ */
 int sgConfigGetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// return the key
 	if (router_opts.serverkey[0] == '\0') {
@@ -211,6 +237,7 @@ int sgConfigGetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Set the URL of the server
 int sgConfigSetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Set a new server URL
 	int exit_code = 0;
@@ -228,6 +255,7 @@ int sgConfigSetURL(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Set the Key for the server
 int sgConfigSetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Set a new server key
 	int exit_code = 0;
@@ -244,6 +272,7 @@ int sgConfigSetKey(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Set the heartbeat period
 int sgConfigSetHeartbeat(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// set heartbeat period
 	if (strlen(str) > 10) {
@@ -264,6 +293,10 @@ int sgConfigSetHeartbeat(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/**
+ * \brief Set the authentication level
+ * Valid levels are loose, filtered, and strict
+ */
 int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// change authentication
 	int exit_code = 0;
@@ -290,6 +323,9 @@ int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/**
+ * Set the network status: shown, or not shown
+ */
 int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	int exit_code = 0;
 	if (strstr(str, "hidden")) {
@@ -308,6 +344,7 @@ int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Get the status of the router
 int sgConfigGetStatus(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 	//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
@@ -376,6 +413,7 @@ rdid                IP address                 status  Last Packet\n");
 
 
 
+/// Get the number of devices in the network
 int sgConfigGetDevices(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// Get the number of devices
 	syslog(LOG_DEBUG, "sansgrid daemon: return # of devices");
@@ -386,6 +424,7 @@ int sgConfigGetDevices(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Return true if the network is hidden
 int sgConfigCheckNetworkHidden(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// return if the network is hidden (not broadcasting)
 	if (router_opts.hidden_network) {
@@ -399,6 +438,7 @@ int sgConfigCheckNetworkHidden(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Pause the dispatch system
 int sgConfigPauseDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// pause packet sending
 	if (!router_opts.dispatch_pause) {
@@ -411,6 +451,7 @@ int sgConfigPauseDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Resume the dispatch system
 int sgConfigResumeDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 	// resume packet sending
 	if (router_opts.dispatch_pause) {
@@ -423,6 +464,7 @@ int sgConfigResumeDispatch(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 
 
+/// Listen on the socket
 int sgSocketListen(void) {
 	// Wait for a command from a client
 	uint32_t i;

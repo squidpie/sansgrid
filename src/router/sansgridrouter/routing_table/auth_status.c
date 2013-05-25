@@ -18,6 +18,7 @@
  *
  *
  */
+/// \file
 
 
 #include "routing_table.h"
@@ -28,6 +29,7 @@
 #include <stdlib.h>
 #include <syslog.h>
 
+/// Default strictness
 static int global_strictness = DEV_AUTH_LOOSE;
 
 /**
@@ -46,6 +48,7 @@ struct DeviceAuth {
 };
 
 
+/// Make sure the device authentication is valid
 static int devauthAssertValid(DeviceAuth *dev_auth) {
 	if (dev_auth == NULL) {
 		syslog(LOG_WARNING, "DeviceAuth is NULL when it shouldn't be");

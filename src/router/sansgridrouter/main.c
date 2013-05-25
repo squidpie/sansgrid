@@ -42,6 +42,7 @@
 /// \file
 
 void usage(int status);
+int spiSetup(void);
 
 
 /**
@@ -137,6 +138,10 @@ void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
 	uint32_t size;
 	SansgridSerial *sg_serial;
+	if (spiSetup() < 0) {
+		syslog(LOG_ERR, "Couldn't initialize SPI");
+		exit(EXIT_FAILURE);
+	}
 	while (1) {
 		while (sgSerialReceive(&sg_serial, &size) == -1) {
 			sched_yield();
@@ -272,20 +277,24 @@ void *heartbeatRuntime(void *arg) {
 void *flyRuntime(void *arg) {
 	// handle broadcast of ESSID
 	SansgridFly sg_fly;
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial = NULL;
 	memset(&sg_fly, 0x0, sizeof(SansgridFly));
-	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
 	sg_fly.datatype = SG_FLY;
 	while (1) {
-		routingTableGetEssid(routing_table, sg_fly.network_name);
-		memcpy(sg_serial.payload, &sg_fly, sizeof(SansgridFly));
-		sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
-		routingTableGetBroadcast(routing_table, sg_serial.ip_addr);
-		while (router_opts.dispatch_pause) {
-			sleep(1);
-		}	
-		if (!router_opts.hidden_network)
-			routerHandleFly(routing_table, &sg_serial);
+		if (!router_opts.hidden_network) {
+			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+			memset(sg_serial, 0x0, sizeof(SansgridSerial));
+			routingTableGetEssid(routing_table, sg_fly.network_name);
+			memcpy(sg_serial->payload, &sg_fly, sizeof(SansgridFly));
+			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
+			routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
+			while (router_opts.dispatch_pause) {
+				sleep(1);
+			}	
+			queueEnqueue(dispatch, sg_serial);
+			sg_serial = NULL;
+			//routerHandleFly(routing_table, &sg_serial);
+		}
 		sleep(10);
 	}
 
@@ -492,6 +501,29 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 }
 
 
+static char *parseOption(char *buffer) {
+	char *out;
+	for (out = buffer; *out != '\0'; out++) {
+		if (out[0] == '=') break;
+	}
+	if (*out == '\0') return out;
+
+	for (out++; *out != '\0'; out++) {
+		if (out[0] != ' ') break;
+	}
+	return out;
+}
+
+
+
+static char *parseWithQuotes(char *buffer) {
+	// parse with a value in single quotes
+	char *str;
+	char *saveptr;
+	str = strtok_r(buffer, "'", &saveptr);
+	str = strtok_r(NULL, "'", &saveptr);
+	return str;
+}
 
 /**
  * \brief Get configuration from a Config File
@@ -505,11 +537,7 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	char key[100],
 		 url[100],
 		 essid[100],
-		 hidden_str[10],
-		 verbosity_str[20],
-		 netmask_str[50],
-		 strictness_str[10],
-		 heartbeat_str[50];
+		 strictness_str[10];
 	int hidden = 0;
 	int verbosity = 0;
 	int strictness = 0;
@@ -524,7 +552,6 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundstrictness = 0,
 		foundheartbeat = 0;
 	char *str = NULL;
-	char *saveptr = NULL;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -535,23 +562,27 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		return -1;
 	}
 	while (getline(&buffer, &buff_alloc, FPTR) != -1) {
+		if (strstr(buffer, "\'")) {
+			str = parseWithQuotes(buffer);
+		} else {
+			str = parseOption(buffer);
+		}
 		if (strstr(buffer, "key")) {
-			sscanf(buffer, "key = %s", key);
+			strncpy(key, str, sizeof(key));
 			foundkey = 1;
 		} else if (strstr(buffer, "url")) {
-			sscanf(buffer, "url = %s", url);
+			strncpy(url, str, sizeof(url));
 			foundurl = 1;
 		} else if (strstr(buffer, "hidden")) {
-			sscanf(buffer, "hidden = %s", hidden_str);
 			foundhidden = 1;
-			if (strstr(hidden_str, "1")) 
+			if (strstr(str, "1")) 
 				hidden = 1;
-			else if (strstr(hidden_str, "0"))
+			else if (strstr(str, "0"))
 				hidden = 0;
 			else
 				foundhidden = 0;
 		} else if (strstr(buffer, "strictness")) {
-			sscanf(buffer, "strictness = %s", strictness_str);
+			strncpy(strictness_str, str, sizeof(strictness_str));
 			foundstrictness = 1;
 			if (strstr(strictness_str, "1"))
 				strictness = 1;
@@ -560,32 +591,16 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			else
 				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
-			str = strtok_r(buffer, "'", &saveptr);
-			str = strtok_r(NULL, "'", &saveptr);
-			if (str == NULL) {
-				syslog(LOG_WARNING, "Couldn't parse config file");
-				return -1;
-			}
 			strcpy(essid, str);
-			//sscanf(buffer, "essid = '%s'", essid);
 			foundessid = 1;
 		} else if (strstr(buffer, "verbosity")) {
-			sscanf(buffer, "verbosity = %s", verbosity_str);
-			verbosity = atoi(verbosity_str);
+			verbosity = atoi(str);
 			foundverbosity = 1;
 		} else if (strstr(buffer, "netmask")) {
-			str = strtok_r(buffer, "'", &saveptr);
-			str = strtok_r(NULL, "'", &saveptr);
-			if (str == NULL) {
-				sscanf(buffer, "netmask = %s", netmask_str);
-			} else {
-				strcpy(netmask_str, str);
-			}
-			parseIPv6(netmask_str, netmask);
+			parseIPv6(str, netmask);
 			foundnetmask = 1;
 		} else if (strstr(buffer, "heartbeat")) {
-			sscanf(buffer, "heartbeat = %s", heartbeat_str);
-			heartbeat = atoi(heartbeat_str);
+			heartbeat = atoi(str);
 			foundheartbeat = 1;
 		}
 	}
@@ -629,7 +644,7 @@ int main(int argc, char *argv[]) {
 	char payload[400];
 	uint8_t ip_addr[IP_SIZE];
 	SansgridHatching sg_hatch;
-	SansgridSerial sg_serial;
+	SansgridSerial *sg_serial;
 
 
 	memset(&router_opts, 0x0, sizeof(RouterOpts));
@@ -830,16 +845,20 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
+	//int old_dispatch = router_opts.dispatch_pause;
+
+	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
-	memset(&sg_serial, 0x0, sizeof(SansgridSerial));
+	memset(sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(ip_addr, 0x0, IP_SIZE);
 	ip_addr[IP_SIZE-1] = 0x1;
 	sg_hatch.datatype = SG_HATCH;
 	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
-	memcpy(&sg_serial.payload, &sg_hatch, sizeof(SansgridHatching));
-	sg_serial.control = SG_SERIAL_CTRL_VALID_DATA;
-	memcpy(sg_serial.ip_addr, ip_addr, IP_SIZE);
-	routerHandleHatching(routing_table, &sg_serial);
+	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
+	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
+	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
+	//router_opts.dispatch_pause = 1;
+	queueEnqueue(dispatch, sg_serial);
 
 
 	// Spin off readers/writers
@@ -847,6 +866,8 @@ int main(int argc, char *argv[]) {
 	pthread_create(&dispatch_thread, NULL, dispatchRuntime, dispatch);
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
+
+	//router_opts.dispatch_pause = old_dispatch;
 
 	// Listen for commands or data from the server
 	sgSocketListen();

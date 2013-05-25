@@ -18,6 +18,7 @@
  *
  *
  */
+/// \file
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -28,6 +29,7 @@
 #include "../communication/sg_tcp.h"
 
 
+/// Check for a valid control path
 static int32_t chkValidCTRLPath(RoutingTable *routing_table, 
 		uint8_t ip_addr[IP_SIZE], uint8_t dt, const char *pktname) {
 	// check to see if this is a valid control path for this device
@@ -271,6 +273,7 @@ int32_t sgPayloadGetPayloadName(enum SansgridDeviceStatusEnum devstatus, char *n
 int routerHandleHatching(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Handle a Hatching data type
 	// 1. Set radio IP address
+	syslog(LOG_DEBUG, "Handling Hatch");
 	SANSGRID_UNION(SansgridHatching, SansgridHatchingConv) sg_hatching_union;
 	SansgridHatching *sg_hatching;
 
