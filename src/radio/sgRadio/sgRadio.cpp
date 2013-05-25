@@ -129,12 +129,6 @@ void SansgridRadio::processSpi() {
 
 bool SansgridRadio::defrag() {
 	bool rv = false;
-	if (MODE(SENSOR)) {
-		memcpy(origin_xbsn, (incoming_packet + 1), XB_SN_LN);
-		if (memcmp(origin_xbsn,xbsn,XB_SN_LN) != 0) {
-			return rv;
-		}
-	}
 	if (incoming_packet[PKT_FRAME] == 0) {
 		frag_buffer[next][FRAG_PENDING] = 1;
 		memcpy(&frag_buffer[next][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN);
@@ -241,7 +235,6 @@ void SansgridRadio::init(HardwareSerial * xbee_link, SansgridSerial * serial_lin
 	// Read XB Serial from XBee module
 	memset(xbsn,0xaa,XB_SN_LN);
 	setXBsn();
-	
 	// Prepare packet fragmentation buffers
 	memset(pkt0_frag,0xaa,MAX_XB_PYLD);
 	memset(pkt1_frag,0xbb,MAX_XB_PYLD);
@@ -283,11 +276,11 @@ void SansgridRadio::setXBsn() {
 	
 	// flush buffer and collect garbage 
 	while(Radio->available() > 0) { Radio->read(); }
-	delete xbsn_str;
+	
 	delete cmdOut;
 }
 
-void SansgridRadio::read() {
+int SansgridRadio::read() {
 	int i = 0;
   while(Radio->available() > 0 && i < MAX_XB_PYLD) {
     delay(2);
@@ -295,6 +288,14 @@ void SansgridRadio::read() {
 		//Radio->write(incoming_packet[i]);
 		i++;
   }
+	if (MODE(SENSOR)) {
+		uint8_t brdcst[XB_SN_LN];
+		memset(brdcst,0x0,XB_SN_LN);
+		if ((memcmp((incoming_packet + 1),xbsn,XB_SN_LN) != 0) || (memcmp((incoming_packet + 1),brdcst,XB_SN_LN) != 0))  {
+			return 0;
+		}
+	}
+	return i;
 }
 
 void SansgridRadio::set_mode(RadioMode mode) {

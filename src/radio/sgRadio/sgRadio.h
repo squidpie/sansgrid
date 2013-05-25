@@ -112,7 +112,7 @@ class SansgridRadio {
 		//SerialDebug debug;
 	public:
 		SansgridRadio();
-		void read();
+		int read();
 		void write();
 		void set_mode(RadioMode mode);
 		void init(HardwareSerial *, SansgridSerial *, SnIpTable *);

@@ -1,7 +1,13 @@
+#define DUE
+
+#include <Arduino.h>
 #include <stdio.h>
 #include <assert.h>
-//#include <SerialDebug.h>
-#include <SPI.h>
+
+#ifndef DUE
+	#include <SPI.h>
+#endif
+
 #include "sgSerial.h"
 #include "sgRadio.h"
 
@@ -9,8 +15,13 @@
 #define DEBUG false
 #define DEBUG_LEVEL 1
 
+#define SPI_RD_CNTRL 0xFD
+#define SPI_WR_CNTRL 0xAD
+#define SPI_ERR_CNTRL 0xFE
+
+#define XB_BAUD 115200
+
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp);
-void readPacket();
 const int ledPin = 13;
 int length;
 byte spi_rw = 1;
@@ -25,119 +36,93 @@ SansgridRadio sgRadio;
 #define SLAVE_READY 8
 #define NUM_BYTES 98
 
-char rx[NUM_BYTES]; //NUM_BYTES + 1];
-volatile uint8_t pos;
-volatile uint8_t pos_b;
 
-// SPI command byte
-volatile uint8_t command;
+#ifdef DUE
+	#define CE 		10
+	#define MISO 	11
+	#define MOSI 	12
+	#define SCK 	13
+	#define SPI_MAX_BUFFER 100
+
+	uint8_t spi_rx[SPI_MAX_BUFFER];
+	uint8_t spi_tx[SPI_MAX_BUFFER];
+	volatile uint8_t bitptr;
+	volatile uint8_t spi_inbyte;
+	volatile uint8_t spi_outbyte;
+	volatile unsigned int byteptr;
+#endif
+
+char rx[NUM_BYTES]; //NUM_BYTES + 1];
+char tx[NUM_BYTES];
+volatile uint8_t rx_pos;
+volatile uint8_t tx_pos;
+
 volatile boolean process_flag;
 volatile boolean spi_active;
 volatile boolean spi_err;
+volatile bool spi_setup;
 
 void setup() {
-	/*#if DEBUG 
-		//SerialDebugger.begin(115200);
-		switch(DEBUG_LEVEL) {
-			case 1:
-				//SerialDebugger.enable(ERROR);
-			case 2:
-				//SerialDebugger.enable(WARNING);
-			case 3:
-				//SerialDebugger.enable(NOTIFICATION);
-		}
-		//SerialDebugger.debug(ERROR,__FUNC__,"Error test\n");
-		//SerialDebugger.debug(WARNING,__FUNC__,"Warn test\n");
-		//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Notify test\n");
-		delay(50);
-		sgDebugInit(&SerialDebugger);
-		//SerialDebugger.debug(NOTIFICATION,__FUNC__, "Entering Setup\n");
-	#else*/
-	pinMode(SLAVE_READY, OUTPUT);
-	digitalWrite(SLAVE_READY, HIGH);
-	Serial.begin(115200);
-  //Serial.println("Setup starts here");
-	//pinMode(ledPin, OUTPUT);
-  pinMode(ROUTER_MODE_PIN, INPUT);
+
+	// Open serial com with XBee
+	Serial.begin(XB_BAUD);
+  
+	// Set up ROUTER_PIN
+	pinMode(ROUTER_MODE_PIN, INPUT);
   digitalWrite(ROUTER_MODE_PIN, LOW);
   
+	// Initialize sansgrid Radio Class
 	sgRadio.init(&Serial, &SpiData, &RouteTable);
   if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
-    //SerialDebugger.debug(NOTIFICATION,__FUNC__,"ROUTER MODE\n");
   	sgRadio.set_mode(ROUTER);
   }
 
-  //pinMode(SPI_IRQ_PIN, INPUT);
-  //digitalWrite(SPI_IRQ_PIN, HIGH);
-      pinMode(MISO, OUTPUT);
-	SPCR |= _BV(SPE);
-	pos = 0;
+	// Initialize SPI Pins for Uno and Due
+  pinMode(MISO, OUTPUT);
+	digitalWrite(MISO, LOW);
+	pinMode(SLAVE_READY, OUTPUT);
+	digitalWrite(SLAVE_READY, HIGH);
+	
+	// Init Due Spi Pins
+	#ifdef DUE
+		pinMode(MOSI, INPUT);
+		pinMode(SCK, INPUT);
+		pinMode(CE, INPUT);
+	
+	// else Enable Uno as SPI slave 
+	#else
+		SPCR |=	_BV(SPE);
+	#endif	
+	
+	// Prepare spi buffers and flags
+	rx_pos = 0;
+	tx_pos = 0;
 	process_flag = false;
 	spi_active = false;
-        command = 0;
   	
-    //SPCR |= _BV(SPIE);
+  //SPCR |= _BV(SPIE);
 	
-	//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Setup Complete\n");
-	//sgRadio = new SansgridRadio;
+	// Flag to dump false spi interrupts
+	spi_setup = true;
 	
-  //Serial.println("Setup Complete");
-  //delay(500);
-  SPI.attachInterrupt();
+	#ifndef DUE
+		SPI.attachInterrupt();
+	#else
+		attachInterrupt(CE, spi_enable, CHANGE);
+	#endif
+	// Allow spi interrupts to operate as normal
+	spi_setup = false;
+	
+	#if DEBUG
+		Serial.println("Setup Complete");
+  	delay(50);
+	#endif
 }
-// SPI Interrupt Service Routine
-ISR (SPI_STC_vect)
-{
-  // Read byte from SPI SPDR register
-  uint8_t c = SPDR;
-  // Call Command Byte
-  switch(spi_rw){
-  case 1:
-      // Receive SPI Packet from Master
-      if ( pos == 0 && c != 0xAD ) {
-				spi_rw = 2;
-				break;
-			}
-			else if (pos == 0) SPDR = 0xAD;
-			if ( pos < NUM_BYTES ){
-          rx[pos++] = c;
-					SPDR = 0xFD;
-          // If buffer is full set process_it flag
-          if ( pos >= NUM_BYTES )    
-              process_flag = true; 
-        }
-      break;
-  case 0:
-      // Transmit SPI Packet to Master
-			if (pos < NUM_BYTES ) {
-      	SPDR = rx[pos++];
-      	// If buffer is full set process_it flag
-      	if ( pos >= NUM_BYTES ){
-              digitalWrite(SLAVE_READY, HIGH);
-              spi_active = false;
-              pos = 0;
-              spi_rw = 1;
-      	}
-			}
-      break;
-  default:
-      if ( pos < NUM_BYTES ){
-          SPDR = 0xFE;
-					pos++;
-          // If buffer is full set process_it flag
-          if ( pos >= NUM_BYTES ) {
-            pos = 0;
-						spi_rw = 1;
-						spi_err = 1;
-          }
-      }
-      break;
-    }  // End of Command Byte
-}  // End of Interupt Service Routine
-
 
 void loop() {
-  loop_head: 
+  loop_head:
+
+	// Check for spi errors and resolve
 	if (spi_err) {
 		if (!spi_rw) {
 			digitalWrite(SLAVE_READY, HIGH);
@@ -150,15 +135,12 @@ void loop() {
 		spi_err = false;
 	}
 	
+	// Check for completion of Spi transfer, process packet and send out over
+	// radio
 	if (process_flag) {
-		Serial.write(0xDEAD);
-		Serial.write((const uint8_t *)rx, sizeof(rx));
-		Serial.write(0xBABE);
-		goto loop_head;
-	  memcpy(&SpiData.payload, rx, sizeof(SpiData));
-		memset(rx,0,sizeof(SpiData));
-		pos = 0;
-    command = 0;
+		memcpy(&SpiData.payload, spi_rx, sizeof(SpiData));
+		memset(spi_rx,0, SPI_MAX_BUFFER);
+		rx_pos = 0;
 		process_flag = false;
 		spi_active = false;
 		sgRadio.processSpi();
@@ -167,54 +149,221 @@ void loop() {
 		sgRadio.write();
 		sgRadio.loadFrame(1);
 		sgRadio.write();
-		//Serial.println("Packet written");
+		
+		#if DEBUG
+			Serial.println("Packet written");
+			delay(50);
+		#endif
 	}
+	
+	// Scan for incoming serial data if not serving spi
 	if (!spi_active) {
-// put your main code here, to run repeatedly: 
 		if (Serial.peek() >= 0) {
-                //Serial.println("peek true");
-                //delay(50);
-  			//Serial.println("Reading form XBee");
-			//SerialDebugger.debug(NOTIFICATION,__FUNC__,"Reading\n");
-		 // Serial.flush();
-			//readPacket();
-	//readPacket();
-
+			// Dump invalid packets, such as debug messages
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
-        //Serial.println("throwing out the bath water");
-        //delay(50);
+        
+				#if DEBUG
+					Serial.println("throwing out the bath water");
+        	delay(50);
+				#endif
+				// flush serial input and return to loop
 				while (Serial.available() > 0) { Serial.read(); }
-				goto loop_head;
+				return;
 			}
-			sgRadio.read();
-                        
+
+			else if (!sgRadio.read()) {
+				// This packet is not addressed to this XBee, diregard
+				return;
+			}
+      
+			// process packet as fragment, if fragment 2, send over spi to host
+			// device
 			if(sgRadio.defrag()) {
 				sgRadio.processPacket();
-				memcpy(rx,&SpiData,sizeof(SpiData)); 
+				memcpy(spi_tx,&SpiData,sizeof(SpiData)); 
 				spi_active = true;
-				Serial.write("Sending SPI");
-				delay(50);
-				//Serial.write((const uint8_t *)rx,sizeof(SpiData));
-				//delay(1000);
 				spi_rw = 0;
+				
+				#if DEBUG
+					Serial.println("Sending SPI");
+					delay(50);
+					Serial.write((const uint8_t *)rx,sizeof(SpiData));
+					delay(1000);
+				#endif
+				// Initiate Spi Slave write
 				digitalWrite(SLAVE_READY, LOW);
 			}
 		}
 	}
 }
-// assert slave interrupt pin 7 to initate SPI tansfer
 
-void readPacket() {
-uint8_t packet_buffer[SG_PACKET_SZ];
-	int i = 0;
-	while(Serial.available() > 0 && i < SG_PACKET_SZ) {
-		delay(2);
-		packet_buffer[i++] = Serial.read();
+#ifndef DUE
+	// SPI Interrupt Service Routine
+	ISR (SPI_STC_vect) {
+		if (spi_setup) {
+			return;
+		}
+		uint8_t cntrl = spi_rw ? SPI_RD_CNTRL : SPI_WR_CNTRL;
+		// Read byte from SPI SPDR register
+		uint8_t c = SPDR;
+
+		// Call Command Byte
+		switch(spi_rw){
+			case 1:
+					// Receive SPI Packet from Master
+					if ( rx_pos == 0 && c != SPI_RD_CNTRL ) {
+						SPDR = SPI_ERR_CNTRL;
+						rx_pos = 0;
+						spi_err = 1;
+						return;
+					}
+					if ( pos < NUM_BYTES ){
+						rx[pos++] = c;
+						SPDR = cntrl;
+						
+						// If buffer is full set process_it flag
+						if ( pos >= NUM_BYTES - 1) {    
+							process_flag = true; 
+						}
+					}
+					break;
+			case 0:
+					// Transmit SPI Packet to Master
+					if (rx_pos == 0 && c != SPI_WR_CNTRL) {
+						SPDR = SPI_ERR_CNTRL;
+						spi_rw = 1;
+						rx_pos = 0;
+						spi_err = 1;
+						return;
+					}
+					if (pos < NUM_BYTES ) {
+						SPDR = rx[rx_pos++];
+						
+						// If buffer is de-assert spi_active and SLAVE_READY, return to
+						// read state
+						if ( rx_pos >= NUM_BYTES - 1){
+							digitalWrite(SLAVE_READY, HIGH);
+							spi_active = false;
+							rx_pos = 0;
+							spi_rw = 1;
+						}
+					}
+					break;
+			default:
+				rx_pos = 0;
+				spi_rw = 1;
+				spi_err = 1;
+				break;  
+		}
+	
+	#if DEBUG
+		Serial.write(c);
+	#endif
+
+	}  // End of Interupt Service Routine
+#endif
+
+
+#ifdef DUE
+
+void spi_sck() {
+	if (spi_setup) return;
+	switch(digitalRead(SCK)) {
+		case LOW:
+			digitalWrite(MISO, ((spi_outbyte >> 7) & 0x1));
+			spi_outbyte = ((spi_outbyte << 1) & 0xFF);
+			if (++bitptr >= 8) {
+				spi_rx[byteptr++] = spi_inbyte;
+				spi_outbyte = byteptr > SPI_MAX_BUFFER ? spi_tx[byteptr] : 0x0;
+				bitptr = 0;
+				spi_inbyte = 0;
+			}	
+			break;
+		case HIGH:
+			byte spi_bit = digitalRead(MOSI);
+			spi_inbyte = (spi_inbyte << 1) | spi_bit;
+			break;
 	}
-	Serial.write(packet_buffer, i);
-	//processPacket();
 }
+
+void spi_enable() {
+	if (spi_setup) {
+		memset(spi_rx, 0x00, SPI_MAX_BUFFER);
+		memset(spi_tx, SPI_RD_CNTRL, SPI_MAX_BUFFER);
+		bitptr = 0;
+		byteptr = 0;
+		spi_inbyte = 0;
+		spi_outbyte = 0;
+		digitalWrite(MISO, LOW);
+		return;
+	}
+	switch(digitalRead(CE)) {
+		case LOW:
+			digitalWrite(MISO, ((spi_outbyte >> 7) & 0x1));
+			spi_setup = true;
+			attachInterrupt(SCK, spi_sck, CHANGE);
+			spi_setup = false;
+			spi_outbyte = ((spi_outbyte << 1) & 0xFF);
+			break;
+		case HIGH:
+			detachInterrupt(SCK);
+			//memcpy(rx, spi_rx, NUM_BYTES);
+			memset(spi_tx, SPI_RD_CNTRL, SPI_MAX_BUFFER);
+			//memset(spi_rx, 0x00, SPI_MAX_BUFFER);
+			process_flag = true;
+			bitptr = 0;
+			byteptr = 0;
+			spi_inbyte = 0;
+			spi_outbyte = 0;
+			digitalWrite(MISO, LOW);
+			break;
+	}
+}
+
+void spi_enable_falling () {
+	if (spi_setup) {
+		return;
+	}
+	spi_setup = true;
+	attachInterrupt(SCK, spi_sck, CHANGE);
+	spi_setup = false;
+}
+
+void spi_enable_rising() {
+	if (spi_setup) Serial.println("SPI INIT Complete");
+	detachInterrupt(SCK);
+	memcpy(rx, spi_rx, NUM_BYTES);
+	memset(spi_tx, SPI_RD_CNTRL, SPI_MAX_BUFFER);
+	memset(spi_rx, 0x00, SPI_MAX_BUFFER);
+	process_flag = spi_setup ? false: true;
+	bitptr = 0;
+	byteptr = 0;
+	spi_inbyte = 0;
+	spi_outbyte = 0;
+	digitalWrite(MISO, LOW);
+}
+
+
+
+void spi_sck_rising() {
+	if (spi_setup) return;
+	byte spi_bit = digitalRead(MOSI);
+	spi_inbyte = (spi_inbyte << 1) | spi_bit;
+}
+
+void spi_sck_falling(){
+	if (spi_setup) return;
+	digitalWrite(MISO, ((spi_outbyte >> 7) & 0x1));
+	spi_outbyte = ((spi_outbyte << 1) & 0xFF);
+	if (++bitptr >= 8) {
+		spi_rx[byteptr++] = spi_inbyte;
+		spi_outbyte = (byteptr = SPI_MAX_BUFFER ? spi_tx[byteptr] : 0x0);
+		bitptr = 0;
+		spi_inbyte = 0;
+	}	
+}
+#endif
 
 // handle diagnostic informations given by assertion and abort program execution:
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp) {
@@ -227,21 +376,3 @@ void __assert(const char *__func, const char *__file, int __lineno, const char *
     // abort program execution.
     abort();
 }
-
-int getMY() {
-  int rv, timeout;
-  timeout = 50;
-  Serial.write("+++");
-  Serial.write("ATMY");
-  while(timeout){
-    delay(50);
-    if (Serial.available() > 0) {
-      rv = Serial.read();
-      timeout = 0;
-    }
-    else timeout--;
-  }
-  Serial.write("ATCN");
-  return rv;
-}
-
