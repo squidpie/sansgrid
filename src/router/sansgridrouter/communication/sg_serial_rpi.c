@@ -44,7 +44,8 @@
 
 /// SPI Clock Speed, in KHz
 //#define SPI_SPEED_KHZ	512
-#define SPI_SPEED_KHZ	4000L
+//#define SPI_SPEED_KHZ	4000L
+#define SPI_SPEED_KHZ	20
 /**
  * \brief Write Cycle Time, in us
  *
@@ -54,7 +55,7 @@
  */
 #define WRITE_CYCLE_U	6000
 /// The max number of bytes we can write before cycling
-#define WRITE_MAX_BYTES 1
+#define WRITE_MAX_BYTES 100
 
 /**
  * \brief What pin the slave interrupt is on
