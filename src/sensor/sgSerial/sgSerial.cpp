@@ -25,6 +25,7 @@
 
 #define DUE 1
 #define DELAY 6
+#define SLAVE_SELECT 10
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
@@ -32,7 +33,7 @@
 uint8_t sgSerialOpen(void){
     Serial.println( "Opening SPI" );
     // Initialize Sensor SPI communication
-    SPI.begin();
+    SPI.begin( SLAVE_SELECT );
     // Set order bits are shifted onto the SPI bus
     SPI.setBitOrder( MSBFIRST );
     // Set SPI Baud Rate to 500 KHz
@@ -69,17 +70,17 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
     sgSerialOpen();
-    delayMicroseconds(DELAY);
+    delayMicroseconds( DELAY );
     // Send dummy byte to Set command on Slave
-    //Serial.println( "First Byte" );
-    SPI.transfer( data_out[0] );
+    Serial.println( "First Byte" );
+    SPI.transfer( SLAVE_SELECT , data_out[0] );
     delayMicroseconds(DELAY);
     // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
-        SPI.transfer( data_out[i] );
+        SPI.transfer( SLAVE_SELECT , data_out[i] );
         delayMicroseconds(DELAY);
-        //Serial.println( data_out[i] );
+        Serial.println( data_out[i] );
     }
     // Close SPI bus - NOT USED
     //sgSerialClose();
@@ -101,20 +102,20 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     delayMicroseconds(DELAY);
     // First dummy transfer defines the command 
     // for valid or not valid data
-    SPI.transfer( rec );
+    SPI.transfer( SLAVE_SELECT , rec );
     delayMicroseconds(DELAY);
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
     // in SPDR register and will be stored on the
     // next SPI.transfer() in the for Loop.
-    SPI.transfer( rec );
+    SPI.transfer( SLAVE_SELECT , rec );
     delayMicroseconds(DELAY);
     // Loop through receiving bytes the length 
     // of packet defined as NUM_BYTES
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI and store
         // byte received in data_in buffer
-        data_in[i] = SPI.transfer( rec );
+        data_in[i] = SPI.transfer( SLAVE_SELECT , rec );
         delayMicroseconds(DELAY);
     }
     for( int i = 0 ; i < NUM_BYTES ; i++){

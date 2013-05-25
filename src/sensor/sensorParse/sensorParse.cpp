@@ -128,5 +128,6 @@ void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat ){
 
 void parseChirp( SansgridSerial *rx , SansgridChirp *sg_chirp ){
     memcpy( sg_chirp->dt , rx->payload , DT );
-    memcpy( sg_chirp->data , rx->payload + DT , DATA );
+	memcpy( sg_chirp->sid, rx->payload + DT , SID );
+    memcpy( sg_chirp->data , rx->payload + DT + SID , DATA );
 }

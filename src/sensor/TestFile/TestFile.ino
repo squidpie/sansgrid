@@ -33,10 +33,7 @@
 #define DUE 1
 
 SensorConfig sg_config;
-SansgridSerial sg_data_in;
-SansgridSerial sg_data_out;
-
-int intPin = 0;
+SansgridSerial sg_serial;
 
 void setup(){
     // This allows for debugging by displaying information 
@@ -48,13 +45,13 @@ void setup(){
     //sg_config.mate = true; 
     
     // Set SansgridSerial data_out control byte
-    sg_data_out.control[0] = 0xAD;
+    sg_serial.control[0] = 0xAD;
     
     // Initialize interrupt for Slave Ready pin
     #ifdef DUE 
-    attachInterrupt( SLAVE_READY , receive , RISING );
+    //attachInterrupt( SLAVE_READY , receive , RISING );
     #else
-    attachInterrupt( 0 , receive , FALLING );
+    //attachInterrupt( 0 , receive , FALLING );
     #endif // end of DUE
     
     // Call Sensor Configuration which sets the:
@@ -66,11 +63,11 @@ void setup(){
     // sending Test Packets, these will not be needed in final
     // code it is strictly for test purposes. Will only send a single
     // packet. To run through entire process, go to payloadHandler
-    // and uncomment all sg_config.<fly,sing,squawk,chirp,challenge...>
+    // and uncomment all sg_config.<fly,sing,squawk,Chirp,challenge...>
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    //sg_config.fly = true;
+    sg_config.fly = true;
     //sg_config.sing = true;
     //sg_config.mock = true;
     //sg_config.squawk = true;
@@ -84,19 +81,53 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
-        sensorConnect( &sg_config , &sg_data_out );  
-        delayMicroseconds(DELAY);
+        sensorConnect( &sg_config , &sg_serial );  
     }
-  
-    delay(1000);
+    // DEBUG message
     Serial.println( "Connected to Network" );
-    
     // Signal Input Code goes here in this loop
-    while(sg_config.nest == true ){
+    while(sg_config.nest == true ){  
+        // Delay between sending Packets atleast 1 second
         delay(1000);
-    }
-    
-}
+        // Received packet over SPI
+        if ( sg_config.received == true ){
+            // Received Packet
+            Serial.println( "RECEIVING SPI PACKET" );
+            sgSerialReceive( &sg_serial , 1 );
+            // Process packet to verify Chirp received
+            payloadHandler( &sg_config , &sg_serial);
+            Serial.println( "setting received to false");
+            // Reset received to default value
+            sg_config.received = false;
+            // Process received Chirp packet
+            if( sg_config.chirp == true ){
+                // Received Chirp from Sensor
+                // Need to process payload to perform action
+                // on Signal. Put code in here.
+              
+                // Reset Chirp to false
+                sg_config.chirp = false; 
+            }// End of received Chirp
+        }
+        // Code to Send Chirp
+        else{
+            // Set control byte to valid data
+            sg_serial.control[0] = (uint8_t) 0xAD;
+            // Set IP address to router ip
+            memcpy( sg_serial.ip_addr , sg_config.router_ip , IP_ADDRESS );
+            // Set Datatype to 0x21, Sensor to Server Chirp
+            sg_serial.payload[0] = (uint8_t) 0x21;
+            // Copy data into Payload
+            // Which Signal Id are you using?
+            //sg_serial.payload[1] = sid????
+            // What are you transmitting???
+            //sg_serial.payload[2] thru sg_serial.payload[80]
+            // Make sure to pad the unused with 0x00
+            // Transmit Payload over SPI  
+            sgSerialSend( &sg_serial , 1 );
+        }// End of Send Chirp
+    }// End of Nested
+}// End of Loop
 
 void receive(){
     // Interrupt was initiated when SLAVE_READY was

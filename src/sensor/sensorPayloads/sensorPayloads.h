@@ -55,15 +55,6 @@
 #define HEARTBEAT_PADDING 80
 #define SID 1
 
-
-typedef struct SansgridSensor{
-    uint8_t id[ SENSOR_ID ];
-    uint8_t classification[ CLASSIFICATION ];
-    uint8_t direction[ DIRECTION ];
-    int8_t label[ LABEL ];
-    int8_t units[ UNITS ];
-} SansgridSensor;
-
 typedef struct SensorConfig{
     static bool mate;
     static bool fly;

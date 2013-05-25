@@ -55,7 +55,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             transmitEyeball( sg_serial , &sg_eyeball );
             // Set FLY flag back to false, wait for Peck
             // packet to arrive.
-            sg_config->fly = false;
+            //sg_config->fly = false;
             break;
         case 0x01 :
             // Peck - Initial server response
@@ -380,8 +380,8 @@ void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
     for( int i = 0 ; i < DATA - 2 ; i++ )
         sg_squawk->data[i] = (uint8_t) 0x00;
     // Store two 8 bit bytes into last two positions of payload
-    sg_squawk->data[78] = (uint8_t) hi_lo[0];
-    sg_squawk->data[79] = (uint8_t) hi_lo[1];
+    sg_squawk->data[1] = (uint8_t) hi_lo[0];
+    sg_squawk->data[2] = (uint8_t) hi_lo[1];
 }
 
 // Compare response from Server to challenge, return value true if 
