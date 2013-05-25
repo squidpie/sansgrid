@@ -27,15 +27,14 @@
 #include <sensorParse.h>
 #include <SPI.h>
 
-//This is the code for the sensor that takes a poteniometers value in and displays it and 
-//shows the capabilities of the mating sansgrid data type in the eyeball phase. In order to
-//the button must be pressed. Button not pressed = not ready to mate.
+//Code for switch digital I/O
 
-//sets led to pin 6 and switch to pin 4
+//sets led to pin 4 and switch to pin 5
 #define SLAVE_READY 2
-#define dip 5 //active low, needs to switch to pin 3 for interrupt
+//#define dip 5 //active low, needs to switch to pin 3 for interrupt
+#define switch_led 4
 
-// state of the button initialized
+//initialization
 int switch_state = 0; //state of dip switch
 int led_state = 0;
 
@@ -53,7 +52,7 @@ void setup() {
   //#ifdef DUE 
   //attachInterrupt( SLAVE_READY , receive , RISING );
   //#else
-  attachInterrupt( 0 , receive , FALLING );
+  //attachInterrupt( 0 , receive , FALLING );
   //#endif // end of DUE
   attachInterrupt( 1 , dipswitch , CHANGE );
   
@@ -128,29 +127,16 @@ void loop(){
     }*/
     // Remove to Here
     
-}
-
-void receive(){
-    // Interrupt was initiated when SLAVE_READY was
-    // asserted low, set received flag to initiate
-    // processing SPI packet
-    Serial.println( "Interrupt Service Routine" );
-    sg_config.received = true;
-    // Display value of received
-    Serial.println( sg_config.received );
-}
-
-void dipswitch(){
-  
-    //dip switch to led code
-    switch_state = digitalRead(dip); //reads current state of dip switch    
+    //dip switch code
+     //dip switch to led code
+    /*switch_state = digitalRead(dip); //reads current state of dip switch    
     Serial.println(switch_state);
     delay(100);
     
     //if switch is on, send code to server to tell it to turn led on on other arduino
     if (switch_state == 1) {
       
-      sg_chirp.dt [0] = (uint8_t) 0x21;
+      /*sg_chirp.dt [0] = (uint8_t) 0x21;
       sg_chirp.id [0] = (uint8_t) 0x01;
       memset(sg_chirp.data, '\0', DATA_SIZE);
       char ch_array[1];
@@ -161,17 +147,17 @@ void dipswitch(){
   
       transmitChirp( &sg_data_out , &sg_chirp);
 
-      /*led_state = 1;
+      led_state = 1;
       Serial.write("led: ");
       Serial.println(led_state);
       digitalWrite(switch_led, HIGH); // turn LED on
-      delay(50);*/
+      delay(50);
         
     //if switch is off, send code to server to tell it to turn led on on other arduino 
     } 
     else {
       
-      sg_chirp.dt [0] = (uint8_t) 0x21;
+      /*sg_chirp.dt [0] = (uint8_t) 0x21;
       sg_chirp.id [0] = (uint8_t) 0x01;
       memset(sg_chirp.data, '\0', DATA_SIZE);
       char ch_array[1];
@@ -180,12 +166,40 @@ void dipswitch(){
       for(int i = 0; i < n; i++)
       sg_chirp.data[i] = ch_array[i];
       
-      transmitChirp( &sg_data_out , &sg_chirp);
+      transmitChirp( &sg_data_out , &sg_chirp); 
       
-      /*led_state = 0;
+      led_state = 0;
       Serial.write("led: ");
       Serial.println(led_state);
       digitalWrite(switch_led, LOW); // turn LED off
-      delay(50); */
+      delay(50); 
+    }*/
+    
+    
+}
+
+/*void receive(){
+    // Interrupt was initiated when SLAVE_READY was
+    // asserted low, set received flag to initiate
+    // processing SPI packet
+    Serial.println( "Interrupt Service Routine" );
+    sg_config.received = true;
+    // Display value of received
+    Serial.println( sg_config.received );
+}*/
+
+void dipswitch(){
+  
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+    led_state = digitalRead(4);
+    digitalWrite(4, !digitalRead(4));
+    Serial.println(led_state);
     }
+ 
+  last_interrupt_time = interrupt_time;  
+
 }

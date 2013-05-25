@@ -34,7 +34,6 @@
 //sets led to pin 6 and button to pin 7
 #define mate_led 6 //active low
 #define SLAVE_READY 2
-#define switch_led 4
 
 // state of the button initialized
 int btn_val = 0; //state of input pin
@@ -62,7 +61,8 @@ SansgridChirp sg_chirp;
 void setup() {
   // initialize the button led as output:
   pinMode(mate_led, OUTPUT); 
-  pinMode(SLAVE_SELECT, OUTPUT);  
+  pinMode(SLAVE_SELECT, OUTPUT);
+  digitalWrite(SLAVE_SELECT, LOW);  
   // initialize led to off
   digitalWrite(mate_led, HIGH); 
   Serial.begin(9600);
@@ -92,14 +92,16 @@ void setup() {
   // and uncomment all sg_config.<fly,sing,squawk,chirp,challenge...>
   // either false or true.
   //sg_config.mate = false;
-  //sg_config.nest = true;
-  sg_config.fly = true;
+  sg_config.nest = true;
+  //sg_config.fly = true;
   //sg_config.sing = true;
   //sg_config.mock = true;
   //sg_config.squawk = true;
   //sg_config.chirp = true;
   //sg_config.nokey = true;
   //sg_config.challenge = true;
+  
+  sgSerialOpen();
 }
 
 void loop(){
@@ -182,23 +184,6 @@ void loop(){
   // after the last reading:
   delay(100);
   
-  //int potvalue = analogRead(A0);
-  // print out the value of the pot:
-  //Serial.println(potvalue);
-  //need to add code to send pot value to server
-  //delay(50);        // delay for better readability
-  
-  
-  //maybe need to declare special value to let my sensor know it wants to turn on led
- /* if (something) {
-    digitalWrite(switch_led, HIGH);
-    delay(50);
-  }
-  else {
-    digitalWrite(switch_led, LOW);
-    delay(50);
-
-}*/
 }
 
 /*void receive(){
@@ -237,3 +222,4 @@ void buttonpress(){
   last_interrupt_time = interrupt_time;
   
 }
+
