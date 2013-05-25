@@ -511,6 +511,8 @@ static char *parseOption(char *buffer) {
 	for (out++; *out != '\0'; out++) {
 		if (out[0] != ' ') break;
 	}
+	if (out[strlen(out)-1] == '\n')
+		out[strlen(out)-1] = '\0';
 	return out;
 }
 
@@ -522,6 +524,8 @@ static char *parseWithQuotes(char *buffer) {
 	char *saveptr;
 	str = strtok_r(buffer, "'", &saveptr);
 	str = strtok_r(NULL, "'", &saveptr);
+	if (str[strlen(str)-1] == '\n')
+		str[strlen(str)-1] = '\0';
 	return str;
 }
 
@@ -850,8 +854,9 @@ int main(int argc, char *argv[]) {
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
-	memset(ip_addr, 0x0, IP_SIZE);
-	ip_addr[IP_SIZE-1] = 0x1;
+	routingTableGetRouterIP(routing_table, ip_addr);
+	//memset(ip_addr, 0x0, IP_SIZE);
+	//ip_addr[IP_SIZE-1] = 0x1;
 	sg_hatch.datatype = SG_HATCH;
 	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
 	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
