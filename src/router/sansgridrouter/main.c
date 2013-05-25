@@ -501,6 +501,29 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 }
 
 
+static char *parseOption(char *buffer) {
+	char *out;
+	for (out = buffer; *out != '\0'; out++) {
+		if (out[0] == '=') break;
+	}
+	if (*out == '\0') return out;
+
+	for (out++; *out != '\0'; out++) {
+		if (out[0] != ' ') break;
+	}
+	return out;
+}
+
+
+
+static char *parseWithQuotes(char *buffer) {
+	// parse with a value in single quotes
+	char *str;
+	char *saveptr;
+	str = strtok_r(buffer, "'", &saveptr);
+	str = strtok_r(NULL, "'", &saveptr);
+	return str;
+}
 
 /**
  * \brief Get configuration from a Config File
@@ -514,11 +537,7 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 	char key[100],
 		 url[100],
 		 essid[100],
-		 hidden_str[10],
-		 verbosity_str[20],
-		 netmask_str[50],
-		 strictness_str[10],
-		 heartbeat_str[50];
+		 strictness_str[10];
 	int hidden = 0;
 	int verbosity = 0;
 	int strictness = 0;
@@ -533,7 +552,6 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		foundstrictness = 0,
 		foundheartbeat = 0;
 	char *str = NULL;
-	char *saveptr = NULL;
 
 	if ((FPTR = fopen(path, "r")) == NULL) {
 		return -1;
@@ -544,23 +562,27 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		return -1;
 	}
 	while (getline(&buffer, &buff_alloc, FPTR) != -1) {
+		if (strstr(buffer, "\'")) {
+			str = parseWithQuotes(buffer);
+		} else {
+			str = parseOption(buffer);
+		}
 		if (strstr(buffer, "key")) {
-			sscanf(buffer, "key = %s", key);
+			strncpy(key, str, sizeof(key));
 			foundkey = 1;
 		} else if (strstr(buffer, "url")) {
-			sscanf(buffer, "url = %s", url);
+			strncpy(url, str, sizeof(url));
 			foundurl = 1;
 		} else if (strstr(buffer, "hidden")) {
-			sscanf(buffer, "hidden = %s", hidden_str);
 			foundhidden = 1;
-			if (strstr(hidden_str, "1")) 
+			if (strstr(str, "1")) 
 				hidden = 1;
-			else if (strstr(hidden_str, "0"))
+			else if (strstr(str, "0"))
 				hidden = 0;
 			else
 				foundhidden = 0;
 		} else if (strstr(buffer, "strictness")) {
-			sscanf(buffer, "strictness = %s", strictness_str);
+			strncpy(strictness_str, str, sizeof(strictness_str));
 			foundstrictness = 1;
 			if (strstr(strictness_str, "1"))
 				strictness = 1;
@@ -569,32 +591,16 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 			else
 				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
-			str = strtok_r(buffer, "'", &saveptr);
-			str = strtok_r(NULL, "'", &saveptr);
-			if (str == NULL) {
-				syslog(LOG_WARNING, "Couldn't parse config file");
-				return -1;
-			}
 			strcpy(essid, str);
-			//sscanf(buffer, "essid = '%s'", essid);
 			foundessid = 1;
 		} else if (strstr(buffer, "verbosity")) {
-			sscanf(buffer, "verbosity = %s", verbosity_str);
-			verbosity = atoi(verbosity_str);
+			verbosity = atoi(str);
 			foundverbosity = 1;
 		} else if (strstr(buffer, "netmask")) {
-			str = strtok_r(buffer, "'", &saveptr);
-			str = strtok_r(NULL, "'", &saveptr);
-			if (str == NULL) {
-				sscanf(buffer, "netmask = %s", netmask_str);
-			} else {
-				strcpy(netmask_str, str);
-			}
-			parseIPv6(netmask_str, netmask);
+			parseIPv6(str, netmask);
 			foundnetmask = 1;
 		} else if (strstr(buffer, "heartbeat")) {
-			sscanf(buffer, "heartbeat = %s", heartbeat_str);
-			heartbeat = atoi(heartbeat_str);
+			heartbeat = atoi(str);
 			foundheartbeat = 1;
 		}
 	}

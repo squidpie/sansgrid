@@ -28,6 +28,10 @@
 /** \file */
 
 
+int spiSetup(void) {
+	return 0;
+}
+
 /**
  * \brief Send data over SPI (Stub)
  *
