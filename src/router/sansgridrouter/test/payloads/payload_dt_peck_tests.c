@@ -17,8 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
+/// Test a peck payload
 int testPeckPayload(PayloadTestStruct *test_struct) {
 	// Call Peck tests with all options
 	int exit_code;
@@ -46,6 +48,7 @@ int testPeckPayload(PayloadTestStruct *test_struct) {
 }
 
 
+/// Test a peck payload
 START_TEST (testPeck) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Peck\n");
@@ -57,10 +60,10 @@ START_TEST (testPeck) {
 	printf("Successfully Pecked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
-
+/// Payload unit tests
 Suite *payloadTestPeck(void) {
 	Suite *s = suite_create("Peck Payload Tests");
 	TCase *tc_core = tcase_create("Core");

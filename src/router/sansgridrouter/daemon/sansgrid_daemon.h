@@ -18,6 +18,7 @@
  *
  *
  */
+/// \file
 
 
 int daemon_init(void);

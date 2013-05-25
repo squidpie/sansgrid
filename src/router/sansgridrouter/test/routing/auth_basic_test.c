@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+/// \file
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,9 @@
 #include "../tests.h"
 
 
+/**
+ * Test the authentication strictness
+ */
 START_TEST (testAuthStrictness) {
 	// Test loose/strict authentication
 	DeviceAuth *dev_auth = NULL;
@@ -50,6 +54,10 @@ START_TEST (testAuthStrictness) {
 	deviceAuthDestroy(dev_auth);
 } END_TEST
 
+
+/**
+ * Do a basic test to make sure the auth order is valid
+ */
 int testAuthOrder(enum SansgridDataTypeEnum dt[], enum SansgridDeviceStatusEnum gdt[], uint32_t size) {
 	DeviceAuth *dev_auth = NULL;
 	uint32_t i;
@@ -74,10 +82,12 @@ int testAuthOrder(enum SansgridDataTypeEnum dt[], enum SansgridDeviceStatusEnum 
 	return 0;
 }
 
+/**
+ * This doesn't actually test the valid control flow
+ * it just walks through what an authentication would look like,
+ * making sure that the authentication syncs correctly
+ */
 START_TEST (testAuthOrderNoRecognize) {
-	// This doesn't actually test the valid control flow
-	// it just walks through what an authentication would look like,
-	// making sure that the authentication syncs correctly
 	enum SansgridDataTypeEnum dt[] = {
 		SG_EYEBALL,
 		SG_PECK,
@@ -103,14 +113,15 @@ START_TEST (testAuthOrderNoRecognize) {
 	testAuthOrder(dt, gdt, sizeof(gdt)/sizeof(gdt[0]));
 	
 
-} END_TEST
+} END_TEST;
 
 
-
+/**
+ * This doesn't actually test the valid control flow
+ * it just walks through what an authentication would look like
+ * making sure that the authentication syncs correctly
+ */
 START_TEST (testAuthOrderRecognized) {
-	// This doesn't actually test the valid control flow
-	// it just walks through what an authentication would look like
-	// making sure that the authentication syncs correctly
 	enum SansgridDataTypeEnum dt[] = {
 		SG_EYEBALL,
 		SG_PECK,
@@ -137,10 +148,13 @@ START_TEST (testAuthOrderRecognized) {
 	fail_if((sizeof(gdt)/sizeof(gdt[0]) != sizeof(dt)/sizeof(dt[0])), "Test specs problem: count(dt) != count(gdt)");
 	testAuthOrder(dt, gdt, sizeof(gdt)/sizeof(gdt[0]));
 
-} END_TEST
+} END_TEST;
 
 
 
+/**
+ * Routing Authentication Testing
+ */
 Suite *routingAuthBasicTestSuite (void) {
 	Suite *s = suite_create("Basic route authentication testing");
 

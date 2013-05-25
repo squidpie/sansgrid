@@ -17,10 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
 
 
+/// Test a Sensor-->Server Chirp Payload
 int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from sensor to server with all valid options
 	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_TCP, SG_DEVSTATUS_LEASED, 0};
@@ -32,6 +34,7 @@ int testChirpPayloadSensorToServer(PayloadTestStruct *test_struct) {
 }
 
 
+/// Test a Server-->Sensor Chirp Payload
 int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
 	// Call Chirp tests from server to sensor with all valid options
 	PayloadTestNode chirp = { SG_TEST_COMM_WRITE_SPI, SG_DEVSTATUS_LEASED, 0};
@@ -42,6 +45,7 @@ int testChirpPayloadServerToSensor(PayloadTestStruct *test_struct) {
 }
 
 
+/// Test Sensor-->Server (toplevel)
 START_TEST (testChirpSensorToServer) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Chirping (Sensor to Server)\n");
@@ -53,8 +57,9 @@ START_TEST (testChirpSensorToServer) {
 	printf("Successfully Chirped (Sensor to Server)\n");
 #endif
 }
-END_TEST
+END_TEST;
 
+/// Test Server-->Sensor (toplevel)
 START_TEST (testChirpServerToSensor) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Chirping (Server to Sensor)\n");
@@ -66,9 +71,10 @@ START_TEST (testChirpServerToSensor) {
 	printf("Successfully Chirped (Server to Sensor)\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Test Chirp Payloads
 Suite *payloadTestChirp(void) {
 	Suite *s = suite_create("Chirp Payload Tests");
 	TCase *tc_core = tcase_create("Core");

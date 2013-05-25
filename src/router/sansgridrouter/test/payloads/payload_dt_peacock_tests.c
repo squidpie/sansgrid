@@ -17,8 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
+/// Peacock payload testing
 int testPeacockPayload(PayloadTestStruct *test_struct) {
 	// Call peacock tests with all valid options
 	int exit_code;
@@ -30,6 +32,7 @@ int testPeacockPayload(PayloadTestStruct *test_struct) {
 }
 
 
+/// Unit test for testing peacock payloads
 START_TEST (testPeacock) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Peacocking\n");
@@ -41,9 +44,10 @@ START_TEST (testPeacock) {
 	printf("Successfully Peacocked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Unit tests for peacock payloads
 Suite *payloadTestPeacock(void) {
 	Suite *s = suite_create("Peacock Payload Tests");
 	TCase *tc_core = tcase_create("Core");

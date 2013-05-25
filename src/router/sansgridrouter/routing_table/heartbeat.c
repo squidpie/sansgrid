@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <syslog.h>
+/// \file
 
 
 /**
@@ -57,9 +58,12 @@ struct HeartbeatStatus {
 };
 
 
+/// Default Stale Threshold
 static int32_t stale_thres_default = STALE_THRESHOLD;
+/// Default Refresh Threshold
 static int32_t ping_thres_default = PING_THRESHOLD;
 
+/// Make sure HeartbeatStatus Structure is valid
 static int hbAssertValid(HeartbeatStatus *hb) {
 	if (hb == NULL) {
 		syslog(LOG_WARNING, "Heartbeat Status struct is NULL!");

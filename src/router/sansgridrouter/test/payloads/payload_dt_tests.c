@@ -18,10 +18,20 @@
  *
  *
  */
+/// \file
 #include "payload_tests.h"
 
 
 
+/**
+ * \brief Test a single payload
+ *
+ * This is the toplevel for payload testing.
+ * \param	sg_serial	payload to test with
+ * \param	test_node	specific test node to use for testing
+ * \param	fn			callback to use to test
+ * \param	message		message to use for logs
+ */
 static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_node,
 		int(*fn)(RoutingTable*, SansgridSerial*), const char *message) {
 
@@ -135,6 +145,7 @@ static int testPayloadSpecific(SansgridSerial *sg_serial, PayloadTestNode *test_
 
 
 
+/// Test a payload path
 int testPayload(PayloadTestStruct *test_struct) {
 	// unit test code to test data types
 	int32_t exit_code = 0;
@@ -323,6 +334,7 @@ int testPayload(PayloadTestStruct *test_struct) {
 	return 0;
 }
 
+/// Initialize a test structure
 void testStructInit(PayloadTestStruct *test_struct) {
 	test_struct->eyeball = NULL;
 	test_struct->peck = NULL;

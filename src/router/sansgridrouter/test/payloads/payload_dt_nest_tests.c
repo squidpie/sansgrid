@@ -17,9 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
 
+/// Test a nesting payload
 int testNestPayload(PayloadTestStruct *test_struct) {
 	// Call Nest tests with all valid options
 	int exit_code;
@@ -56,7 +58,7 @@ int testNestPayload(PayloadTestStruct *test_struct) {
 
 
 
-
+/// Unit testing for nest payloads
 START_TEST (testNest) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Nesting\n");
@@ -68,10 +70,10 @@ START_TEST (testNest) {
 	printf("Successfully Nested\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
-
+/// Nest payload unit testing
 Suite *payloadTestNest(void) {
 	Suite *s = suite_create("Nest Payload Tests");
 	TCase *tc_core = tcase_create("Core");

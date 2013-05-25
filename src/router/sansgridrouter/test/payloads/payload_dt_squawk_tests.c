@@ -17,9 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
 
+/// Test a squawk payload where both the sensor and the server wish to authenticate
 int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 	// Call squawk tests with all valid options
 	//int exit_code;
@@ -41,6 +43,7 @@ int testSquawkPayloadAuthBoth(PayloadTestStruct *test_struct) {
 }
 
 
+/// Test a squawk payload where only the sensor wishes to authenticate
 int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
 	// Call squawk: sensor requires authentication
 	// with all valid options
@@ -63,6 +66,7 @@ int testSquawkPayloadAuthSensor(PayloadTestStruct *test_struct) {
 }
 	
 
+/// Test a squawk payload where only the server wishes to authenticate
 int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 	// Call squawk: server requires authentication
 	// with all valid options
@@ -85,6 +89,7 @@ int testSquawkPayloadAuthServer(PayloadTestStruct *test_struct) {
 }
 
 
+/// Test a squawk payload where neither sensor nor server wish to authenticate
 int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 	// Call squawk: No authentication
 	// with all valid options
@@ -108,6 +113,7 @@ int testSquawkPayloadNoAuth(PayloadTestStruct *test_struct) {
 
 
 
+/// Unit test for both sensor & server authenticating
 START_TEST (testSquawkAuthBoth) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Squawking (Both Authenticate)\n");
@@ -120,9 +126,10 @@ START_TEST (testSquawkAuthBoth) {
 	printf("Successfully Squawked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Unit test for sensor wishing to authenticate
 START_TEST (testSquawkAuthSensor) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Squawking (Sensor Authenticates)\n");
@@ -135,9 +142,10 @@ START_TEST (testSquawkAuthSensor) {
 	printf("Successfully Squawked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Unit test for server wishing to authenticate
 START_TEST (testSquawkAuthServer) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Squawking (Server Authenticates)\n");
@@ -150,9 +158,10 @@ START_TEST (testSquawkAuthServer) {
 	printf("Successfully Squawked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
+/// Unit test for neither wishing to authenticate
 START_TEST (testSquawkNoAuth) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Squawking (Neither Authenticate)\n");
@@ -165,10 +174,11 @@ START_TEST (testSquawkNoAuth) {
 	printf("Successfully Squawked\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
 
+/// Squawk Unit tests
 Suite *payloadTestSquawk(void) {
 	Suite *s = suite_create("Squawk Payload Tests");
 	TCase *tc_core = tcase_create("Core");

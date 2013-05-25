@@ -21,10 +21,9 @@
  * 		- Dynamic resizing at runtime
  * 		- Variable-length entries in the queue
  *
- * TODO: change all normal locks to timed locks
- *
  * Link with -lpthread
  */
+/// \file
 
 #include <stdio.h>
 #include <pthread.h>

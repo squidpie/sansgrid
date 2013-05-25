@@ -17,8 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+/// \file
 #include "payload_tests.h"
 
+
+/// Test an eyeball payload
 int testEyeballPayload(PayloadTestStruct *test_struct) {
 	// Call Eyeball tests with all options
 	// Mate, NoMate
@@ -40,6 +43,7 @@ int testEyeballPayload(PayloadTestStruct *test_struct) {
 
 
 
+/// Test an eyeball payload
 START_TEST (testEyeball) {
 #if TESTS_DEBUG_LEVEL > 0
 	printf("\n\nTesting Eyeball\n");
@@ -51,10 +55,10 @@ START_TEST (testEyeball) {
 	printf("Successfully Eyeballed\n");
 #endif
 }
-END_TEST
+END_TEST;
 
 
-
+/// Test multiple eyeball payloads
 START_TEST (testMultEyeballs) {
 	int num_defined_here = 0;
 	int old_num_devices;
@@ -73,9 +77,10 @@ START_TEST (testMultEyeballs) {
 	}
 	if (num_defined_here)
 		num_devices = old_num_devices;
-} END_TEST
+} END_TEST;
 
 
+/// Eyeball tests
 Suite *payloadTestEyeball(void) {
 	Suite *s = suite_create("Eyeball Payload Tests");
 	TCase *tc_core = tcase_create("Core");

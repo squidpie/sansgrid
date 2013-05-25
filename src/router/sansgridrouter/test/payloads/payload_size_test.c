@@ -20,11 +20,13 @@
  * This dispatch test uses a named pipe as a stub to read from.
  * The data from the stub is enqueued, and the dispatch thread dequeues the data.
  */
+/// \file
 
 #include "payload_tests.h"
 
 
 
+/// Make sure all payloads are the same, correct size.
 START_TEST (testPayloadSize) {
 	// unit test code for making sure all payloads are the same size
 	checkSize("SansgridHatching", sizeof(SansgridHatching));
@@ -39,11 +41,12 @@ START_TEST (testPayloadSize) {
 	checkSize("SansgridHeartbeat", sizeof(SansgridHeartbeat));
 	checkSize("SansgridChirp", sizeof(SansgridChirp));
 }
-END_TEST
+END_TEST;
 
 
 
 
+/// Payload size testing unit tests
 Suite *payloadSizeTesting (void) {
 	Suite *s = suite_create("Payload Size Test");
 	TCase *tc_core = tcase_create("Core");
