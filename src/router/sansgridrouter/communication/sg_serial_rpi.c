@@ -213,11 +213,9 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 
 	// receive data
-	int val = 0;
-	sem_wait(&wait_on_slave);
-	sem_getvalue(&wait_on_slave, &val);
+	if (digitalRead(wpiPinToGpio(SLAVE_INT_PIN)))
+		sem_wait(&wait_on_slave);
 	while (sem_trywait(&wait_on_slave) == 0);
-	printf("Value = %i\n", val);
 
 	// Slave wants to send data
 	if ((fd = spiOpen()) == -1) {
