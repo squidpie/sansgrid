@@ -54,15 +54,7 @@
 #define NEST_PADDING 80
 #define HEARTBEAT_PADDING 80
 #define SID 1
-
-
-typedef struct SansgridSensor{
-    uint8_t id[ SENSOR_ID ];
-    uint8_t classification[ CLASSIFICATION ];
-    uint8_t direction[ DIRECTION ];
-    int8_t label[ LABEL ];
-    int8_t units[ UNITS ];
-} SansgridSensor;
+#define DATA_SIZE 79
 
 typedef struct SensorConfig{
     static bool mate;
@@ -76,6 +68,7 @@ typedef struct SensorConfig{
     static bool challenge;
     static bool forget;
 	static bool received;
+	static bool transmit;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];

@@ -614,6 +614,8 @@ int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZ
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
+	if (index < 2) 
+		return 0;
 	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
 }
 

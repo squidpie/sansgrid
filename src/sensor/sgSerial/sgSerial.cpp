@@ -23,14 +23,15 @@
 #include <Arduino.h>
 #include "sgSerial.h"
 
-#define DUE 1
+//#define DUE 1
 #define DELAY 6
+#define SLAVE_SELECT 10
  
 // Opens serial device for reading/writing, configures ports, sets order data 
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
 uint8_t sgSerialOpen(void){
-    Serial.println( "Opening SPI" );
+    //Serial.println( "Opening SPI" );
     // Initialize Sensor SPI communication
     SPI.begin();
     // Set order bits are shifted onto the SPI bus
@@ -69,19 +70,19 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
     sgSerialOpen();
-    delayMicroseconds(DELAY);
+    delayMicroseconds( DELAY );
     // Send dummy byte to Set command on Slave
     //Serial.println( "First Byte" );
-    SPI.transfer( data_out[0] );
-    delayMicroseconds(DELAY);
+    //SPI.transfer( data_out[0] );
+    //delayMicroseconds(DELAY);
     // Loop through buffer sending one byte at a time over SPI
     for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI
         SPI.transfer( data_out[i] );
         delayMicroseconds(DELAY);
-        //Serial.println( data_out[i] );
+        Serial.println( data_out[i] );
     }
-    // Close SPI bus - NOT USED
+	// Close SPI bus - NOT USED
     //sgSerialClose();
     return 0;
 }
@@ -101,8 +102,8 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     delayMicroseconds(DELAY);
     // First dummy transfer defines the command 
     // for valid or not valid data
-    SPI.transfer( rec );
-    delayMicroseconds(DELAY);
+    //SPI.transfer( rec );
+    //delayMicroseconds(DELAY);
     // Second dummy transfer allows the first 
     // byte transferred from Slave to be placed
     // in SPDR register and will be stored on the

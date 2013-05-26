@@ -36,6 +36,7 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 #include <syslog.h>
+#include "../sansgrid_router.h"
 /** \file */
 
 
@@ -44,7 +45,8 @@
 
 /// SPI Clock Speed, in KHz
 //#define SPI_SPEED_KHZ	512
-#define SPI_SPEED_KHZ	4000L
+//#define SPI_SPEED_KHZ	4000L
+#define SPI_SPEED_KHZ	15
 /**
  * \brief Write Cycle Time, in us
  *
@@ -54,7 +56,7 @@
  */
 #define WRITE_CYCLE_U	6000
 /// The max number of bytes we can write before cycling
-#define WRITE_MAX_BYTES 1
+#define WRITE_MAX_BYTES 100
 
 /**
  * \brief What pin the slave interrupt is on
@@ -66,6 +68,30 @@
 static sem_t wait_on_slave;
 static int sem_initd = 0;
 static int g_fd = 0;
+static pthread_mutex_t transfer_lock;
+
+/**
+ * \brief Interrupt handler: waits until slave wants to send data
+ *
+ * An interrupt is set up in sgSerialReceive on a GPIO pin.
+ * When that pin is asserted, this function allows a read transaction
+ * to commence.
+ */
+void sgSerialSlaveSending(void) {
+	printf("Got an interrupt\n");
+	sem_post(&wait_on_slave);
+}
+
+
+static SansgridSerial *sgSerialCP(SansgridSerial *sg_serial) {
+	// allocate a new structure and copy sg_serial into it
+	SansgridSerial *sg_serial_cpy;
+	sg_serial_cpy = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memcpy(sg_serial_cpy, sg_serial, sizeof(SansgridSerial));
+	return sg_serial_cpy;
+}
+
+
 
 /**
  * \brief Prepare for impending SPI Transaction
@@ -84,6 +110,16 @@ int spiSetup(void) {
 	// FIXME: use SLAVE_INT_PIN here
 	FPTR = popen("gpio export 2 in", "r");
 	fclose(FPTR);
+	//syslog(LOG_DEBUG, "Using pin %i", SLAVE_INT_PIN);
+	if (wiringPiSetupSys() == -1) {
+		syslog(LOG_ERR, "Couldn't setup wiringPi system!");
+		exit(EXIT_FAILURE);
+	}
+	if (wiringPiISR(SLAVE_INT_PIN, INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
+		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
+		exit(EXIT_FAILURE);
+	}
+	pthread_mutex_init(&transfer_lock, NULL);
 	return 0;
 }
 
@@ -99,7 +135,6 @@ int spiSetup(void) {
  * return 0 always.
  */
 int spiTransfer(char *buffer, int size) {
-	int i;
 	// only a certain amount of byte can be written at a time. see below
 	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
 	struct timespec req = { 0, WRITE_CYCLE_U*1000L };
@@ -152,6 +187,8 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	int fd;
 	char buffer[size+1];
+	int8_t exit_code = 0;
+	pthread_mutex_lock(&transfer_lock);
 
 	syslog(LOG_INFO, "Sending data over Serial");
 
@@ -163,20 +200,13 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	spiTransfer(buffer, size);
 
 	close(fd);
+	memcpy(sg_serial, buffer, size);
+	pthread_mutex_unlock(&transfer_lock);
+	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA)
+		queueEnqueue(dispatch, sgSerialCP(sg_serial));
+	
 
-	return 0;
-}
-
-
-/**
- * \brief Interrupt handler: waits until slave wants to send data
- *
- * An interrupt is set up in sgSerialReceive on a GPIO pin.
- * When that pin is asserted, this function allows a read transaction
- * to commence.
- */
-void sgSerialSlaveSending(void) {
-	sem_post(&wait_on_slave);
+	return exit_code;
 }
 
 
@@ -192,47 +222,40 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
-	int fd;
 	char buffer[sizeof(SansgridSerial)+1];
 	syslog(LOG_INFO, "Waiting for data over serial");
-	if (wiringPiSetupSys() == -1) {
-		syslog(LOG_ERR, "Couldn't setup wiringPi system!");
-		exit(EXIT_FAILURE);
-	}
-	//syslog(LOG_DEBUG, "Using pin %i", SLAVE_INT_PIN);
-	if (wiringPiISR(wpiPinToGpio(SLAVE_INT_PIN), INT_EDGE_FALLING, &sgSerialSlaveSending) < 0) {
-		syslog(LOG_ERR, "Couldn't setup interrupt on pin!");
-		exit(EXIT_FAILURE);
-	}
 	if (!sem_initd) {
 		sem_init(&wait_on_slave, 0, 0);
 		sem_initd = 1;
 	}
 	memset(buffer, 0x0, sizeof(buffer));
+	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memset(*sg_serial, 0x0, sizeof(SansgridSerial));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 
 	// receive data
-	int val = 0;
-	sem_wait(&wait_on_slave);
-	sem_getvalue(&wait_on_slave, &val);
 	while (sem_trywait(&wait_on_slave) == 0);
-	printf("Value = %i\n", val);
+	if (digitalRead((SLAVE_INT_PIN)))
+		sem_wait(&wait_on_slave);
 
 	// Slave wants to send data
+	/*
 	if ((fd = spiOpen()) == -1) {
 		syslog(LOG_ERR, "setting up SPI failed");
 		exit(EXIT_FAILURE);
 	}
 	spiTransfer(buffer, sizeof(SansgridSerial));
 	close(fd);
+	*/
+	sgSerialSend(*sg_serial, sizeof(SansgridSerial));
+	memcpy(buffer, *sg_serial, sizeof(SansgridSerial));
 	if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA) {
 		syslog(LOG_WARNING, "Bad data on SPI");
-		sleep(5);
+		sleep(1);
 		return -1;
 	}
 
-	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
+	//memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
 
 	return 0;
