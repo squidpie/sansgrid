@@ -44,7 +44,6 @@ static int32_t chkValidCTRLPath(RoutingTable *routing_table,
 }
 
 
-
 /**
  * \brief Send a disconnect signal and deallocate a device
  *

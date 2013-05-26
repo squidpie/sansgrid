@@ -140,9 +140,10 @@ void *spiReaderRuntime(void *arg) {
 	SansgridSerial *sg_serial;
 	while (1) {
 		while (sgSerialReceive(&sg_serial, &size) == -1) {
+			free(sg_serial);
 			sched_yield();
 		}
-		queueEnqueue(dispatch, sg_serial);
+		//queueEnqueue(dispatch, sg_serial);
 	}
 	pthread_exit(arg);
 }

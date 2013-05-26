@@ -36,6 +36,7 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 #include <syslog.h>
+#include "../sansgrid_router.h"
 /** \file */
 
 
@@ -82,6 +83,16 @@ void sgSerialSlaveSending(void) {
 }
 
 
+static SansgridSerial *sgSerialCP(SansgridSerial *sg_serial) {
+	// allocate a new structure and copy sg_serial into it
+	SansgridSerial *sg_serial_cpy;
+	sg_serial_cpy = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memcpy(sg_serial_cpy, sg_serial, sizeof(SansgridSerial));
+	return sg_serial_cpy;
+}
+
+
+
 /**
  * \brief Prepare for impending SPI Transaction
  *
@@ -124,7 +135,6 @@ int spiSetup(void) {
  * return 0 always.
  */
 int spiTransfer(char *buffer, int size) {
-	int i;
 	// only a certain amount of byte can be written at a time. see below
 	int bounded_size = (size > WRITE_MAX_BYTES ? WRITE_MAX_BYTES : size);
 	struct timespec req = { 0, WRITE_CYCLE_U*1000L };
@@ -177,6 +187,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
 	int fd;
 	char buffer[size+1];
+	int8_t exit_code = 0;
 	pthread_mutex_lock(&transfer_lock);
 
 	syslog(LOG_INFO, "Sending data over Serial");
@@ -191,8 +202,11 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	close(fd);
 	memcpy(sg_serial, buffer, size);
 	pthread_mutex_unlock(&transfer_lock);
+	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA)
+		queueEnqueue(dispatch, sgSerialCP(sg_serial));
+	
 
-	return 0;
+	return exit_code;
 }
 
 
@@ -208,7 +222,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
-	int fd;
 	char buffer[sizeof(SansgridSerial)+1];
 	syslog(LOG_INFO, "Waiting for data over serial");
 	if (!sem_initd) {
