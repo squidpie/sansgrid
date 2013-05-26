@@ -31,19 +31,14 @@
 
 //sets led to pin 4 and switch to pin 5
 #define SLAVE_READY 2
-//#define dip 5 //active low, needs to switch to pin 3 for interrupt
 #define switch_led 4
 
 //initialization
 int switch_state = 0; //state of dip switch
 int led_state = 0;
 
-int intPin = 0;
-
 SensorConfig sg_config;
-SansgridSerial sg_data_in;
-SansgridSerial sg_data_out;
-SansgridChirp sg_chirp;
+SansgridSerial sg_serial;
 
 //setting up the pins to proper i/o
 void setup() {
@@ -93,89 +88,83 @@ void loop(){
         sensorConnect( &sg_config , &sg_data_out );  
     }
   
-    delay(1000);
+    // DEBUG message
     Serial.println( "Connected to Network" );
-    // Signal Output Code goes here
-    //delay(1000);
-    //Serial.println( "Connected to Network" );
-    
-    //Serial.println( "Interrupt Service Routine" );
-    //sgSerialReceive( &sg_data_in, 1 );
-    
-    // Testing Squawk - remove for final source code
-    /*sg_data_in.control[0] = (uint8_t) 0xAD;
-    // Set IP address to router ip
-    memcpy( &sg_data_in.ip_addr , &sg_config.router_ip , IP_ADDRESS );
-    sg_data_in.payload[0] = 0x12;
-    payloadHandler( &sg_config , &sg_data_in );
-    delay(1000);
-    // Received Squawk payload, respond to 
-    // squawk before leaving interrupt.
-    while( sg_config.squawk == true ){
-        // Received a Squawk packet, now send a Squawk back
-        Serial.println( "RETURN SQUAWKING" );
-        // Set control byte to valid data
-	sg_data_in.control[0] = (uint8_t) 0xAD;
-        // Set IP address to router ip
-	memcpy( &sg_data_in.ip_addr , &sg_config.router_ip , IP_ADDRESS );
-	// Call Payload Handler to send return squawk
-        payloadHandler( &sg_config , &sg_data_in);
-    }  
-    // Signal Input Code goes here
-    while(1){
+    // Signal Input Code goes here in this loop
+    while(sg_config.nest == true ){  
+        // Delay between sending Packets atleast 1 second
         delay(1000);
-    }*/
-    // Remove to Here
-    
-    //dip switch code
-     //dip switch to led code
-    /*switch_state = digitalRead(dip); //reads current state of dip switch    
-    Serial.println(switch_state);
-    delay(100);
-    
-    //if switch is on, send code to server to tell it to turn led on on other arduino
-    if (switch_state == 1) {
+        // Received packet over SPI
+        if ( sg_config.received == true ){
+            // Received Packet
+            Serial.println( "RECEIVING SPI PACKET" );
+            sgSerialReceive( &sg_serial , 1 );
+            // Process packet to verify Chirp received
+            payloadHandler( &sg_config , &sg_serial);
+            Serial.println( "setting received to false");
+            // Reset received to default value
+            sg_config.received = false;
+            // Process received Chirp packet
+            if( sg_config.chirp == true ){
+                // if (sg_serial.payload[0] == 0x20){
+                //blah blah blah}
+                //check for sid at [1]
+                //last position is at [2]
+                //Received Chirp from Sensor
+                // Need to process payload to perform action
+                // on Signal. Put code in here.
+              
+                // Reset Chirp to false
+                sg_config.chirp = false; 
+            }// End of received Chirp
+        }
+        // Code to Send Chirp
+        else{
+            // Set control byte to valid data
+            sg_serial.control[0] = (uint8_t) 0xAD;
+            // Set IP address to router ip
+            memcpy( sg_serial.ip_addr , sg_config.router_ip , IP_ADDRESS );
+            // Set Datatype to 0x21, Sensor to Server Chirp
+            sg_serial.payload[0] = (uint8_t) 0x21;
+            // Copy data into Payload
+            // Which Signal Id are you using?
+            sg_serial.payload[1] = (unit8_t) 0x01; //make sure to change this to 0x02 for second sensor
+            //if switch is on, send code to server to tell it to turn led on on other arduino
+            if (switch_state == 1) {
       
-      /*sg_chirp.dt [0] = (uint8_t) 0x21;
-      sg_chirp.id [0] = (uint8_t) 0x01;
-      memset(sg_chirp.data, '\0', DATA_SIZE);
-      char ch_array[1];
-      int n;
-      n = sprintf(ch_array, "%d", 1);
-      for(int i = 0; i < n; i++)
-      sg_chirp.data[i] = ch_array[i];
-  
-      transmitChirp( &sg_data_out , &sg_chirp);
-
-      led_state = 1;
-      Serial.write("led: ");
-      Serial.println(led_state);
-      digitalWrite(switch_led, HIGH); // turn LED on
-      delay(50);
-        
-    //if switch is off, send code to server to tell it to turn led on on other arduino 
-    } 
-    else {
+              memset(sg_chirp.data, '\0', DATA_SIZE);
+              char ch_array[1];
+              int n;
+              n = sprintf(ch_array, "%d", 1);
+              for(int i = 0; i < n; i++)
+                sg_chirp.data[i] = ch_array[i];
+              led_state = 1;
+              //code for TESTING
+              Serial.write("led: ");
+              Serial.println(led_state);
+              digitalWrite(switch_led, HIGH); // turn LED on
+              delay(50);
+            }
+          //if switch is off, send code to server to tell it to turn led on on other arduino 
+            else {
       
-      /*sg_chirp.dt [0] = (uint8_t) 0x21;
-      sg_chirp.id [0] = (uint8_t) 0x01;
-      memset(sg_chirp.data, '\0', DATA_SIZE);
-      char ch_array[1];
-      int n;
-      n = sprintf(ch_array, "%d", 0);
-      for(int i = 0; i < n; i++)
-      sg_chirp.data[i] = ch_array[i];
-      
-      transmitChirp( &sg_data_out , &sg_chirp); 
-      
-      led_state = 0;
-      Serial.write("led: ");
-      Serial.println(led_state);
-      digitalWrite(switch_led, LOW); // turn LED off
-      delay(50); 
-    }*/
-    
-    
+              memset(sg_chirp.data, '\0', DATA_SIZE);
+              char ch_array[1];
+              int n;
+              n = sprintf(ch_array, "%d", 0);
+              for(int i = 0; i < n; i++)
+              sg_chirp.data[i] = ch_array[i];
+              led_state = 0;
+              //code for TESTING
+              Serial.write("led: ");
+              Serial.println(led_state);
+              digitalWrite(switch_led, LOW); // turn LED off
+              delay(50); 
+            }
+            // Transmit Payload over SPI  
+            sgSerialSend( &sg_serial , 1 );
+        }// End of Send Chirp
+    }// End of Nested
 }
 
 /*void receive(){
@@ -185,7 +174,7 @@ void loop(){
     Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
     // Display value of received
-    Serial.println( sg_config.received );
+    Serial.println( "Received flag set to true" );
 }*/
 
 void dipswitch(){
@@ -195,7 +184,7 @@ void dipswitch(){
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time > 200) 
   {
-    led_state = digitalRead(4);
+    led_state = !digitalRead(4);
     digitalWrite(4, !digitalRead(4));
     Serial.println(led_state);
     }
