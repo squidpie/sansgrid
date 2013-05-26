@@ -2,7 +2,7 @@
 include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
 
 // Establish connection with server.
-$db = @mysqli_connect("$SG_domain", "$SG_db_user", "$SG_db_pass") or die ("Couldn't connect to database.");
+$db = @mysqli_connect($SG['domain'], $SG['db_user'], $SG['db_pass']) or die ("Couldn't connect to database.");
 
 // Check for existence of "sansgrid" database. If it exists we should delete it. 
 if ( mysqli_select_db($db, 'sansgrid') ) {
