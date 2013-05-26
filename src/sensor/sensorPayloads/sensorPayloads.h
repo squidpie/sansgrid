@@ -54,6 +54,7 @@
 #define NEST_PADDING 80
 #define HEARTBEAT_PADDING 80
 #define SID 1
+#define DATA_SIZE 79
 
 typedef struct SensorConfig{
     static bool mate;
