@@ -67,6 +67,7 @@ typedef struct SensorConfig{
     static bool challenge;
     static bool forget;
 	static bool received;
+	static bool transmit;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];

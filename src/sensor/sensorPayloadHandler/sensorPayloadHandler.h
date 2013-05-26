@@ -29,11 +29,9 @@
 #include <sgSerial.h>
 
 void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial );
-void peck( SensorConfig *sg_config , SansgridPeck *sg_peck );
-void sing( SensorConfig *sg_config , SansgridSing *sg_sing );
-void peacock( SensorConfig *sg_config , SansgridPeacock *sg_sing);
 void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
 bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial );
+int freeRam ( void ); 
 
 #endif // __SENSOR_PAYLOAD_HANDLER_H__

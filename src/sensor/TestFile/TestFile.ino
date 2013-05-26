@@ -30,7 +30,8 @@
 #include <SPI.h>
 
 //#define PUSH_BUTTON 1
-#define DUE 1
+//#define DUE 1
+//#define LED 13
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
@@ -67,9 +68,9 @@ void setup(){
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    sg_config.fly = true;
+    //sg_config.fly = true;
     //sg_config.sing = true;
-    //sg_config.mock = true;
+    sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.nokey = true;
@@ -81,10 +82,11 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
+        //Serial.println(freeRam());
         sensorConnect( &sg_config , &sg_serial );  
     }
     // DEBUG message
-    Serial.println( "Connected to Network" );
+    //Serial.println( "Connected to Network" );
     // Signal Input Code goes here in this loop
     while(sg_config.nest == true ){  
         // Delay between sending Packets atleast 1 second
@@ -92,11 +94,11 @@ void loop(){
         // Received packet over SPI
         if ( sg_config.received == true ){
             // Received Packet
-            Serial.println( "RECEIVING SPI PACKET" );
+            //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( &sg_serial , 1 );
             // Process packet to verify Chirp received
             payloadHandler( &sg_config , &sg_serial);
-            Serial.println( "setting received to false");
+            //Serial.println( "setting received to false");
             // Reset received to default value
             sg_config.received = false;
             // Process received Chirp packet
@@ -133,8 +135,10 @@ void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, set received flag to initiate
     // processing SPI packet
-    Serial.println( "Interrupt Service Routine" );
+    //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
     // Display value of received
-    Serial.println( "Received flag set to true" );
+    //Serial.println( "Received flag set to true" );
 }
+
+
