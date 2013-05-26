@@ -9,14 +9,7 @@ if ( mysqli_select_db($db, 'sansgrid') ) {
 	// Database exists
 	print "The \"sansgrid\" database already exists. If you wish to begin a new installation please ";
 	print "delete it and run INSTALL.php again.";
-	// UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!!  UNCOMMENT THIS!!! 
-	//die ("<br>");
-
-	// DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!  DELETE THIS!!!
-	$query = "DROP DATABASE sansgrid";
-	$result = mysqli_query($db, $query) or die ("Couldn't delete database, quitting.");
-	print "<br><br>I just blindly deleted the sansgrid database.  <span style=\"color: red;\">This is terrible</span><br><br>";
-
+	die ("<br>");
 }
 
 
@@ -98,7 +91,8 @@ mysqli_close($db);
 <body>
 
 <p>
-<b>There should be some text here indicating that we were successful or whatever</b>
+Congratulations! Your SansGrid server is fully installed. It is <b>highly</b>
+recommended that you delete this file (INSTALL.php). 
 </p>
 
 </body>
