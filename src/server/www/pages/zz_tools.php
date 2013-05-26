@@ -116,7 +116,7 @@ function returnDatabaseConnection() {
 	$db_pass = $SG['db_pass'];
 
 	$db = @mysqli_connect("$domain", "$db_user", "$db_pass", "sansgrid") 
-			or die ("Couldn't connect to database.<br>$query");
+			or die ("Couldn't connect to database (rDC).");
 	return $db;
 }
 /* ************************************************************************** */

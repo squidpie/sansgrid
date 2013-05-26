@@ -1,5 +1,5 @@
 <?
-include_once($_SERVER["DOCUMENT_ROOT"] . "super_include.php");
+include_once($_SERVER["DOCUMENT_ROOT"] . "config.php");
 
 // Establish connection with server.
 $db = @mysqli_connect($SG['domain'], $SG['db_user'], $SG['db_pass']) or die ("Couldn't connect to database.");
@@ -34,7 +34,7 @@ if ($db->connect_errno) {
 }
 
 // Table: server
-$query = "CREATE TABLE server (id_server int NOT NULL UNIQUE AUTO_INCREMENT, server_key VARCHAR(250), verify_mating INT(1), refresh_rate INT )";
+$query = "CREATE TABLE server (id_server int NOT NULL UNIQUE AUTO_INCREMENT, server_id VARCHAR(250), server_key VARCHAR(250), verify_mating INT(1), refresh_rate INT )";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'server', quitting.<br>$query");
 
 // Table: router
@@ -54,7 +54,7 @@ $query = "CREATE TABLE log (id_log INT NOT NULL UNIQUE AUTO_INCREMENT, log VARCH
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'log', quitting.");
 
 // Table: pipeline
-$query = "CREATE TABLE pipeline (id_sensor INT; rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), workspace VARCHAR(250), last_update TIMESTAMP)";
+$query = "CREATE TABLE pipeline (id_sensor INT, rdid VARCHAR(50), latest_tx VARCHAR(10), router_ip VARCHAR(50), workspace VARCHAR(250), last_update TIMESTAMP)";
 $result = mysqli_query($db, $query) or die ("Couldn't create table 'pipeline', quitting.");
 
 // Table: com (Compendium of Manufacturers) 
@@ -73,9 +73,21 @@ $result = mysqli_query($db, $query) or die ("Couldn't create table 'trigger', qu
 // Generate and save server_id and set other system defaults
 $server_key = generateRandomHash(128);	// 128 characters = 64 bytes
 $server_id  = generateRandomHash(32);	// 32 characters = 16 bytes
-$query = "INSERT INTO server (server_id, server_key, verify_mating, auto_refresh) VALUES ('$server_id', '$server_key', 0, 0)";
+$query = "INSERT INTO server (server_id, server_key, verify_mating, refresh_rate) VALUES ('$server_id', '$server_key', 0, 0)";
 $result = mysqli_query($db, $query) or die ("Couldn't initialize new server.");
 
+/* ************************************************************************** */
+// Returns a random hex string that's $length characters long
+function generateRandomHash ($length) {
+	$tmp = "";
+	for ($i = 0; $i < $length; ++$i) {
+		$tmp .= sprintf ("%x", mt_rand(0,15));
+	}
+
+
+	return $tmp;
+}
+/* ************************************************************************** */
 
 mysqli_close($db);
 ?>
