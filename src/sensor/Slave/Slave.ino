@@ -102,18 +102,18 @@ void loop (void){
     { 
     Serial.println( "Packet" );  
     for( int i = 0 ; i < NUM_BYTES ; i++ )
-        Serial.println ( rx_buf[i], DEC );
+        Serial.println ( rx_buf[i], DEC ); 
     pos = 0;
     pos_b = 0;
     command = 0;
     process_it = false;
     }  // end of flag set
     
-    delay(6000);
+    /*delay(6000);
     digitalWrite( SLAVE_READY , LOW );
     delayMicroseconds( 5 );
     digitalWrite( SLAVE_READY , HIGH );
-    delay(6000);
+    delay(6000);*/
 }  // end of loop
 
 // Peck

@@ -36,9 +36,13 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
     // Read in data type from first position of payload
     // to determine what to do with packet
     uint8_t command = sg_serial->payload[0];
-    //Serial.println( command );
-	// Counter 
+	// Counter for Verifying Router IP
+	// and Forgotten Server.
+	// If old Router IP address does'nt match peck
+	// Forget Sensor.
 	uint8_t val = 0;
+	// Memory Test to see how much SRAM left
+	Serial.println( freeRam() );
     switch ( command ){ 
         case 0x00 :
             // Eyeball - Sensor entering network.
@@ -55,10 +59,9 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Copy Eyeball payload into SansgridSerial
             // struct and send over SPI.
             transmitEyeball( sg_serial , &sg_eyeball );
-            sg_config->transmit = true;
 			// Set FLY flag back to false, wait for Peck
             // packet to arrive.
-            //sg_config->fly = false;
+            sg_config->fly = false;
             break;
         case 0x01 :
             // Peck - Initial server response
@@ -106,7 +109,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
 			}
             // Set Sing flag to true to intiate sending a 
             // Mock payload.
-            //sg_config->sing = true;
+            sg_config->sing = true;
             break;
         case 0x07 :
             // Mock - The sensor has a public key to share with 
@@ -118,9 +121,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Transmit Mock payload
             transmitMock( sg_serial , &sg_mock_key );
 			//Serial.println( freeRam() );
-			sg_config->transmit = true;
-            //sg_config->mock = true;
-            //sg_config->sing = false;
+            sg_config->mock = true;
+            sg_config->sing = false;
             break;
         case 0x08 :
             // Mock - Sensor does not require authentication, 
@@ -131,9 +133,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             //Serial.println( "Sending Mock 08" );
             // Transmit Mock Payload
             transmitMock( sg_serial , &sg_mock_nokey );
-			sg_config->transmit = true;
-            //sg_config->mock = true;
-            //sg_config->sing = false;
+            sg_config->mock = true;
+            sg_config->sing = false;
             break;
         case 0x0C :
             // Peacock - Sensor share's capabilities with server.
@@ -143,8 +144,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // to 0x01 before transmitting
             //Serial.println( "Sending Peacock" );
             transmitPeacock( sg_serial , &sg_peacock );
-			sg_config->transmit = true;
-            //sg_config->mock = false;
+            sg_config->mock = false;
             break;
         case 0x10 :
             // Nest - Server accepts sensor into network.
@@ -154,7 +154,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // clear mate flag once nested to allow
             // for push button mate again.
             #ifdef PUSH_BUTTON
-            //sg_config->mate = false;
+            sg_config->mate = false;
             #endif // PUSH_BUTTON
             //Serial.println( "Nested" );
             break;
@@ -166,7 +166,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // sensor payload.
             if( sg_config->forget == true ){
                 sg_serial->payload[0] = (uint8_t) 0x27;
-                //sg_config->squawk = true;
+                sg_config->squawk = true;
                 break;
             }
             SansgridSquawk sg_squawk_noauth;
@@ -183,7 +183,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Set squawk flag to true to intitiate
             // sending reply squawk of data type
             // 0x15 or 0x16.
-            //sg_config->squawk = true;
+            sg_config->squawk = true;
             //Serial.println( "Squawked with datatype 0x11" );
             break;
         case 0x12 :    
@@ -194,7 +194,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // sensor payload.
             if( sg_config->forget == true ){
                 sg_serial->payload[0] = (uint8_t) 0x27;
-                //sg_config->squawk = true;
+                sg_config->squawk = true;
                 break;
             }
             SansgridSquawk sg_squawk_auth;
@@ -211,10 +211,10 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Set squawk flag to true to intitiate
             // sending reply squawk of data type
             // 0x15 or 0x16.
-            //sg_config->squawk = true;
+            sg_config->squawk = true;
             //Serial.println( "Squawked with datatype 0x12" );
             break;
-        case 0x15 :    
+		case 0x15 :    
             // Squawk - Sensor response to server squawk no 
             // challenge needed.
             SansgridSquawk sg_squawk_sensor_noauth;
@@ -226,12 +226,11 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Server requires authentication, call function
             // to authenticate Server and Sensor Public Key
             // store authentication in Squawk payload
-            authenticateKey( sg_config , &sg_squawk_noauth );
+            authenticateKey( sg_config , &sg_squawk_sensor_noauth );
             transmitSquawk ( sg_serial , &sg_squawk_sensor_noauth );
-			sg_config->transmit = true;
             // Set squawk flag to false, wait for another Squawk or Nest
             // payload to be received.
-            //sg_config->squawk = false;
+            sg_config->squawk = false;
             break;
         case 0x16 :    
             // Squawk - Sensor acknowledge.
@@ -243,7 +242,6 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Transmit Squawk payload
             //Serial.println( "Sending Squawk datatype 0x16" );
             transmitSquawk( sg_serial , &sg_squawk_acknowledge );
-			sg_config->transmit = true;
 			break;
 		case 0x17 :    
             // Squawk - Sensor response to challenge.
@@ -257,18 +255,37 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             authenticateKey( sg_config , &sg_squawk_response );
             //Serial.println( "Sending Squawk datatype 0x17" );
             transmitSquawk( sg_serial , &sg_squawk_response );
-			sg_config->transmit = true;
             // Set squawk flag to false, wait for another Squawk or Nest
             // payload to be received.
-            //sg_config->squawk = false;
+            sg_config->squawk = false;
             break;
         case 0x1b :    
             // Squawk - Server denies sensor's challenge response.
             // Server denied challenge, attempt to mate again by
             // setting fly flag to false and wait for fly payload again
-            //sg_config->fly = false;
-            //sg_config->squawk = false;
+            sg_config->fly = false;
+            sg_config->squawk = false;
             break;
+		default : 
+            break;
+    }  
+    Serial.println( freeRam() );	
+}
+
+// Payload Handler - Processes a SansgridSerial Struct. Will
+// parse all inbound SPI packets in the form of a SansgridSerial, and 
+// transmit all outboud SPI packets in the form of a SansgridSerial.
+void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
+    //Serial.println( "payloadHandler");
+    // Delay one second between packets sent
+    // to allow radio and router to process packet
+    delay(1000);
+    // Read in data type from first position of payload
+    // to determine what to do with packet
+    uint8_t command = sg_serial->payload[0];
+	// Memory Test to see how much SRAM left
+	Serial.println( freeRam() );
+    switch ( command ){ 
         case 0x1c :    
             // Squawk - Server response to challenge.
         case 0x1d :    
@@ -283,15 +300,14 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             if( compareResponse( sg_config , &sg_squawk_accept_response ) ){
                 sg_serial->payload[0] = (uint8_t) 0x1d;
                 transmitSquawk( sg_serial , &sg_squawk_accept_response );
-				sg_config->transmit = true;
             }
             // If not, Sensor denied challenge, attempt to mate again by
             // setting fly and squawk flag to false and wait for fly payload
             // to begin mate process again.
             else{
-                //sg_config->fly = false;
+                sg_config->fly = false;
             }
-            //sg_config->squawk = false;
+            sg_config->squawk = false;
             break;
         case 0x1e :    
             // Heartbeat - Router pulse to sensor
@@ -302,13 +318,12 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Chirp - Command sent from server to sensor.
             SansgridChirp sg_chirp_in;
             parseChirp( sg_serial , &sg_chirp_in );
-            //sg_config->chirp = true;
+            sg_config->chirp = true;
             break;
         case 0x21 :    
             // Chirp - Chirp sent from sensor to server.
             SansgridChirp sg_chirp_out;
             transmitChirp( sg_serial , &sg_chirp_out );
-			sg_config->transmit = true;
             break;
         case 0x25 :    
             // Chirp - Network is disconnecting sensor.
@@ -318,8 +333,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             parseChirp( sg_serial , &sg_chirp_disconnect );
             sg_chirp_disconnect.dt[0] = (uint8_t) 0x26;
             transmitChirp( sg_serial , &sg_chirp_disconnect );
-			sg_config->transmit = true;
-            //sg_config->nest = false;
+            sg_config->nest = false;
             break;
         case 0x27 :    
             // Squawk - Sensor has forgotten Server, 
@@ -327,8 +341,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             SansgridSquawk sg_squawk_forget;
             sg_squawk_forget.dt[0] = (uint8_t) 0x27;
             transmitSquawk( sg_serial , &sg_squawk_forget );
-			sg_config->transmit = true;
-            //sg_config->fly = true;
+            sg_config->fly = true;
             break;
         case 0xF0 :    
             // Flying - Broadcast from router identifying the network
@@ -336,7 +349,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             parseFly( sg_serial , &sg_fly );
             memcpy( sg_config->network_name , sg_fly.network_name , DATA );
             //Serial.println( "FLY" );
-            sg_config->fly = true;
+			if ( sg_config->nest == false );
+                sg_config->fly = true;
             break;
         case 0xFE :    
             // - Reserved for future expansion
@@ -346,7 +360,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             break;
         default : 
             break;
-    }         
+    }  
+    Serial.println( freeRam() );	
 }
 
 // Authenticate Public Keys from Sensor and Server
@@ -389,7 +404,7 @@ bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
 
 // Connect sensor to network. Wait in while loop until nested.
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){ 
-    //Serial.println( "Sensor Connect Function" );
+    Serial.println( freeRam() );
     while( sg_config->nest == false ){
         // Received flag is set indicating Master received 
         // a packet from Slave over SPI, process packet
@@ -397,9 +412,11 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
             // Received Packet
             //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( sg_serial , 1 );
-            payloadHandler( sg_config , sg_serial);
-            Serial.println( "setting recieved to false");
-            sg_config->received = false;
+			if( sg_serial->payload[0] < 0x1C )
+                payloadHandler( sg_config , sg_serial );
+            else
+			    payloadHandlerB( sg_config , sg_serial );
+			sg_config->received = false;
         }
         // Sent a Mock packet, now send a Peacock packet
         else if ( sg_config->mock == true ){
@@ -408,13 +425,10 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
             sg_serial->control[0] = (uint8_t) 0xAD;
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             sg_serial->payload[0] = (uint8_t) 0x0C;
-            payloadHandler( sg_config , sg_serial);
-			Serial.println(freeRam());
-			if( sg_config->transmit == true){
-			    sgSerialSend( sg_serial , 1 );
-			    Serial.println(freeRam());
-				sg_config->transmit = false;
-			}
+            if( sg_serial->payload[0] < 0x1C )
+                payloadHandler( sg_config , sg_serial );
+            else
+			    payloadHandlerB( sg_config , sg_serial );
         }
         // Received a Sing packet, send a Mock packet
         else if ( sg_config->sing == true ){
@@ -426,12 +440,10 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
                 sg_serial->payload[0] = (uint8_t) 0x07;
             else
                 sg_serial->payload[0] = (uint8_t) 0x08;
-            payloadHandler( sg_config , sg_serial);
-			if( sg_config->transmit == true){
-			    sgSerialSend( sg_serial , 1 );
-			    Serial.println(freeRam());
-				sg_config->transmit = false;
-			}
+            if( sg_serial->payload[0] < 0x1C )
+                payloadHandler( sg_config , sg_serial );
+            else
+			    payloadHandlerB( sg_config , sg_serial );
         }
         // Received Fly packet, send an Eyeball packet
         else if( sg_config->fly == true ){
@@ -440,12 +452,10 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
             sg_serial->control[0] = (uint8_t) 0xAD;
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             sg_serial->payload[0] = (uint8_t) 0x00;
-            payloadHandler( sg_config , sg_serial);
-			if( sg_config->transmit == true){
-			    sgSerialSend( sg_serial , 1 );
-			    Serial.println(freeRam());
-				sg_config->transmit = false;
-			}
+            if( sg_serial->payload[0] < 0x1C )
+                payloadHandler( sg_config , sg_serial );
+            else
+			    payloadHandlerB( sg_config , sg_serial );
         }
         else if( sg_config->squawk == true ){
             // Received a Squawk packet, now send a Squawk back
@@ -455,12 +465,10 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
             // Set IP address to router ip
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             // Call Payload Handler to send return squawk
-            payloadHandler( sg_config , sg_serial);
-			if( sg_config->transmit == true){
-			    sgSerialSend( sg_serial , 1 );
-			    Serial.println(freeRam());
-				sg_config->transmit = false;
-			}
+            if( sg_serial->payload[0] < 0x1C )
+                payloadHandler( sg_config , sg_serial );
+            else
+			    payloadHandlerB( sg_config , sg_serial );
 			if( sg_serial->payload[0] == 0x16 )
 				sg_serial->payload[0] = (uint8_t) 0x17;
         }  

@@ -35,6 +35,7 @@
 #define RECEIVE 0xFD        // Control byte for receiving data
 #define TRANSMIT 0xAD       // Control byte for transmit data
 #define SLAVE_SELECT  10    // SS pin 10
+#define DELAY 6				// Delay in Microseconds to process byte over SPI
 
 #ifdef DUE
 #define SLAVE_READY  8      // Hand shake pin identifying Slave has data to send

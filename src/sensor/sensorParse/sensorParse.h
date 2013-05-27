@@ -32,7 +32,6 @@ void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball );
 void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock );
 void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock );
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk );
-void parseSquawkSerial( SansgridSerial *tx , SansgridSquawk *sg_squawk );
 void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat);
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp );
 

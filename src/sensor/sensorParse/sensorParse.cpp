@@ -33,7 +33,7 @@ void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE , sg_eyeball->mode , MODE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE + MODE , sg_eyeball->padding, EYEBALL_PADDING);
     ////Serial.println( "Transmitting Eyeball" );
-    //sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
@@ -42,7 +42,7 @@ void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
     for( int i = DT + SENSOR_KEY ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
     //Serial.println( "Transmitting Mock" );
-    //sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
@@ -60,27 +60,21 @@ void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
     tx->payload[79] = sg_peacock->additional[0];
     tx->payload[80] = sg_peacock->padding[0];
     //Serial.println( "Transmitting Peacock" );
-    //sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     memcpy( tx->payload , sg_squawk->dt , DT );
     memcpy( tx->payload + DT , sg_squawk->data , DATA );
     //Serial.println( "Transmitting Squawk" );
-    //sgSerialSend( tx , 1 );
-}
-
-void parseSquawkSerial( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
-    memcpy( tx->payload , sg_squawk->dt , DT );
-    memcpy( tx->payload + DT , sg_squawk->data , DATA );
-    //Serial.println( "Copying Squawk into SansgridSerial" );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
     memcpy( tx->payload , sg_chirp->dt , DT );
     memcpy( tx->payload + DT , sg_chirp->data , DATA );
     //Serial.println( "Transmitting Chirp" );
-    //sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
@@ -88,7 +82,7 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
     for( int i = DT ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
     //Serial.println( "Transmitting Heartbeat" );
-    //sgSerialSend( tx , 1 );
+    sgSerialSend( tx , 1 );
 }
 
 // Payloads received at Sensor from Router

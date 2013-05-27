@@ -35,7 +35,6 @@ bool SensorConfig::nokey = false;
 bool SensorConfig::challenge = false;
 bool SensorConfig::forget = false;
 bool SensorConfig::received = false;
-bool SensorConfig::transmit = false;
 uint8_t SensorConfig::manid[ MANID ] = { 0x00, 0x00, 0x00, 0x01 };
 uint8_t SensorConfig::modnum[ MODNUM ] = { 0x00, 0x00, 0x00, 0x01 };
 int8_t SensorConfig::sn[ SN ] = { 0x44, 0x55, 0x45, 0x31, 0x32, 0x33, 0x34, 0x35 };
@@ -66,7 +65,7 @@ uint8_t SensorConfig::sensor_public_key[ SENSOR_KEY ] = { 0x09,0xC4,0x59,0xDC,
 // Initialize SansgridEyeball static members
 uint8_t SansgridEyeball::dt[ DT ] = { 0x00 };
 uint8_t SansgridEyeball::manid[ MANID ] = { 0x00, 0x00, 0x00, 0x01 };
-uint8_t SansgridEyeball::modnum[ MODNUM ] = { 0x44, 0x55, 0x45, 0x01 };
+uint8_t SansgridEyeball::modnum[ MODNUM ] = { 0x44, 0x55, 0x45, 0x31 };
 int8_t SansgridEyeball::sn[ SN ] = { 0x00, 0x00, 0x44, 0x55, 0x45, 0x20, 0x52, 0x33 };
 uint8_t SansgridEyeball::profile[ PROFILE ] = { 0x01 };
 uint8_t SansgridEyeball::mode[ MODE ] = { 0x01 } ;

@@ -45,8 +45,14 @@ void setup(){
     // Set Mate, true is automatic, false is push button based
     //sg_config.mate = true; 
     
+    // Enable Slave Select
+    pinMode(SLAVE_SELECT, OUTPUT);
+    digitalWrite(SLAVE_SELECT, HIGH);
     // Set SansgridSerial data_out control byte
     sg_serial.control[0] = 0xAD;
+    
+    // Delay to setup Radio
+    delay(5000);
     
     // Initialize interrupt for Slave Ready pin
     #ifdef DUE 
@@ -68,13 +74,15 @@ void setup(){
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    //sg_config.fly = true;
+    sg_config.fly = true;
     //sg_config.sing = true;
-    sg_config.mock = true;
+    //sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.nokey = true;
     //sg_config.challenge = true;
+    //sg_config.received = true;
+    //sg_serial.payload[0] = (uint8_t) 0xF0;
 }
 
 void loop(){
