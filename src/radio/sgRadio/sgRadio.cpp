@@ -91,7 +91,7 @@ void SansgridRadio::processSpi() {
 				router_mode = ROUTER;
 //				setDestAddr(BROADCAST);
 				//Radio->println("Hello Router");
-				//delay(50);
+				//dela/y(50);
 			break;
 		
 		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:

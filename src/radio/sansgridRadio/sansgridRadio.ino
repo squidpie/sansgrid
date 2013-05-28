@@ -192,13 +192,13 @@ void loop() {
 				spi_rw = 0;
 				tx_pos = 0;
 				
-				#if DEBUG
+		//		#if DEBUG
 					Serial.println("Sending SPI");
 					delay(50);
 					Serial.write(spi_tx,sizeof(SpiData));
 					delay(1000);
 					Serial.write(0xFF);
-			#endif
+		//	#endif
 				// Initiate Spi Slave write
 				#ifdef DUE
 					spi_outbyte = spi_tx[0];
