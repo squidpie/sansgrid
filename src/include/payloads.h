@@ -413,8 +413,8 @@ typedef struct SansgridChirp {
 	 * \param SG_CHIRP_SENSOR_DISCONNECT		Sensor is disconnecting from network
 	 */
 	uint8_t datatype;
-	/// Data Size, Used to truncate data
-	uint8_t datasize;
+	/// Signal Identifier
+	uint8_t sid;
 	/// Data being sent
 	uint8_t data[79];
 } SansgridChirp;
