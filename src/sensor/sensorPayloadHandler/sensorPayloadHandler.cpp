@@ -40,7 +40,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
 	// and Forgotten Server.
 	// If old Router IP address does'nt match peck
 	// Forget Sensor.
-	uint8_t val = 0;
+	int val = 0;
 	// Memory Test to see how much SRAM left
 	Serial.println( freeRam() );
     switch ( command ){ 
@@ -276,13 +276,14 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
 // parse all inbound SPI packets in the form of a SansgridSerial, and 
 // transmit all outboud SPI packets in the form of a SansgridSerial.
 void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
-    //Serial.println( "payloadHandler");
+    Serial.println( "payloadHandler");
     // Delay one second between packets sent
     // to allow radio and router to process packet
     delay(1000);
     // Read in data type from first position of payload
     // to determine what to do with packet
     uint8_t command = sg_serial->payload[0];
+	Serial.println( command , HEX );
 	// Memory Test to see how much SRAM left
 	Serial.println( freeRam() );
     switch ( command ){ 
@@ -351,6 +352,8 @@ void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
             //Serial.println( "FLY" );
 			if ( sg_config->nest == false );
                 sg_config->fly = true;
+			Serial.println( sg_config->fly );
+			
             break;
         case 0xFE :    
             // - Reserved for future expansion
@@ -410,18 +413,16 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
         // a packet from Slave over SPI, process packet
         if ( sg_config->received == true ){
             // Received Packet
-            //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( sg_serial , 1 );
 			if( sg_serial->payload[0] < 0x1C )
                 payloadHandler( sg_config , sg_serial );
             else
 			    payloadHandlerB( sg_config , sg_serial );
 			sg_config->received = false;
-        }
+		}
         // Sent a Mock packet, now send a Peacock packet
         else if ( sg_config->mock == true ){
             // Peacock
-            //Serial.println( "PEACOCKING" );
             sg_serial->control[0] = (uint8_t) 0xAD;
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             sg_serial->payload[0] = (uint8_t) 0x0C;
@@ -433,7 +434,6 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
         // Received a Sing packet, send a Mock packet
         else if ( sg_config->sing == true ){
             // Mock
-            //Serial.println( "MOCKING" );
             sg_serial->control[0] = (uint8_t) 0xAD;
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             if( sg_config->nokey == false )
@@ -448,7 +448,6 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
         // Received Fly packet, send an Eyeball packet
         else if( sg_config->fly == true ){
             // Eyeball
-            //Serial.println( "EYEBALLING");
             sg_serial->control[0] = (uint8_t) 0xAD;
             memcpy( sg_serial->ip_addr , sg_config->router_ip , IP_ADDRESS );
             sg_serial->payload[0] = (uint8_t) 0x00;
@@ -459,7 +458,6 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
         }
         else if( sg_config->squawk == true ){
             // Received a Squawk packet, now send a Squawk back
-            //Serial.println( "RETURN SQUAWKING" );
             // Set control byte to valid data
             sg_serial->control[0] = (uint8_t) 0xAD;
             // Set IP address to router ip
@@ -471,12 +469,16 @@ void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial ){
 			    payloadHandlerB( sg_config , sg_serial );
 			if( sg_serial->payload[0] == 0x16 )
 				sg_serial->payload[0] = (uint8_t) 0x17;
-        }  
+        }
     }
 }
 
+// Function is called to verify space left in SRAM (Stack)
 int freeRam( void ){ 
+	// Value of start of Stack and current end of Stack
     extern int __heap_start, *__brkval; 
+	// Value of SRAM left
     int v; 
+	// Return value left of SRAM
     return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }

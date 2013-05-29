@@ -56,9 +56,9 @@ void setup(){
     
     // Initialize interrupt for Slave Ready pin
     #ifdef DUE 
-    //attachInterrupt( SLAVE_READY , receive , RISING );
+    attachInterrupt( SLAVE_READY , receive , FALLING );
     #else
-    //attachInterrupt( 0 , receive , FALLING );
+    attachInterrupt( 0 , receive , FALLING );
     #endif // end of DUE
     
     // Call Sensor Configuration which sets the:

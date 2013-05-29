@@ -60,6 +60,7 @@ uint8_t sgSerialSetAsSensor(void){
 
 // Send size bytes of serial data over SPI.
 uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
+    Serial.println( "Sending" );
     // Buffer to store data array to send to Slave over SPI
     uint8_t data_out[ NUM_BYTES ];
     // Copy SansgridSerial data to buffer
@@ -93,6 +94,7 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 
 // Receive size bytes of serial data over SPI.
 uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
+	Serial.println( "Receiving" );
     // Array of size NUM_BYTES to store SPI packet
     uint8_t data_in[NUM_BYTES];
     // Test data_in
@@ -128,17 +130,17 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
 		// Delay to allow Slave to process byte
         delayMicroseconds(DELAY);
     }
+	// Place Slave Select High again (Chip Enable, Chip Select)
+	digitalWrite( SLAVE_SELECT , HIGH );
 	// Test Code to Serial print data sent 
 	// over SPI to verify data received 
-    for( int i = 0 ; i < NUM_BYTES ; i++){
+    /*for( int i = 0 ; i < NUM_BYTES ; i++){
         // Send a byte over SPI and store
         // byte received in data_in buffer
         Serial.println( data_in[i], HEX );
-    }
+    }*/
     // Close SPI bus - NOT USED
     //sgSerialClose();
-    // Place Slave Select High again (Chip Enable, Chip Select)
-	digitalWrite( SLAVE_SELECT , HIGH );
 	// Copy data from array into SansgridSerial structure
     // containing Control byte, IP address, and Payload
     // Copy SansgridSerial data to buffer
