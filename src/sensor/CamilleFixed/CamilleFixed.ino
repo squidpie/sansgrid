@@ -72,17 +72,22 @@ void setup() {
 void loop() {
     // Check for completion of Spi transfer, process packet and send out over
     // radio
+    uint8_t buff[98];
     if (process_flag) {
         if(spi_active){
+            memcpy(buff , spi_tx , NUM_BYTES );
+            Serial.println( "tx buffer");
+            for( int i = 0 ; i < NUM_BYTES ; i++ ){
+                Serial.println( buff[i] , HEX );
+            }  
             tx_pos = 0;  
         }
         else{
-            uint8_t buff[98];
             memcpy(&SpiData, spi_rx, sizeof(SpiData));
             memcpy(buff , spi_rx , NUM_BYTES );
             Serial.println( "rx buffer");
             for( int i = 0 ; i < NUM_BYTES ; i++ ){
-                Serial.println( buff[i] );
+                Serial.println( buff[i] , HEX );
             }
             memset(spi_rx,0, SPI_MAX_BUFFER);
             rx_pos = 0;
@@ -100,7 +105,6 @@ void loop() {
 
 // SPI Interrupt Service Routine
 ISR (SPI_STC_vect) {
-    //Serial.println( "ISR" );
     uint8_t c = SPDR;
     switch(cmd) {
         case 0x00:

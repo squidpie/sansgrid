@@ -74,7 +74,7 @@ void setup(){
     // either false or true.
     //sg_config.mate = false;
     //sg_config.nest = true;
-    sg_config.fly = true;
+    //sg_config.fly = true;
     //sg_config.sing = true;
     //sg_config.mock = true;
     //sg_config.squawk = true;
