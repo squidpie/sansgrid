@@ -310,7 +310,7 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 	SansgridChirp sg_chirp;
 
 	atox(&sg_chirp.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(&sg_chirp.datasize,		match(dict, size, "datasize"),	1*sizeof(uint8_t));
+	atox(&sg_chirp.sid,		match(dict, size, "sid"),	1*sizeof(uint8_t));
 	strncpy((char*)sg_chirp.data, 			match(dict, size, "data"),	79);
 	//atox(sg_chirp.data,				match(dict, size, "data"),		79*sizeof(uint8_t));
 	
@@ -645,7 +645,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			break;
 		case SG_DEVSTATUS_CHIRPING:
 			memcpy(&sg_chirp, sg_serial->payload, sizeof(SansgridChirp));
-			addHexField("datasize", &sg_chirp.datasize, 1, payload);
+			addHexField("sid", &sg_chirp.sid, 1, payload);
 			addCharField("data",		(char*)sg_chirp.data, 79, payload);
 			break;
 		default:

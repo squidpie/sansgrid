@@ -62,7 +62,7 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 		return -1;
 	} else {
 		syslog(LOG_DEBUG, "Sending packet %s to server", payload);
-		snprintf(cmd, 2000, "curl -s %s/API.php --data-urlencode key='%s' --data-urlencode payload='%s'", 
+		snprintf(cmd, 2000, "curl -m 2 -s %s/API.php --data-urlencode key='%s' --data-urlencode payload='%s'", 
 				router_opts.serverip, router_opts.serverkey, payload);
 		printf("%s\n", cmd);
 		if ((FPTR = popen(cmd, "r")) == NULL) {
@@ -70,10 +70,12 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 			return -1;
 		}
 		buff_size = size;
+		/*
 		buffer = (char*)malloc(buff_size*sizeof(char));
 		while (getline(&buffer, &size, FPTR) != -1) {
 		}
 		free(buffer);
+		*/
 		exit_code = pclose(FPTR);
 		if (exit_code > 0) {
 			syslog(LOG_INFO, "send command exited successfully");

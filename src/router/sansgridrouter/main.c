@@ -292,7 +292,7 @@ void *flyRuntime(void *arg) {
 			sg_serial = NULL;
 			//routerHandleFly(routing_table, &sg_serial);
 		}
-		sleep(10);
+		sleep(5);
 	}
 
 	pthread_exit(arg);

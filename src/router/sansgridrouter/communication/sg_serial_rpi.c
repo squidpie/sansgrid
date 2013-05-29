@@ -197,8 +197,27 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	}
 
 	memcpy(buffer, sg_serial, size);
+	printf("Sending:\n");
+	printf("control byte: %.2x\n", buffer[0]);
+	printf("IP address: ");
+	for (uint32_t i=1; i<16+1; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\ndata: ");
+	for (uint32_t i=17; i<size; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\n");
+
 	spiTransfer(buffer, size);
 
+	printf("Receiving:\n");
+	printf("control byte: %.2x\n", buffer[0]);
+	printf("IP address: ");
+	for (uint32_t i=1; i<16+1; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\ndata: ");
+	for (uint32_t i=17; i<size; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\n");
 	close(fd);
 	memcpy(sg_serial, buffer, size);
 	pthread_mutex_unlock(&transfer_lock);
@@ -230,8 +249,9 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	}
 	memset(buffer, 0x0, sizeof(buffer));
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-	memset(*sg_serial, 0x0, sizeof(SansgridSerial));
+	//memset(*sg_serial, 0x0, sizeof(SansgridSerial));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
+	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 
 	// receive data
 	while (sem_trywait(&wait_on_slave) == 0);
