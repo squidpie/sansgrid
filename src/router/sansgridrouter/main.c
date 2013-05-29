@@ -585,10 +585,12 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		} else if (strstr(buffer, "strictness")) {
 			strncpy(strictness_str, str, sizeof(strictness_str));
 			foundstrictness = 1;
-			if (strstr(strictness_str, "1"))
-				strictness = 1;
-			else if (strstr(strictness_str, "0"))
-				strictness = 0;
+			if (strstr(strictness_str, "strict"))
+				strictness = DEV_AUTH_STRICT;
+			else if (strstr(strictness_str, "filtered"))
+				strictness = DEV_AUTH_FILTERED;
+			else if (strstr(strictness_str, "loose"))
+				strictness = DEV_AUTH_LOOSE;
 			else
 				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
