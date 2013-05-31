@@ -24,6 +24,10 @@ if ( ! isset($_POST['payload']) ) {
 	$msg = "[$router_ip] - Missing payload. Terminated connection.";
 	addToLog($msg);
 	die ("Missing payload"); 
+// DEBUGGING 
+} else {
+	$msg = "DEBUG:<br>" . debugSplitting($_POST['payload']);
+	addToLog($msg);
 }
 
 $ff_del = $SG['ff_del'];
@@ -120,6 +124,11 @@ switch ( hexdec($data["dt"]) ) {
 		// If sensor sends a 0x26 we drop the device and, wierdly enough,
 		// send a 0x25 back out.
 		dropSensorFromNetwork($router_ip, $data, $db);
+		break;
+	case 39: 	// 39 = 0x27
+		// If sensor sends a 0x27 we drop the device and completely forget
+		// that it ever existed. 
+		dropAndForgetSensor($router_ip, $data, $db);
 		break;
 	case 253: 	// 253 = 0xfd
 		// Status updates from the router

@@ -141,4 +141,22 @@ function returnRefresh () {
 
 }
 /* ************************************************************************** */
+
+// Used for debugging. Hopefully I'll remember to delete this. 
+function debugSplitting ($payload) {
+	$fields = explode('β', $payload);
+
+	$ret = "";
+
+	for ($i = 1; $i < sizeof($fields) - 1; $i++) {
+
+		$keyval = explode('α', $fields[$i]);
+
+		$ret .= "&nbsp;&nbsp;&nbsp;&nbsp;" .$keyval[0] . ": ";
+		$ret .= $keyval[1] . "<br>\n";
+		
+	}
+
+	return $ret;
+}
 ?>

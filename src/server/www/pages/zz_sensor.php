@@ -102,7 +102,7 @@ function xmitToRouter ($outbound_payload, $url) {
 
 	# DELETE THIS! THIS IS JUST FOR DEBUGGING!!!!
 	if ($url == "10.42.0.1")
-		$url = "10.42.0.90";
+		$url = "10.42.0.23";
 
 	#$url="10.42.0.40/API-router.php";
 	$url="$url/API-router.php";

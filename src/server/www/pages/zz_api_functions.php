@@ -69,8 +69,10 @@ function processEyeball ($router_ip, $payload, $db) {
 		// Send Peck
 		xmitToRouter($reply, $router_ip);
 
+		// Sleep for 1000 ms after Peck before sending Squawk. 
+		usleep(1000000);		
 		// Sleep for 250 ms after Peck before sending Squawk. 
-		usleep(250000);		
+		//usleep(250000);		
 
 		// Now we start squawking.  SQUAWK!!!
 		generateSquawk ($rdid, $id_sensor, $router_ip, $db);
@@ -134,7 +136,9 @@ function processEyeball ($router_ip, $payload, $db) {
 				xmitToRouter($reply, $router_ip);
 
 				// Sleep for 250 ms after Peck before sending Sing. 
-				usleep(250000);		
+				//usleep(250000);		
+				//usleep(1000000);		
+				usleep(5000000);		
 
 				// Now we Sing
 				generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db);
@@ -593,7 +597,8 @@ function processSquawkSensorChallenge($router_ip, $payload, $db) {
 		}
 
 		// Sleep for 250 ms
-		usleep(250000);		
+		//usleep(250000);		
+		usleep(1000000);		
 
 	}
 
@@ -796,7 +801,6 @@ function dropSensorFromNetwork($router_ip, $payload, $db) {
 	global $SG;
 
 	$rdid 	= $payload['rdid'];
-	$sig_id	= strtolower($payload['status']);
 	$data 	= strtolower($payload['data']);
 
 	// Take sensor offline within database
@@ -810,6 +814,35 @@ function dropSensorFromNetwork($router_ip, $payload, $db) {
 	xmitToRouter($reply, $router_ip);
 
 } // End dropSensorFromNetwork()
+
+
+/* ************************************************************************** */
+
+
+function dropAndForgetSensor($router_ip, $payload, $db) {
+	global $SG;
+
+	$rdid 	= $payload['rdid'];
+	$data 	= strtolower($payload['data']);
+
+	// Get the $id_sensor that's tied to $rdid
+	$query  = "SELECT id_sensor FROM sensor WHERE rdid='$rdid'";
+	$result = mysqli_query($db, $query) or die ("Couldn't execute query dafs1.");
+	$row = mysqli_fetch_assoc($result);
+
+	$id_sensor = $row['id_sensor'];
+
+	// Delete the sensor from the database. 
+	deleteSensorByID($id_sensor);
+
+	// Send the "disconnect sensor from network" command
+	$reply = appendToPayload($SG['ff_del'], "rdid", 	$rdid);
+	$reply = appendToPayload($reply, 		"dt", 		"25");
+	$reply = appendToPayload($reply, 		"data", 	"");
+
+	xmitToRouter($reply, $router_ip);
+
+} // End dropAndForgetSensor()
 
 
 /* ************************************************************************** */
