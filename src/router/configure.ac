@@ -11,11 +11,17 @@ AC_PROG_CC
 AM_PROG_AR
 AC_PROG_RANLIB
 
+case $(uname -m) in
+	*arm*)		SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
+	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)' ;;
+esac
+
 # Checks for libraries.
-AC_CHECK_LIB([check], [srunner_create])
-AC_CHECK_LIB([pthread], [pthread_create])
-AC_CHECK_LIB([wiringPi], [wiringPiSPISetup])
-AC_CHECK_LIB([rt], [clock_gettime])
+AC_CHECK_LIB([check], [srunner_create], [], AC_MSG_ERROR([check unit testing library is required]))
+AC_CHECK_LIB([pthread], [pthread_create], [], AC_MSG_ERROR([posix thread library required]))
+AC_CHECK_LIB([wiringPi], [wiringPiSPISetup], [], SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)')
+# Have to link with -lrt for glibc versions before 2.17
+AC_CHECK_LIB([rt], [clock_gettime], [], AC_MSG_WARN([librt required for glibc versions before 2.17]))
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h stdint.h stdlib.h string.h syslog.h unistd.h])
@@ -38,9 +44,5 @@ AC_CONFIG_FILES([Makefile \
                  #test/Makefile
                  #test/dispatch/Makefile
                  #test/routing/Makefile])
-case $(uname -m) in
-	*arm*)		SANSGRIDROUTER_SYSTEM='sg_serial_rpi.$(OBJEXT)' ;;
-	*)		SANSGRIDROUTER_SYSTEM='sg_serial_generic.$(OBJEXT)' ;;
-esac
 AC_SUBST([SANSGRIDROUTER_SYSTEM])
 AC_OUTPUT

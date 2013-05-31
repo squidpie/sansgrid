@@ -162,7 +162,7 @@ void payloadMkSquawkSensor(SansgridSquawk *sg_squawk, PayloadTestStruct *test_sp
 /// Make a chirp using specs from test_specs
 void payloadMkChirp(SansgridChirp *sg_chirp, PayloadTestStruct *test_specs) {
 	sg_chirp->datatype = test_specs->chirp_mode;
-	sg_chirp->datasize = 79;
+	sg_chirp->sid = 79;
 	for (int i=0; i<79; i++)
 		sg_chirp->data[i] = 0x0;
 }
