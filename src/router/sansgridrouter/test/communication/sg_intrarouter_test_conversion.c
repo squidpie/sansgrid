@@ -137,15 +137,17 @@ START_TEST(testPeckConversion) {
 	mark_point();
 	payloadMkSerial(&sg_serial);
 	payloadMkPeck(&sg_peck, &test_struct);
+	memcpy(sg_peck.assigned_ip, sg_serial.ip_addr, IP_SIZE);
+	memset(sg_serial.ip_addr, 0xff, IP_SIZE);
 
 	mark_point();
 	memcpy(sg_serial.payload, &sg_peck, sizeof(SansgridPeck));
 	memcpy(&sg_serial_orig, &sg_serial, sizeof(SansgridSerial));
 
 	mark_point();
-	routingTableAssignIPStatic(routing_table, sg_serial.ip_addr);
+	routingTableAssignIPStatic(routing_table, sg_peck.assigned_ip);
 	mark_point();
-	rdid_orig = routingTableIPToRDID(routing_table, sg_serial.ip_addr);
+	rdid_orig = routingTableIPToRDID(routing_table, sg_peck.assigned_ip);
 
 	mark_point();
 	exit_code = sgRouterToServerConvert(&sg_serial, payload);
