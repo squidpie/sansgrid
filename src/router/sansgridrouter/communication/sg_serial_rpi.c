@@ -280,7 +280,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// first make sure semaphore is zeroed out
 	while (sem_trywait(&wait_on_slave) == 0);
 	// If there are no pending requests, wait until we get one
-	if (digitalRead((SLAVE_INT_PIN)))
+	if (digitalRead((SLAVE_INT_PIN)) && !queueSize(tx_buffer))
 		sem_wait(&wait_on_slave);
 
 	// Transfer about to occur
