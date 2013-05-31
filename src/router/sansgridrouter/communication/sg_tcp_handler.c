@@ -189,7 +189,7 @@ static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 	atox(&sg_peck.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
 	//atox(sg_peck.router_ip, 		match(dict, size, "router_ip"),	IP_SIZE);
-	//atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
+	atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
 	atox(sg_peck.server_id,			match(dict, size, "sid"),		16*sizeof(uint8_t));
 	atox(&sg_peck.recognition,		match(dict, size,"recognition"),1*sizeof(uint8_t));
 	atox(sg_peck.manid,				match(dict, size, "manid"),		4*sizeof(uint8_t));
@@ -363,6 +363,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	int32_t size = 0;
 	int8_t exit_code = 0;
 	uint32_t rdid_32;
+	char *rdid_str;
 	char *saved 	= NULL,
 		 *key 		= NULL,
 		 *value 	= NULL;
@@ -384,7 +385,13 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	// Find payload type
 	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
 	//atox(rdid, 		match(dict, size, "rdid"), 4*sizeof(uint8_t));
-	rdid_32 = atoi(match(dict, size, "rdid"));
+	rdid_str = match(dict, size, "rdid");
+	if (rdid_str == NULL) {
+		syslog(LOG_WARNING, "Couldn't find rdid in payload %s", payload);
+		rdid_32 = 0;
+	} else {
+		rdid_32 = atoi(rdid_str);
+	}
 	if (datatype == ~0x0) {
 		return -1;
 	}
@@ -573,7 +580,19 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 
 	memset(rdid, 0x0, sizeof(rdid));
 	routingTableGetBroadcast(routing_table, broadcast);
-	if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
+	if (datatype == SG_DEVSTATUS_PECKING) {
+		// Peck is a special case because the IP field of sg_serial is broadcast.
+		// So we need to grab the IP from the payload
+		memcpy(&sg_peck, sg_serial->payload, sizeof(SansgridPeck));
+		if ((rdid_32 = routingTableIPToRDID(routing_table, sg_peck.assigned_ip)) == 0) {
+			syslog(LOG_NOTICE, "No device found: %u", 
+					routingTableIPToRDID(routing_table, sg_peck.assigned_ip));
+			return -1;
+		} else {
+			wordToByte(rdid, &rdid_32, 4);
+			addIntField("rdid", rdid, 4, payload);
+		}
+	} else if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
 		// broadcast address
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {

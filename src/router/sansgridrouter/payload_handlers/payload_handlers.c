@@ -391,25 +391,27 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	SansgridPeck *sg_peck;
 	SANSGRID_UNION(SansgridPeck, SansgridPeckConv) sg_peck_union;
 
-	syslog(LOG_INFO, "Handling Peck packet: device %u",
-			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
-	/*
-	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+
+	// NOTE: Peck sends out a broadcast, so you need to check assigned
+	// 	IP instead
+	syslog(LOG_INFO, "Handling Peck packet: device %u",
+			routingTableIPToRDID(routing_table, sg_peck->assigned_ip));
+	if (chkValidCTRLPath(routing_table, sg_peck->assigned_ip,
 				sg_peck->datatype, "Peck") < 0)
 		return -1;
-		*/
 	routingTableSetCurrentPacket(routing_table, 
-			sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
+			sg_peck->assigned_ip, SG_DEVSTATUS_PECKING);
 
 	switch (sg_peck->recognition) {
 		case SG_PECK_RECOGNIZED:
 			// Sensor Recognized
 			// Next packet: Squawk
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+			routingTableSetNextExpectedPacket(routing_table, 
+					sg_peck->assigned_ip,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
@@ -417,7 +419,8 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor Not Recognized;
 			// Server will mate
 			// Next packet: Mate
-			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+			routingTableSetNextExpectedPacket(routing_table, 
+					sg_peck->assigned_ip,
 					SG_DEVSTATUS_SINGING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
@@ -429,7 +432,8 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor refuses mate
 		default:
 			// fallthrough/error
-			routerFreeDevice(routing_table, sg_serial->ip_addr);
+			routerFreeDevice(routing_table, 
+					sg_peck->assigned_ip);
 			return 1;
 			break;
 	}
