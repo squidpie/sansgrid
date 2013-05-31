@@ -185,10 +185,11 @@ static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_se
 static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peck datatype from the payload
 	SansgridPeck sg_peck;
+	uint32_t rdid;
 
 	atox(&sg_peck.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(sg_peck.router_ip, 		match(dict, size, "router_ip"),	IP_SIZE);
-	atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
+	//atox(sg_peck.router_ip, 		match(dict, size, "router_ip"),	IP_SIZE);
+	//atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
 	atox(sg_peck.server_id,			match(dict, size, "sid"),		16*sizeof(uint8_t));
 	atox(&sg_peck.recognition,		match(dict, size,"recognition"),1*sizeof(uint8_t));
 	atox(sg_peck.manid,				match(dict, size, "manid"),		4*sizeof(uint8_t));
@@ -196,7 +197,11 @@ static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial
 	atox(sg_peck.serial_number,		match(dict, size, "sn"),		8*sizeof(uint8_t));
 
 	memset(sg_peck.padding, 0x0, 15*sizeof(uint8_t));
+	routingTableGetRouterIP(routing_table, sg_peck.router_ip);
+	rdid = atoi(match(dict, size, "rdid"));
+	routingTableRDIDToIP(routing_table, rdid, sg_peck.assigned_ip);
 
+	routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
 	memcpy(sg_serial->payload, &sg_peck, sizeof(SansgridPeck));
 	
 	return translateRdid(dict, size);
