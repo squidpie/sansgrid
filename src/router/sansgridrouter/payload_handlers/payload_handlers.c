@@ -33,7 +33,7 @@
 static int32_t chkValidCTRLPath(RoutingTable *routing_table, 
 		uint8_t ip_addr[IP_SIZE], uint8_t dt, const char *pktname) {
 	// check to see if this is a valid control path for this device
-	if (!routingTableCheckValidPacket(routing_table, ip_addr, dt)) {
+	if (routingTableCheckValidPacket(routing_table, ip_addr, dt) <= 0) {
 		// Not a valid control path
 		syslog(LOG_NOTICE, "%s is not a valid payload for this device: %x", 
 				pktname, ip_addr[IP_SIZE-1]);
@@ -42,7 +42,6 @@ static int32_t chkValidCTRLPath(RoutingTable *routing_table,
 		return 0;
 	}
 }
-
 
 
 /**
@@ -60,6 +59,9 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 		// router or server. Don't free device
 		syslog(LOG_WARNING, "Can't free reserved devices!");
 		return -1;
+	} else if (!routingTableLookup(routing_table, ip_addr)) {
+		syslog(LOG_DEBUG, "Trying to free device that doesn't exist");
+		return 0;
 	}
 
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -339,7 +341,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
 
-	memset(ip_addr, 0x0, sizeof(ip_addr));
+	//memset(ip_addr, 0x0, sizeof(ip_addr));
+	memcpy(ip_addr, sg_serial->ip_addr, IP_SIZE);
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
 		syslog(LOG_DEBUG, "New device wishes to mate");
@@ -394,9 +397,11 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
+	/*
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_peck->datatype, "Peck") == -1)
+				sg_peck->datatype, "Peck") < 0)
 		return -1;
+		*/
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
 
@@ -452,7 +457,7 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	syslog(LOG_INFO, "Handling Sing packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_sing->datatype, "Sing") == -1)
+				sg_sing->datatype, "Sing") < 0)
 		return -1;
 
 	routingTableSetCurrentPacket(routing_table, 
@@ -498,7 +503,7 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_mock->datatype, "Mock") == -1)
+				sg_mock->datatype, "Mock") < 0)
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_MOCKING);
@@ -546,7 +551,7 @@ int routerHandlePeacock(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	syslog(LOG_INFO, "Handling Peacock packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_peacock->datatype, "Peacock") == -1)
+				sg_peacock->datatype, "Peacock") < 0)
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PEACOCKING);
@@ -578,7 +583,7 @@ int routerHandleNest(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	syslog(LOG_INFO, "Handling Nest packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_serial->payload[0], "Nest") == -1)
+				sg_serial->payload[0], "Nest") < 0)
 		return -1;
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_NESTING);
@@ -613,7 +618,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_squawk->datatype, "Squawk") == -1)
+				sg_squawk->datatype, "Squawk") < 0)
 		return -1;
 
 	routingTableSetCurrentPacket(routing_table, 
@@ -754,9 +759,12 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
-	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_chirp->datatype, "Chirp") == -1)
-		return -1;
+	if (sg_chirp->datatype != SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
+			&& sg_chirp->datatype == SG_CHIRP_SENSOR_DISCONNECT) {
+		if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+					sg_chirp->datatype, "Chirp") < 0)
+			return -1;
+	} 
 
 	syslog(LOG_INFO, "Handling Chirp packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));

@@ -91,7 +91,7 @@ void SansgridRadio::processSpi() {
 				router_mode = ROUTER;
 //				setDestAddr(BROADCAST);
 				//Radio->println("Hello Router");
-				//delay(50);
+				//dela/y(50);
 			break;
 		
 		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
@@ -200,7 +200,8 @@ void SansgridRadio::processPacket() {
 			break;
 	}
 	SpiData->control = SG_SERIAL_CTRL_VALID_DATA;
-	memset(SpiData->ip_addr, 0xDD, IP_SIZE);
+	memset(SpiData->ip_addr, 0x00, IP_SIZE);
+	SpiData->ip_addr[15] = 0xFF;
 	//memcpy(&SpiData->ip_addr, &ip_lookup, IP_SIZE);
 	memcpy(SpiData->payload, packet_buffer, sizeof(SpiData->payload));
 }

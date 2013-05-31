@@ -73,8 +73,8 @@ void setup(){
     // and uncomment all sg_config.<fly,sing,squawk,Chirp,challenge...>
     // either false or true.
     //sg_config.mate = false;
-    //sg_config.nest = true;
-    //sg_config.fly = true;
+    //sg_config.nest = false;
+    sg_config.fly = true;
     //sg_config.sing = true;
     //sg_config.mock = true;
     //sg_config.squawk = true;
@@ -83,60 +83,30 @@ void setup(){
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
+	sg_config.received = false;
+	
 }
 
 void loop(){
-    // If not connected to network, nest will be false.
-    // Attempt to connect to network untill nested and
-    // nest flag is true.
-    while( sg_config.nest == false ){
-        //Serial.println(freeRam());
-        sensorConnect( &sg_config , &sg_serial );  
-    }
-    // DEBUG message
-    //Serial.println( "Connected to Network" );
-    // Signal Input Code goes here in this loop
-    while(sg_config.nest == true ){  
-        // Delay between sending Packets atleast 1 second
-        delay(1000);
-        // Received packet over SPI
-        if ( sg_config.received == true ){
+	if ( sg_config.received == true ){
             // Received Packet
-            //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( &sg_serial , 1 );
             // Process packet to verify Chirp received
             payloadHandler( &sg_config , &sg_serial);
-            //Serial.println( "setting received to false");
             // Reset received to default value
             sg_config.received = false;
-            // Process received Chirp packet
-            if( sg_config.chirp == true ){
-                // Received Chirp from Sensor
-                // Need to process payload to perform action
-                // on Signal. Put code in here.
-              
-                // Reset Chirp to false
-                sg_config.chirp = false; 
-            }// End of received Chirp
-        }
-        // Code to Send Chirp
-        else{
-            // Set control byte to valid data
+    }
+	else {
+	 // Set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
             // Set IP address to router ip
             memcpy( sg_serial.ip_addr , sg_config.router_ip , IP_ADDRESS );
             // Set Datatype to 0x21, Sensor to Server Chirp
+			memset(sg_serial.payload, 0, 81);
             sg_serial.payload[0] = (uint8_t) 0x21;
-            // Copy data into Payload
-            // Which Signal Id are you using?
-            //sg_serial.payload[1] = sid????
-            // What are you transmitting???
-            //sg_serial.payload[2] thru sg_serial.payload[80]
-            // Make sure to pad the unused with 0x00
-            // Transmit Payload over SPI  
             sgSerialSend( &sg_serial , 1 );
-        }// End of Send Chirp
-    }// End of Nested
+			delay(10000);
+	}
 }// End of Loop
 
 void receive(){
@@ -150,3 +120,8 @@ void receive(){
 }
 
 
+
+    // If not connected to network, nest will be false.
+    // Attempt to connect to network untill nested and
+    // nest flag is true.
+	

@@ -327,6 +327,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		return 1;
 
 	index = locationToTablePtr(ip_addr, table->base) % ROUTING_ARRAYSIZE;
+	if (index < 2)
+		return 1;
 
 	if (routingTableLookup(table, ip_addr) == 0) {
 		// Allocate space for the device
@@ -614,6 +616,8 @@ int32_t routingTableCheckValidPacket(RoutingTable *table, uint8_t ip_addr[IP_SIZ
 	uint32_t index = locationToTablePtr(ip_addr, table->base);
 	if (index >= ROUTING_ARRAYSIZE || table->routing_table[index] == NULL)
 		return -1;
+	if (index < 2) 
+		return 0;
 	return deviceAuthIsSGPayloadTypeValid(table->routing_table[index]->auth, dt);
 }
 

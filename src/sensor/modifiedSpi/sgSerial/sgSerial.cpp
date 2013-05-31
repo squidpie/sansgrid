@@ -69,24 +69,14 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
     memcpy( data_out + CONTROL + IP_ADDRESS , sg_serial->payload, PAYLOAD );
     // Open SPI bus
     sgSerialOpen();
-	// Delay to allow SPI bus to Initiate
-    delayMicroseconds(DELAY);
-	// Assert Slave Select (Chip Enable, Chip Select)
-	digitalWrite( SLAVE_SELECT , LOW );
-    // Send dummy byte to Set command on Slave
-    SPI.transfer( data_out[0] );
-	// Delay to allow Slave to process byte
-    delayMicroseconds(DELAY);
-    // Loop through buffer sending one byte at a time over SPI
-    for( int i = 0 ; i < NUM_BYTES ; i++){
-        // Send a byte over SPI
-        SPI.transfer( data_out[i] );
-		// Delay to allow Slave to process byte
-        delayMicroseconds(DELAY);
-        //Serial.println( data_out[i] );
-    }
-	// Place Slave Select High again (Chip Enable, Chip Select)
-	digitalWrite( SLAVE_SELECT , HIGH );
+	digitalWrite(SLAVE_SELECT , LOW);
+	SPI.transfer(0xAD);
+	delayMicroseconds(DELAY);
+	for (int i = 0; i < NUM_BYTES; i++) {
+		SPI.transfer(data_out[i]);
+		delayMicroseconds(DELAY);
+	}
+	digitalWrite(SLAVE_SELECT , HIGH);
 	// Close SPI bus - NOT USED
     //sgSerialClose();
     return 0;
@@ -94,56 +84,19 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 
 // Receive size bytes of serial data over SPI.
 uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
+	uint8_t data_in[NUM_BYTES];
 	Serial.println( "Receiving" );
-    // Array of size NUM_BYTES to store SPI packet
-    uint8_t data_in[NUM_BYTES];
-    // Test data_in
-    data_in[0] = 0xfd;
-    for( int i = 1 ; i < 18 ; i++ )
-        data_in[i] = 0xF0;
-    // Dummy byte sent to slave 
-    uint8_t rec = 0xFD;
-    // Open SPI bus
-    sgSerialOpen();
-	// Delay to allow SPI bus to Initiate
-    delayMicroseconds(DELAY);
-    // Assert Slave Select (Chip Enable, Chip Select)
+	sgSerialOpen();
 	digitalWrite( SLAVE_SELECT , LOW );
-	// First dummy transfer defines the command 
-    // for valid or not valid data
-    SPI.transfer( rec );
-	// Delay to allow Slave to process byte
-    delayMicroseconds(DELAY);
-    // Second dummy transfer allows the first 
-    // byte transferred from Slave to be placed
-    // in SPDR register and will be stored on the
-    // next SPI.transfer() in the for Loop.
-    SPI.transfer( rec );
-    // Delay to allow Slave to process byte
+	SPI.transfer(0xFD);
 	delayMicroseconds(DELAY);
-    // Loop through receiving bytes the length 
-    // of packet defined as NUM_BYTES
-    for( int i = 0 ; i < NUM_BYTES ; i++){
-        // Send a byte over SPI and store
-        // byte received in data_in buffer
-        data_in[i] = SPI.transfer( rec );
-		// Delay to allow Slave to process byte
-        delayMicroseconds(DELAY);
-    }
-	// Place Slave Select High again (Chip Enable, Chip Select)
+	SPI.transfer(0xFD);
+	delayMicroseconds(DELAY);
+	for (int i = 0; i < NUM_BYTES; i++) {
+		data_in[i] = SPI.transfer(0xFD);
+		delayMicroseconds(DELAY);
+	}
 	digitalWrite( SLAVE_SELECT , HIGH );
-	// Test Code to Serial print data sent 
-	// over SPI to verify data received 
-    /*for( int i = 0 ; i < NUM_BYTES ; i++){
-        // Send a byte over SPI and store
-        // byte received in data_in buffer
-        Serial.println( data_in[i], HEX );
-    }*/
-    // Close SPI bus - NOT USED
-    //sgSerialClose();
-	// Copy data from array into SansgridSerial structure
-    // containing Control byte, IP address, and Payload
-    // Copy SansgridSerial data to buffer
     memcpy( sg_serial->control , data_in , CONTROL );
     memcpy( sg_serial->ip_addr , data_in + CONTROL , IP_ADDRESS  );
     memcpy( sg_serial->payload , data_in + CONTROL + IP_ADDRESS , PAYLOAD );

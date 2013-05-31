@@ -138,15 +138,12 @@ void *spiReaderRuntime(void *arg) {
 	// Read from SPI and queue data onto dispatch
 	uint32_t size;
 	SansgridSerial *sg_serial;
-	if (spiSetup() < 0) {
-		syslog(LOG_ERR, "Couldn't initialize SPI");
-		exit(EXIT_FAILURE);
-	}
 	while (1) {
 		while (sgSerialReceive(&sg_serial, &size) == -1) {
+			free(sg_serial);
 			sched_yield();
 		}
-		queueEnqueue(dispatch, sg_serial);
+		//queueEnqueue(dispatch, sg_serial);
 	}
 	pthread_exit(arg);
 }
@@ -295,7 +292,7 @@ void *flyRuntime(void *arg) {
 			sg_serial = NULL;
 			//routerHandleFly(routing_table, &sg_serial);
 		}
-		sleep(10);
+		sleep(5);
 	}
 
 	pthread_exit(arg);
@@ -511,6 +508,8 @@ static char *parseOption(char *buffer) {
 	for (out++; *out != '\0'; out++) {
 		if (out[0] != ' ') break;
 	}
+	if (out[strlen(out)-1] == '\n')
+		out[strlen(out)-1] = '\0';
 	return out;
 }
 
@@ -522,6 +521,8 @@ static char *parseWithQuotes(char *buffer) {
 	char *saveptr;
 	str = strtok_r(buffer, "'", &saveptr);
 	str = strtok_r(NULL, "'", &saveptr);
+	if (str[strlen(str)-1] == '\n')
+		str[strlen(str)-1] = '\0';
 	return str;
 }
 
@@ -584,10 +585,12 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 		} else if (strstr(buffer, "strictness")) {
 			strncpy(strictness_str, str, sizeof(strictness_str));
 			foundstrictness = 1;
-			if (strstr(strictness_str, "1"))
-				strictness = 1;
-			else if (strstr(strictness_str, "0"))
-				strictness = 0;
+			if (strstr(strictness_str, "strict"))
+				strictness = DEV_AUTH_STRICT;
+			else if (strstr(strictness_str, "filtered"))
+				strictness = DEV_AUTH_FILTERED;
+			else if (strstr(strictness_str, "loose"))
+				strictness = DEV_AUTH_LOOSE;
 			else
 				foundstrictness = 0;
 		} else if (strstr(buffer, "essid")) {
@@ -845,19 +848,22 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
-	//int old_dispatch = router_opts.dispatch_pause;
+	if (spiSetup() < 0) {
+		syslog(LOG_ERR, "Couldn't initialize SPI");
+		exit(EXIT_FAILURE);
+	}
 
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(&sg_hatch, 0x0, sizeof(SansgridHatching));
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
-	memset(ip_addr, 0x0, IP_SIZE);
-	ip_addr[IP_SIZE-1] = 0x1;
+	routingTableGetRouterIP(routing_table, ip_addr);
+	//memset(ip_addr, 0x0, IP_SIZE);
+	//ip_addr[IP_SIZE-1] = 0x1;
 	sg_hatch.datatype = SG_HATCH;
 	memcpy(sg_hatch.ip, ip_addr, IP_SIZE);
 	memcpy(sg_serial->payload, &sg_hatch, sizeof(SansgridHatching));
 	sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
-	//router_opts.dispatch_pause = 1;
 	queueEnqueue(dispatch, sg_serial);
 
 
@@ -867,7 +873,6 @@ int main(int argc, char *argv[]) {
 	pthread_create(&heartbeat_thread, NULL, heartbeatRuntime, dispatch);
 	pthread_create(&fly_thread, NULL, flyRuntime, dispatch);
 
-	//router_opts.dispatch_pause = old_dispatch;
 
 	// Listen for commands or data from the server
 	sgSocketListen();

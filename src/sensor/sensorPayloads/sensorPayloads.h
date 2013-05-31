@@ -47,7 +47,7 @@
 #define IP_ADDRESS 16
 #define CONTROL 1
 #define SENSOR_A 39
-#define DELAY 12
+#define DELAY 6
 #define EYEBALL_PADDING 62
 #define PECK_PADDING 15
 #define PEACOCK_PADDING 1
@@ -68,7 +68,6 @@ typedef struct SensorConfig{
     static bool challenge;
     static bool forget;
 	static bool received;
-	static bool transmit;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];
