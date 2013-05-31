@@ -59,6 +59,9 @@ int32_t routerFreeDevice(RoutingTable *routing_table, uint8_t ip_addr[IP_SIZE]) 
 		// router or server. Don't free device
 		syslog(LOG_WARNING, "Can't free reserved devices!");
 		return -1;
+	} else if (!routingTableLookup(routing_table, ip_addr)) {
+		syslog(LOG_DEBUG, "Trying to free device that doesn't exist");
+		return 0;
 	}
 
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -338,7 +341,8 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	sg_eyeball_union.serialdata = sg_serial->payload;
 	sg_eyeball = sg_eyeball_union.formdata;
 
-	memset(ip_addr, 0x0, sizeof(ip_addr));
+	//memset(ip_addr, 0x0, sizeof(ip_addr));
+	memcpy(ip_addr, sg_serial->ip_addr, IP_SIZE);
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
 		syslog(LOG_DEBUG, "New device wishes to mate");
@@ -753,9 +757,12 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
-	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
-				sg_chirp->datatype, "Chirp") < 0)
-		return -1;
+	if (sg_chirp->datatype != SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
+			&& sg_chirp->datatype == SG_CHIRP_SENSOR_DISCONNECT) {
+		if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
+					sg_chirp->datatype, "Chirp") < 0)
+			return -1;
+	} 
 
 	syslog(LOG_INFO, "Handling Chirp packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
