@@ -20,8 +20,6 @@
  */
 
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
-									// used in a deprecated function
 #include "heartbeat.h"
 
 #include <stdint.h>
@@ -63,8 +61,9 @@ static int32_t stale_thres_default = STALE_THRESHOLD;
 /// Default Refresh Threshold
 static int32_t ping_thres_default = PING_THRESHOLD;
 
-/// Make sure HeartbeatStatus Structure is valid
+/// Make sure HeartbeatStatus Structure is non-null
 static int hbAssertValid(HeartbeatStatus *hb) {
+	// Make sure Heartbeat Status Structure is non-null
 	if (hb == NULL) {
 		syslog(LOG_WARNING, "Heartbeat Status struct is NULL!");
 		return -1;
@@ -80,6 +79,7 @@ static int hbAssertValid(HeartbeatStatus *hb) {
  * also signal device stale if device is lost
  */
 int32_t hbIsDeviceStale(HeartbeatStatus *hb) {
+	// Return whether or not device is stale
 	if (hbAssertValid(hb) == -1) {
 		syslog(LOG_INFO, "NULL in hbIsDeviceStale");
 		return -1;
@@ -96,6 +96,7 @@ int32_t hbIsDeviceStale(HeartbeatStatus *hb) {
  * \brief Return whether or not the device is lost
  */
 int32_t hbIsDeviceLost(HeartbeatStatus *hb) {
+	// Return whether or not the device has been lost
 	if (hbAssertValid(hb) == -1) {
 		syslog(LOG_INFO, "NULL in hbIsDeviceLost");
 		return -1;
@@ -149,6 +150,7 @@ HeartbeatStatus *hbInitDefault(void) {
  * \brief Free allocated resources contained in Heartbeat Data structure
  */
 void hbDestroy(HeartbeatStatus *hb) {
+	// Free allocated resources contained in heartbeat data structure
 	free(hb);
 	return;
 }
@@ -166,6 +168,7 @@ void hbDestroy(HeartbeatStatus *hb) {
  * otherwise return 0 (state didn't change)
  */
 int32_t hbDecrement(HeartbeatStatus *hb) {
+	// Decrement device health, return if status changed
 	int32_t device_before = 0;
 	int32_t device_after = 0;
 
@@ -196,6 +199,7 @@ int32_t hbDecrement(HeartbeatStatus *hb) {
  * otherwise return 0 (state didn't change)
  */
 int32_t hbRefresh(HeartbeatStatus *hb) {
+	// Device was just heard from
 	int32_t device_before = 0;
 	int32_t device_after = 0;
 

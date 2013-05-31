@@ -87,6 +87,8 @@ int isRunning(void) {
 
 /// Initialize and fork off the daemon
 int daemon_init(void) {
+	// Initialize and fork off the daemon
+
 	pid_t pid;
 	pid_t sid;
 
@@ -327,6 +329,7 @@ int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
  * Set the network status: shown, or not shown
  */
 int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
+	// Set the network status: shown, or not shown
 	int exit_code = 0;
 	if (strstr(str, "hidden")) {
 		router_opts.hidden_network = 1;
@@ -346,6 +349,7 @@ int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 /// Get the status of the router
 int sgConfigGetStatus(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
+	// Get the status of the router
 	syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 	//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 	int devnum = routingTableGetDeviceCount(routing_table);

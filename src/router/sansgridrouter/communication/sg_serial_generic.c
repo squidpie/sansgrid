@@ -28,11 +28,15 @@
 /** \file */
 
 
+/// This is a Stub. Normally used to init SPI
 int spiSetup(void) {
+	// Stub. Does nothing
 	return 0;
 }
 
+/// This is a Stub. Normally used to teardown SPI
 int spiTeardown(void) {
+	// Stub. Does nothing
 	return 0;
 }
 
@@ -45,11 +49,12 @@ int spiTeardown(void) {
  * \param size[in]			Size of data. Not currently used.
  */
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
-	// Send size bytes of serialdata
+	// (Stub) Send size bytes of serialdata
 	if (sg_serial->payload[0] != SG_FLY)
 		syslog(LOG_INFO, "Sending packet over SPI");
 
-	return -1;
+	size = -1;
+	return size;
 }
 
 
@@ -62,7 +67,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
  * \param size[out]			Size of the returned payload
  */
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	// Receive serialdata, size of packet stored in size
+	// (Stub) Receive serialdata, size of packet stored in size
 	sem_t blocker;
 	sem_init(&blocker, 0, 0);
 
@@ -70,8 +75,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	sem_wait(&blocker);
 
 	sem_destroy(&blocker);
+	sg_serial = NULL;
+	*size = -1;
 
-	return -1;
+	return *size;
 }
 
 

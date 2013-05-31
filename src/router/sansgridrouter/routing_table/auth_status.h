@@ -25,10 +25,15 @@
 #include <stdint.h>
 typedef struct DeviceAuth DeviceAuth;
 
+/// Device Authentication Types
 enum DeviceAuthEnum {
+	/// Bad Authentication Type
 	DEV_AUTH_ERROR,
+	/// Loose Authentication
 	DEV_AUTH_LOOSE,
+	/// Filtered Authentication
 	DEV_AUTH_FILTERED,
+	/// Strict Authentication
 	DEV_AUTH_STRICT,
 };
 

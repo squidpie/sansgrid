@@ -41,6 +41,16 @@
 #include <semaphore.h>
 /// \file
 
+
+/**
+ * \mainpage SansGrid Router: sansgridrouter
+ *
+ * \section intro_sec Introduction
+ *
+ * SansGrid is a distributed sensor infrastructure for the Internet of Things.
+ * This is the router that communicates between a server and sensors.
+ */
+
 void usage(int status);
 int spiSetup(void);
 int spiTeardown(void);

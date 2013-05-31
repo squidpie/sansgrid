@@ -22,6 +22,7 @@
 
 //#ifdef SG_ARCH_PI
 
+/// Required for nanosleep
 #define _POSIX_C_SOURCE 199309L
 #include <pthread.h>
 #include <semaphore.h>
@@ -41,7 +42,9 @@
 /** \file */
 
 
+/// Convert KHz to Hz
 #define KHZ(freq) (1000*freq)
+/// Convert MHz to Hz
 #define MHZ(freq) (1000*KHZ(freq))
 
 /// SPI Clock Speed, in KHz
@@ -67,20 +70,22 @@
 #define SLAVE_INT_PIN 	2
 
 /// SPI Transaction indicator
-static sem_t wait_on_slave;
-static int sem_initd = 0;
+static sem_t wait_on_slave;				// SPI transaction indicator
+/// Make sure semaphore wait_on_slave is initialized
+static int sem_initd = 0;				// flag if semaphore is initialized
 /// Global file descriptor for SPI transfer
-static int g_fd = 0;
+static int g_fd = 0;					// global file descriptor
 /// SPI atomic lock
-static pthread_mutex_t transfer_lock;
+static pthread_mutex_t transfer_lock;	// atomic lock
 /// Transmission buffer
-static Queue *tx_buffer = NULL;
+static Queue *tx_buffer = NULL;			// transfer buffer
 
 
 /**
  * Print a SansgridSerial structure
  */
 static void spiPrintSgSerial(char *buffer) {
+	// print an sg_serial structure stored in a buffer
 	printf("control byte: %.2x\n", buffer[0]);
 	printf("IP address: ");
 	for (uint32_t i=1; i<16+1; i++)
@@ -100,11 +105,19 @@ static void spiPrintSgSerial(char *buffer) {
  * to commence.
  */
 void sgSerialSlaveSending(void) {
+	// Interrupt handler for sgSerialReceive
 	printf("Got an interrupt\n");
 	sem_post(&wait_on_slave);
 }
 
 
+/**
+ * \brief Create a copy of a SansgridSerial payload
+ * \param[in]	sg_serial	SansgridSerial structure to copy
+ * \returns
+ * A new chunk of memory is allocated on the heap and sg_serial is
+ * copied into the new chunk. This chunk is returned.
+ */
 static SansgridSerial *sgSerialCP(SansgridSerial *sg_serial) {
 	// allocate a new structure and copy sg_serial into it
 	SansgridSerial *sg_serial_cpy;
@@ -302,8 +315,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// LOCKED
 
 
+	// Make sure only one thread can access SPI at a time
 	syslog(LOG_INFO, "Sending data over Serial");
 
+	// this needs to be atomic, since fd comes from static global g_fd
 	if ((fd = spiOpen()) == -1) {
 		return -1;
 	}

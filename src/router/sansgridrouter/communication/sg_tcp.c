@@ -19,7 +19,7 @@
  *
  */
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
+#define _POSIX_C_SOURCE 200809L		///< Required for nanosleep()
 
 #include <stdio.h>
 #include <stdint.h>
@@ -50,8 +50,7 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 	char cmd[2000];
 	char payload[size*5];
 	FILE *FPTR = NULL;
-	char *buffer = NULL;
-	int buff_size = size;
+	//int buff_size = size;
 	int exit_code;
 	syslog(LOG_INFO, "Sending packet over TCP");
 
@@ -69,8 +68,8 @@ int8_t sgTCPSend(SansgridSerial *sg_serial, uint32_t size) {
 			syslog(LOG_WARNING, "Router-->Server send failed");
 			return -1;
 		}
-		buff_size = size;
 		/*
+		buff_size = size;
 		buffer = (char*)malloc(buff_size*sizeof(char));
 		while (getline(&buffer, &size, FPTR) != -1) {
 		}
