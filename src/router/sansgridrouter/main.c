@@ -634,6 +634,9 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 
 
 
+/**
+ * \brief Sansgrid Router Startup point
+ */
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch

@@ -66,11 +66,12 @@
  */
 #define SLAVE_INT_PIN 	2
 
-/// Receive block
+/// SPI Transaction indicator
 static sem_t wait_on_slave;
 static int sem_initd = 0;
 /// Global file descriptor for SPI transfer
 static int g_fd = 0;
+/// SPI atomic lock
 static pthread_mutex_t transfer_lock;
 /// Transmission buffer
 static Queue *tx_buffer = NULL;
@@ -257,10 +258,11 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
  * Data is also received over serial wire and then converted
  * into a SansgridSerial structure.  
  * \param sg_serial[out]		Where received data is placed. 
- * \param size[out]				Size of the returned payload
+ * \param size[out]				Size of the returned payload, zero if not packet
+ * received
  */
 int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
-	// Receive serialdata, size of packet stored in size
+	// Transmit/Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
 	SansgridSerial *sg_serial_out = NULL;
@@ -328,6 +330,7 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		queueEnqueue(dispatch, sgSerialCP(sg_serial));
 		*size = sizeof(SansgridSerial);
 	} else {
+		// No need for sg_serial anymore
 		free(sg_serial);
 		*size = 0;
 		if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA

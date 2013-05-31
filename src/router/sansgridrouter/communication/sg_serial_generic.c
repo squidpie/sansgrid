@@ -37,8 +37,7 @@ int spiTeardown(void) {
 }
 
 /**
- * \brief Send data over SPI (Stub)
- *
+ * This is a Stub. \n
  * The SansgridSerial structure is normally converted into raw bytes
  * and transferred over a serial wire. But if we are on an
  * unsupported device, this stub is compiled in instead.
@@ -55,8 +54,7 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 
 
 /**
- * \brief Receive data over SPI (Stub)
- *
+ * This is a Stub. \n
  * Data is normally received over serial wire and then converted
  * into a SansgridSerial structure. But if we are on an unsupported
  * device, this stub is compiled in instead.
