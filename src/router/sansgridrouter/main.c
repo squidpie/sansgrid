@@ -43,6 +43,7 @@
 
 void usage(int status);
 int spiSetup(void);
+int spiTeardown(void);
 
 
 /**
@@ -892,6 +893,7 @@ int main(int argc, char *argv[]) {
 	sem_destroy(&router_opts.hb_wait);
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
+	spiTeardown();
 
 	return 0;
 }

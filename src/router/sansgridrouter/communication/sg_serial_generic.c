@@ -32,6 +32,10 @@ int spiSetup(void) {
 	return 0;
 }
 
+int spiTeardown(void) {
+	return 0;
+}
+
 /**
  * \brief Send data over SPI (Stub)
  *

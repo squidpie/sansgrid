@@ -37,6 +37,7 @@
 #include <wiringPiSPI.h>
 #include <syslog.h>
 #include "../sansgrid_router.h"
+#include "../dispatch/dispatch.h"
 /** \file */
 
 
@@ -65,10 +66,30 @@
  */
 #define SLAVE_INT_PIN 	2
 
+/// Receive block
 static sem_t wait_on_slave;
 static int sem_initd = 0;
+/// Global file descriptor for SPI transfer
 static int g_fd = 0;
 static pthread_mutex_t transfer_lock;
+/// Transmission buffer
+static Queue *tx_buffer = NULL;
+
+
+/**
+ * Print a SansgridSerial structure
+ */
+static void spiPrintSgSerial(char *buffer) {
+	printf("control byte: %.2x\n", buffer[0]);
+	printf("IP address: ");
+	for (uint32_t i=1; i<16+1; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\ndata: ");
+	for (uint32_t i=17; i<size; i++)
+	    printf("%.2x", buffer[i]);
+	printf("\n");
+}
+
 
 /**
  * \brief Interrupt handler: waits until slave wants to send data
@@ -94,16 +115,16 @@ static SansgridSerial *sgSerialCP(SansgridSerial *sg_serial) {
 
 
 /**
- * \brief Prepare for impending SPI Transaction
+ * \brief Setup resources for SPI transactions
  *
- * Called before every SPI transaction.
+ * Called Once to setup buffers, locks, and GPIO
  * \returns
- * On success, a file descriptor is returned. You can write to
- * the file descriptor using Linux syscalls read and write. \n
- * You do have to close the file descriptor using the close() syscall
- * once you are done.
+ * If Setup has been called recently, 1 is returned as a warning. \n
+ * If GPIO can't be loaded, the entire system is stopped with EXIT_FAILURE. \n
+ * Otherwise, 0 is returned.
  */
 int spiSetup(void) {
+	// Setup resources for SPI transactions
 	FILE *FPTR;
 	FPTR = popen("gpio load spi", "r");
 	fclose(FPTR);
@@ -120,6 +141,12 @@ int spiSetup(void) {
 		exit(EXIT_FAILURE);
 	}
 	pthread_mutex_init(&transfer_lock, NULL);
+	if (tx_buffer == NULL) {
+		tx_buffer = queueInit(100);
+	} else {
+		syslog(LOG_WARNING, "spiSetup has already been called!");
+		return 1;
+	}
 	return 0;
 }
 
@@ -200,10 +227,11 @@ int spiOpen(void) {
 
 
 /**
- * \brief Send data over SPI
+ * \brief Enqueue data to be sent over SPI
  *
- * The SansgridSerial structure is converted into raw bytes
- * and transferred over a serial wire. 
+ * This function gets data ready to be sent over SPI.
+ * Note that the actual transfer is done in sgSerialReceive with
+ * the current scheme.
  * \param sg_serial[in]		Data to be sent. Contains a Sansgrid Payload
  * \param size[in]			Size of data. Not currently used.
  */
@@ -212,56 +240,21 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	int fd;
 	char buffer[size+1];
 	int8_t exit_code = 0;
+	SansgridSerial *sg_serial_cp = NULL;
 
-	pthread_mutex_lock(&transfer_lock);
-	// LOCKED
-
-	syslog(LOG_INFO, "Sending data over Serial");
-
-	if ((fd = spiOpen()) == -1) {
-		return -1;
-	}
-
-	memcpy(buffer, sg_serial, size);
-	printf("Sending:\n");
-	printf("control byte: %.2x\n", buffer[0]);
-	printf("IP address: ");
-	for (uint32_t i=1; i<16+1; i++)
-	    printf("%.2x", buffer[i]);
-	printf("\ndata: ");
-	for (uint32_t i=17; i<size; i++)
-	    printf("%.2x", buffer[i]);
-	printf("\n");
-
-	spiTransfer(buffer, size);
-
-	printf("Receiving:\n");
-	printf("control byte: %.2x\n", buffer[0]);
-	printf("IP address: ");
-	for (uint32_t i=1; i<16+1; i++)
-	    printf("%.2x", buffer[i]);
-	printf("\ndata: ");
-	for (uint32_t i=17; i<size; i++)
-	    printf("%.2x", buffer[i]);
-	printf("\n");
-	close(fd);
-	memcpy(sg_serial, buffer, size);
-
-	pthread_mutex_unlock(&transfer_lock);
-	// UNLOCKED
-
-	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA)
-		queueEnqueue(dispatch, sgSerialCP(sg_serial));
-	
-
-	return exit_code;
+	sg_serial_cp = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+	memcpy(sg_serial_cp, sg_serial, sizeof(SansgridSerial));
+	queueEnqueue(tx_buffer, sg_serial_cp);
+	sem_post(&wait_on_slave);
+	return 0;
 }
 
 
 /**
- * \brief Receive data over SPI
+ * \brief Receive data full-duplex over SPI
  *
- * Data is received over serial wire and then converted
+ * If there is data waiting to be sent, that is transferred.
+ * Data is also received over serial wire and then converted
  * into a SansgridSerial structure.  
  * \param sg_serial[out]		Where received data is placed. 
  * \param size[out]				Size of the returned payload
@@ -270,16 +263,17 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
+	SansgridSerial *sg_serial_out = NULL;
 	char buffer[sizeof(SansgridSerial)+1];
+	// Set when we're sending data
+	int sending = 0;
 	syslog(LOG_INFO, "Waiting for data over serial");
 	if (!sem_initd) {
 		sem_init(&wait_on_slave, 0, 0);
 		sem_initd = 1;
 	}
 	memset(buffer, 0x0, sizeof(buffer));
-	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
-	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 
 	// receive data
 	
@@ -289,19 +283,88 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	if (digitalRead((SLAVE_INT_PIN)))
 		sem_wait(&wait_on_slave);
 
-	// Slave wants to send data
-	sgSerialSend(*sg_serial, sizeof(SansgridSerial));
-	memcpy(buffer, *sg_serial, sizeof(SansgridSerial));
-	if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA) {
-		syslog(LOG_WARNING, "Bad data on SPI");
-		sleep(1);
+	// Transfer about to occur
+	if (queueTryDequeue(tx_buffer, &sg_serial_out) >= 0) {
+		// Data needs to be sent
+		*sg_serial = sg_serial_out;
+		memcpy(buffer, sg_serial_out, size);
+		sending = 1;
+	} else {
+		// No data needs to be sent
+		*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+		sending = 0;
+	}
+
+
+	pthread_mutex_lock(&transfer_lock);
+	// LOCKED
+
+
+	syslog(LOG_INFO, "Sending data over Serial");
+
+	if ((fd = spiOpen()) == -1) {
 		return -1;
 	}
 
-	*size = sizeof(SansgridSerial);
+	// (debug) Print our data to send 
+	printf("Sending:\n");
+	spiPrintSgSerial(buffer);
+
+	spiTransfer(buffer, size);
+	close(fd);
+
+
+	pthread_mutex_unlock(&transfer_lock);
+	// UNLOCKED
+
+
+	// (debug) Print what we got 
+	printf("Receiving:\n");
+	spiPrintSgSerial(buffer);
+
+
+	memcpy(*sg_serial, buffer, size);
+	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA) {
+		queueEnqueue(dispatch, sgSerialCP(sg_serial));
+		*size = sizeof(SansgridSerial);
+	} else {
+		free(sg_serial);
+		*size = 0;
+		if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA
+				&& sending == 0) {
+			// Didn't send valid data, and didn't get valid data
+			syslog(LOG_WARNING, "Bad data on SPI");
+			sleep(1);
+			return -1;
+		}
+	}
+
 
 	return 0;
 }
+
+
+/**
+ * \brief Teardown dynamic resources for SPI transactions, leave GPIO state
+ *
+ * Undoes some of what spiSetup() does. \n
+ * GPIO pins are unexported, buffers are destroyed.
+ * \returns
+ * On success, 0 is returned. \n
+ * If buffers are already NULL, a warning is returned.
+ */
+int spiTeardown(void) {
+	// Teardown resources for SPI transactions
+	if (tx_buffer == NULL) {
+		syslog(LOG_WARNING, "Trying to free NULL tx_buffer");
+		return 1;
+	}
+	pthread_mutex_destroy(&transfer_lock);
+	free(tx_buffer);
+	tx_buffer = NULL;
+	return 0;
+}
+
 
 //#else
 //#error "Expected Raspberry Pi Architecture Definition"
