@@ -154,6 +154,18 @@ int spiTransfer(char *buffer, int size) {
 	return 0;
 }
 
+
+/**
+ * \brief Prepare for SPI transfer (API)
+ *
+ * Note that to use this, you must have an int g_fd file descriptor
+ * that this can write to. You must close that file descriptor when
+ * transfer is done. You should use spiOpen(), which is a wrapper
+ * for this function that returns the file descriptor directly.
+ * \returns
+ * This function returns 0 on success, and -1 on failure. \n
+ * A global file descriptor is stored in the int g_fd field.
+ */
 int8_t sgSerialOpen(void) {
 	// Set up SPI
 	if ((g_fd = wiringPiSPISetup (0, KHZ(SPI_SPEED_KHZ))) < 0) {
@@ -165,6 +177,17 @@ int8_t sgSerialOpen(void) {
 	return 0;
 }
 
+/**
+ * \brief Prepare for SPI transfer (Wrapper)
+ *
+ * A wrapper for sgSerialOpen to account for the int8_t return
+ * for the API call, which cannot pass back a file descriptor.
+ * This wrapper function solves that.
+ * \returns
+ * This function returns a file descriptor that can be used for 
+ * writing to or reading from SPI. It must be closed once the
+ * transfer is complete.
+ */
 int spiOpen(void) {
 	// Wrapper to setup SPI
 	int8_t exit_code;
@@ -174,6 +197,7 @@ int spiOpen(void) {
 		return g_fd;
 	}
 }
+
 
 /**
  * \brief Send data over SPI
@@ -188,7 +212,9 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	int fd;
 	char buffer[size+1];
 	int8_t exit_code = 0;
+
 	pthread_mutex_lock(&transfer_lock);
+	// LOCKED
 
 	syslog(LOG_INFO, "Sending data over Serial");
 
@@ -220,7 +246,10 @@ int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	printf("\n");
 	close(fd);
 	memcpy(sg_serial, buffer, size);
+
 	pthread_mutex_unlock(&transfer_lock);
+	// UNLOCKED
+
 	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA)
 		queueEnqueue(dispatch, sgSerialCP(sg_serial));
 	
@@ -249,24 +278,18 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	}
 	memset(buffer, 0x0, sizeof(buffer));
 	*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-	//memset(*sg_serial, 0x0, sizeof(SansgridSerial));
 	buffer[0] = SG_SERIAL_CTRL_NO_DATA;
 	memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 
 	// receive data
+	
+	// first make sure semaphore is zeroed out
 	while (sem_trywait(&wait_on_slave) == 0);
+	// If there are no pending requests, wait until we get one
 	if (digitalRead((SLAVE_INT_PIN)))
 		sem_wait(&wait_on_slave);
 
 	// Slave wants to send data
-	/*
-	if ((fd = spiOpen()) == -1) {
-		syslog(LOG_ERR, "setting up SPI failed");
-		exit(EXIT_FAILURE);
-	}
-	spiTransfer(buffer, sizeof(SansgridSerial));
-	close(fd);
-	*/
 	sgSerialSend(*sg_serial, sizeof(SansgridSerial));
 	memcpy(buffer, *sg_serial, sizeof(SansgridSerial));
 	if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA) {
@@ -275,7 +298,6 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		return -1;
 	}
 
-	//memcpy(*sg_serial, buffer, sizeof(SansgridSerial));
 	*size = sizeof(SansgridSerial);
 
 	return 0;
