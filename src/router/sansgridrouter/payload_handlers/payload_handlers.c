@@ -397,9 +397,11 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	// Convert serial data to formatted data
 	sg_peck_union.serialdata = sg_serial->payload;
 	sg_peck = sg_peck_union.formdata;
+	/*
 	if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
 				sg_peck->datatype, "Peck") < 0)
 		return -1;
+		*/
 	routingTableSetCurrentPacket(routing_table, 
 			sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
 
