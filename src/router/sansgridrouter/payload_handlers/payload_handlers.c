@@ -189,6 +189,7 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 		case SG_SQUAWK_SERVER_RESPOND:
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+		case SG_SQUAWK_FORGET_ME:
 			// Squawking
 			return SG_DEVSTATUS_SQUAWKING;
 			break;
@@ -681,6 +682,10 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor accepts server's response
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_NESTING);
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
+			break;
+		case SG_SQUAWK_FORGET_ME:
+			// Sensor requires server to forget it
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
