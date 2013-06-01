@@ -372,7 +372,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		return 1;
 
 	index = locationToTablePtr(ip_addr, table->base) % ROUTING_ARRAYSIZE;
-	if (index < 1)
+	if (index < 1 || index == (ROUTING_ARRAYSIZE-1))
 		return 1;
 
 	if (routingTableLookup(table, ip_addr) == 0) {
@@ -423,7 +423,9 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	tableptr = table->tableptr;
 
 	// Find next available slot
-	while (table->routing_table[tableptr] || tableptr < 2) {
+	while (table->routing_table[tableptr] 
+			|| tableptr < 2
+			|| tableptr == (ROUTING_ARRAYSIZE-1)) {
 		tableptr = (tableptr + 1) % ROUTING_ARRAYSIZE;
 	}
 	maskip(ip_addr, table->base, tableptr);	// create IP address
