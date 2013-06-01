@@ -81,10 +81,24 @@ void *dispatchRuntime(void *arg) {
 			syslog(LOG_ERR, "Dispatch Queue Failed, Quitting");
 			exit(EXIT_FAILURE);
 		}
-		printf("Got packet of type %x\n", sg_serial->payload[0]);
 		while (router_opts.dispatch_pause) {
 			sleep(1);
 		}
+
+		if (router_opts.dumping_dispatch) {
+			// Remove everything from the dispatch
+			do {
+				if (sg_serial) {
+					free(sg_serial);
+					sg_serial = NULL;
+				}
+				queueDequeue(dispatch, (void**)&sg_serial);
+			} while (queueSize(dispatch) > 0);
+			router_opts.dumping_dispatch = 0;
+			continue;
+		}
+
+		printf("Got packet of type %x\n", sg_serial->payload[0]);
 		if (sg_serial->payload[0] == SG_SERVSTATUS) {
 			routerHandleServerStatus(routing_table, sg_serial);
 		} else {
@@ -183,6 +197,11 @@ void *heartbeatRuntime(void *arg) {
 	uint32_t current_packet;
 	uint64_t nano_add = 0;
 	uint64_t sec_add = 0;
+	int oldstatus;
+
+	// We have to make sure this thread can be cancelled whenever.
+	// Otherwise we may miss the signal
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldstatus);
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
@@ -944,6 +963,7 @@ Daemon Commands\n\
       kill                   shutdown the router daemon\n\
       drop [DEVICE]          drop a device\n\
       drop all               drop all devices\n\
+      drop queue             drop all enqueued items\n\
       pause                  don't send any packets\n\
       resume                 continue sending packets\n\
 \n\

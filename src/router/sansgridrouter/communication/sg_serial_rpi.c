@@ -346,8 +346,8 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		*size = sizeof(SansgridSerial);
 	} else {
 		// No need for sg_serial anymore
-		free(sg_serial);
-		*size = 0;
+		//free(sg_serial);
+		//*size = 0;
 		if (buffer[0] != SG_SERIAL_CTRL_VALID_DATA
 				&& sending == 0) {
 			// Didn't send valid data, and didn't get valid data

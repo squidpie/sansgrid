@@ -190,6 +190,10 @@ int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 		// drop all devices
 		routerFreeAllDevices(routing_table);
 		strcpy(str, "All devices freed");
+	} else if (!strcmp(str, "drop queue")) {
+		// drop queue
+		router_opts.dumping_dispatch = 1;
+		router_opts.dispatch_pause = 0;
 	} else if ((device = atoi(&str[5])) != 0) {
 		// drop device
 		routingTableRDIDToIP(routing_table, device, ip_addr);

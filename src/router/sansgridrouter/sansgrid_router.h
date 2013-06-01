@@ -56,6 +56,7 @@ typedef struct RouterOpts {
 	int verbosity;			///< how loud we should be
 	int strictness;			///< How strict authentication should be
 	int dispatch_pause;		///< whether the dispatch should dequeue
+	int dumping_dispatch;	///< whether or not to dump all packets
 	int heartbeat_period;	///< how often a device should be pinged
 	sem_t hb_wait;			///< post this to interrupt heartbeat sleep
 } RouterOpts;
