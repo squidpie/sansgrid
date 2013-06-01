@@ -20,30 +20,31 @@
  *
  */
 
-
+//libraries made by Matt to allow sensor code to work with Sangride protocol
 #include <sgSerial.h>
 #include <sensorPayloads.h>
 #include <sensorPayloadHandler.h>
 #include <sensorParse.h>
 #include <SPI.h>
 
-//This is the code for the sensor that takes a poteniometers value in and displays it and 
-//shows the capabilities of the mating sansgrid data type in the eyeball phase. In order to
-//the button must be pressed. Button not pressed = not ready to mate.
+// This is the code for a sensor that takes a poteniometer's value in, sets an led's brightness accordingly,
+// and sends out a mapped value from 1-100 to the server to be displayed. shows the capabilities of the mating 
+// sansgrid data type in the eyeball phase. In order to
+// the button must be pressed. Button not pressed = not ready to mate.
 
-//sets led to pin 6 and button to pin 7
-#define mate_led 6 //active low
+// sets led to pin 6 and slave ready to interrupt pin 2
+#define MATE_LED 6 //active low
 #define SLAVE_READY 2
 
-// state of the button initialized
+// state of the mating led initialized
 boolean led_state = true;
 
-const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
-const int analogOutPin = 9; // Analog output pin that the LED is attached to
+const int analog_in_pin = A0;  // Analog input pin that the potentiometer is attached to
+const int analog_out_pin = 9; // Analog output pin that the LED is attached to
 
-int sensorValue = 0;        // value read from the pot
-int outputValue = 0;        // value read from led
-int percentValue = 0;       // value sent to server
+int sensor_value = 0;        // value read from the pot
+int output_value = 0;        // value read from led
+int percent_value = 0;       // value sent to server
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
@@ -51,11 +52,11 @@ SansgridSerial sg_serial;
 //setting up the pins to proper i/o
 void setup() {
   // initialize the button led as output:
-  pinMode(mate_led, OUTPUT); 
+  pinMode(MATE_LED, OUTPUT); 
   pinMode(SLAVE_SELECT, OUTPUT);
   digitalWrite(SLAVE_SELECT, LOW);  
   // initialize led to off
-  digitalWrite(mate_led, HIGH); 
+  digitalWrite(MATE_LED, HIGH); 
   Serial.begin(9600);
   //Initialize interrupt for Slave Ready pin
   //#ifdef DUE 
@@ -63,7 +64,7 @@ void setup() {
   //#else
   //attachInterrupt( 0 , receive , FALLING );
   //#endif // end of DUE
-  attachInterrupt( 1 , buttonpress , RISING );
+  attachInterrupt( 1 , buttonPress , RISING );
   
   // Set Mate, true is automatic, false is push button based
   sg_config.mate = false; 
@@ -144,20 +145,20 @@ void loop(){
             // Which Signal Id are you using?
             sg_serial.payload[1] = (uint8_t) 0x01;
             // read the analog in value:
-            sensorValue = analogRead(analogInPin);            
+            sensor_value = analogRead(analog_in_pin);            
             // map it to the range of the analog out:
-            outputValue = map(sensorValue, 0, 681, 0, 255); 
-            percentValue = map(sensorValue, 0, 681, 0, 100);
+            output_value = map(sensor_value, 0, 681, 0, 255); 
+            percent_value = map(sensor_value, 0, 681, 0, 100);
             // change the analog out value:
-            analogWrite(analogOutPin, outputValue);
+            analogWrite(analog_out_pin, output_value);
             //zero out the payload to ensure no unwanted data
-            for(int x = 0; x < DATA_SIZE; x++)
-              sg_serial.payload[x+2] = 0;
+            for(int j = 0; j < DATA_SIZE; j++)
+              sg_serial.payload[j+2] = 0;
             //code to setup value to send to server  
-            int analog_size = sizeof(percentValue);
+            int analog_size = sizeof(percent_value);
             char ch_array[analog_size];
-            int n;
-            n = sprintf(ch_array, "%d", percentValue);
+            int j;
+            n = sprintf(ch_array, "%d", percent_value);
             for(int i = 0; i < n; i++)
               sg_serial.payload[i+2] = ch_array[i];
             
@@ -167,7 +168,7 @@ void loop(){
             //print the results to the serial monitor for TESTING:
             Serial.println(ch_array);     
             Serial.print("percent lit up = ");
-            Serial.println(percentValue);
+            Serial.println(percent_value);
             // Transmit Payload over SPI
             delay (10000);  
             sgSerialSend( &sg_serial , 1 );
@@ -186,7 +187,7 @@ void loop(){
     Serial.println( "Received flag set to true" );
 }*/
 
-void buttonpress(){
+void buttonPress(){
   
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
@@ -194,14 +195,14 @@ void buttonpress(){
   if (interrupt_time - last_interrupt_time > 200) 
   {
     if(led_state){
-      digitalWrite( mate_led, LOW );
+      digitalWrite( MATE_LED, LOW );
       led_state = false;
       //Serial.println("led is on");
       sg_config.mate = true;
       //Serial.println("mating state: ");
       //Serial.println(sg_config.mate);
     } else{
-      digitalWrite( mate_led, HIGH );
+      digitalWrite( MATE_LED, HIGH );
       led_state = true;
       //Serial.println("led is off");
       sg_config.mate = false;

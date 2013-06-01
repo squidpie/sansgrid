@@ -31,7 +31,7 @@
 
 //sets led to pin 4 and switch to pin 5
 #define SLAVE_READY 2
-#define switch_led 4
+#define SWITCH_LED 4
 
 //initialization
 int switch_state = 0; //state of dip switch
@@ -44,6 +44,11 @@ SansgridSerial sg_serial;
 
 //setting up the pins to proper i/o
 void setup() {
+  pinMode(SWITCH_LED, OUTPUT); 
+  pinMode(SLAVE_SELECT, OUTPUT);
+  digitalWrite(SLAVE_SELECT, LOW);  
+  // initialize led to off
+  digitalWrite(SWITCH_LED, LOW);
   Serial.begin(9600);
   //Initialize interrupt for Slave Ready pin
   //#ifdef DUE 
@@ -51,7 +56,7 @@ void setup() {
   //#else
   //attachInterrupt( 0 , receive , FALLING );
   //#endif // end of DUE
-  attachInterrupt( 1 , dipswitch , CHANGE );
+  attachInterrupt( 1 , dipSwitch , CHANGE );
   
   // Set Mate, true is automatic, false is push button based
   sg_config.mate = true; 
@@ -114,9 +119,9 @@ void loop(){
                 if (sid == 0x31){
                   led_value = sg_serial.payload[2];
                   if (led_value == 0x31) //comparing value to ascii 1
-                    digitalWrite(switch_led, HIGH); // turn LED on
+                    digitalWrite(SWITCH_LED, HIGH); // turn LED on
                   else
-                    digitalWrite(switch_led, LOW); // turn LED off
+                    digitalWrite(SWITCH_LED, LOW); // turn LED off
                 }
               }
                 // Reset Chirp to false
@@ -149,7 +154,7 @@ void loop(){
               //code for TESTING
               Serial.write("led: ");
               Serial.println(led_state);
-              digitalWrite(switch_led, HIGH); // turn LED on
+              digitalWrite(SWITCH_LED, HIGH); // turn LED on
               delay(50);
             }
           //if switch is off, send code to server to tell it to turn led on on other arduino 
@@ -160,14 +165,14 @@ void loop(){
                 sg_serial.payload[x+2] = (uint8_t) 0x0;
               char ch_array[1];
               int n = sprintf(ch_array, "%d", led_state);
-              for(int i = 0; i < n; i++)
-                sg_serial.payload[i+2] = ch_array[i];
+              for(int j = 0; j < n; j++)
+                sg_serial.payload[j+2] = ch_array[j];
               
               //led_state = 0;
               //code for TESTING
               Serial.write("led: ");
               Serial.println(led_state);
-              digitalWrite(switch_led, LOW); // turn LED off
+              digitalWrite(SWITCH_LED, LOW); // turn LED off
               delay(50); 
             }
             // Transmit Payload over SPI  
