@@ -83,8 +83,8 @@ void setup() {
   // and uncomment all sg_config.<fly,sing,squawk,chirp,challenge...>
   // either false or true.
   //sg_config.mate = false;
-  sg_config.nest = true;
-  //sg_config.fly = true;
+  //sg_config.nest = true;
+  sg_config.fly = true;
   //sg_config.sing = true;
   //sg_config.mock = true;
   //sg_config.squawk = true;
@@ -142,7 +142,7 @@ void loop(){
             sg_serial.payload[0] = (uint8_t) 0x21;
             // Copy data into Payload
             // Which Signal Id are you using?
-            sg_serial.payload[1] = (unit8_t) 0x01;
+            sg_serial.payload[1] = (uint8_t) 0x01;
             // read the analog in value:
             sensorValue = analogRead(analogInPin);            
             // map it to the range of the analog out:
@@ -160,20 +160,23 @@ void loop(){
             n = sprintf(ch_array, "%d", percentValue);
             for(int i = 0; i < n; i++)
               sg_serial.payload[i+2] = ch_array[i];
+            
+            
+            
+            
             //print the results to the serial monitor for TESTING:
-            Serial.println(ch_array);
-            Serial.print("sensor = " );                       
-            Serial.println(sensorValue);      
+            Serial.println(ch_array);     
             Serial.print("percent lit up = ");
             Serial.println(percentValue);
-            // Transmit Payload over SPI  
+            // Transmit Payload over SPI
+            delay (10000);  
             sgSerialSend( &sg_serial , 1 );
         }// End of Send Chirp
     }// End of Nested
 
 }
 
-void receive(){
+/*void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, set received flag to initiate
     // processing SPI packet
@@ -181,7 +184,7 @@ void receive(){
     sg_config.received = true;
     // Display value of received
     Serial.println( "Received flag set to true" );
-}
+}*/
 
 void buttonpress(){
   
@@ -193,17 +196,17 @@ void buttonpress(){
     if(led_state){
       digitalWrite( mate_led, LOW );
       led_state = false;
-      Serial.println("led is on");
+      //Serial.println("led is on");
       sg_config.mate = true;
-      Serial.println("mating state: ");
-      Serial.println(sg_config.mate);
+      //Serial.println("mating state: ");
+      //Serial.println(sg_config.mate);
     } else{
       digitalWrite( mate_led, HIGH );
       led_state = true;
-      Serial.println("led is off");
+      //Serial.println("led is off");
       sg_config.mate = false;
-      Serial.println("mating state: ");
-      Serial.println(sg_config.mate);
+      //Serial.println("mating state: ");
+      //Serial.println(sg_config.mate);
     }
   }
   last_interrupt_time = interrupt_time;

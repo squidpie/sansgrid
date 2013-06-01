@@ -36,6 +36,8 @@
 //initialization
 int switch_state = 0; //state of dip switch
 int led_state = 0;
+int sid = 0;
+int led_value = 0;
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
@@ -55,7 +57,7 @@ void setup() {
   sg_config.mate = true; 
   
   // Set SansgridSerial data_out control byte
-  sg_data_out.control[0] = 0xAD;
+  sg_serial.control[0] = 0xAD;
     
   // Call Sensor Configuration which sets the:
   // Serial Number, Model Number, Manufacture ID, Sensor Public Key
@@ -69,7 +71,7 @@ void setup() {
   // and uncomment all sg_config.<fly,sing,squawk,chirp,challenge...>
   // either false or true.
   //sg_config.mate = false;
-  //sg_config.nest = true;
+  sg_config.nest = true;
   //sg_config.fly = true;
   //sg_config.sing = true;
   //sg_config.mock = true;
@@ -85,7 +87,7 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
-        sensorConnect( &sg_config , &sg_data_out );  
+        sensorConnect( &sg_config , &sg_serial );  
     }
   
     // DEBUG message
@@ -106,14 +108,17 @@ void loop(){
             sg_config.received = false;
             // Process received Chirp packet
             if( sg_config.chirp == true ){
-                // if (sg_serial.payload[0] == 0x20){
-                //blah blah blah}
-                //check for sid at [1]
-                //last position is at [2]
-                //Received Chirp from Sensor
-                // Need to process payload to perform action
-                // on Signal. Put code in here.
               
+              if (sg_serial.payload[0] == 0x20){
+                sid = sg_serial.payload[1];
+                if (sid == 0x31){
+                  led_value = sg_serial.payload[2];
+                  if (led_value == 0x31) //comparing value to ascii 1
+                    digitalWrite(switch_led, HIGH); // turn LED on
+                  else
+                    digitalWrite(switch_led, LOW); // turn LED off
+                }
+              }
                 // Reset Chirp to false
                 sg_config.chirp = false; 
             }// End of received Chirp
@@ -128,17 +133,19 @@ void loop(){
             sg_serial.payload[0] = (uint8_t) 0x21;
             // Copy data into Payload
             // Which Signal Id are you using?
-            sg_serial.payload[1] = (unit8_t) 0x01; //make sure to change this to 0x02 for second sensor
+            sg_serial.payload[1] = (uint8_t) 0x02; //switch's sid, led's sid will be 0x01
             //if switch is on, send code to server to tell it to turn led on on other arduino
             if (switch_state == 1) {
       
-              memset(sg_chirp.data, '\0', DATA_SIZE);
+              //zero out the payload to ensure no unwanted data
+              for(int x = 0; x < DATA_SIZE; x++)
+                sg_serial.payload[x+2] = (uint8_t) 0x0;
               char ch_array[1];
-              int n;
-              n = sprintf(ch_array, "%d", 1);
+              int n = sprintf(ch_array, "%d", led_state);
               for(int i = 0; i < n; i++)
-                sg_chirp.data[i] = ch_array[i];
-              led_state = 1;
+                sg_serial.payload[i+2] = ch_array[i];
+              
+              //led_state = 1;
               //code for TESTING
               Serial.write("led: ");
               Serial.println(led_state);
@@ -148,13 +155,15 @@ void loop(){
           //if switch is off, send code to server to tell it to turn led on on other arduino 
             else {
       
-              memset(sg_chirp.data, '\0', DATA_SIZE);
+              //zero out the payload to ensure no unwanted data
+              for(int x = 0; x < DATA_SIZE; x++)
+                sg_serial.payload[x+2] = (uint8_t) 0x0;
               char ch_array[1];
-              int n;
-              n = sprintf(ch_array, "%d", 0);
+              int n = sprintf(ch_array, "%d", led_state);
               for(int i = 0; i < n; i++)
-              sg_chirp.data[i] = ch_array[i];
-              led_state = 0;
+                sg_serial.payload[i+2] = ch_array[i];
+              
+              //led_state = 0;
               //code for TESTING
               Serial.write("led: ");
               Serial.println(led_state);
@@ -184,9 +193,12 @@ void dipswitch(){
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time > 200) 
   {
-    led_state = !digitalRead(4);
-    digitalWrite(4, !digitalRead(4));
-    Serial.println(led_state);
+    //led_state = !digitalRead(3);
+    //digitalWrite(4, !digitalRead(4));
+    led_state = !led_state;
+    //Serial.println("led_state: ");
+    //Serial.println(led_state);
+    switch_state = led_state;
     }
  
   last_interrupt_time = interrupt_time;  
