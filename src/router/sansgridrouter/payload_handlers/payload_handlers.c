@@ -351,31 +351,31 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
 		syslog(LOG_DEBUG, "New device wishes to mate");
-		if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
-			// no IP address given
-			// Assign an IP address
-			syslog(LOG_INFO, "Assigning IP dynamically for new device");
+	} else {
+		syslog(LOG_DEBUG, "New device doesn't wish to mate");
+	}
+
+	if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
+		// no IP address given
+		// Assign an IP address
+		syslog(LOG_INFO, "Assigning IP dynamically for new device");
+		routingTableAssignIP(routing_table, ip_addr);
+		memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
+	} else {
+		// IP address given
+		if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr) == 1) {
+			syslog(LOG_INFO, "Couldn't statically assign IP for new device");
 			routingTableAssignIP(routing_table, ip_addr);
 			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
-		} else {
-			// IP address given
-			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr) == 1) {
-				syslog(LOG_INFO, "Couldn't statically assign IP for new device");
-				routingTableAssignIP(routing_table, ip_addr);
-				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
-			}
 		}
-		routingTableSetCurrentPacket(routing_table, 
-				sg_serial->ip_addr, SG_DEVSTATUS_EYEBALLING);
-		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
-
-		// Send packet to the server
-		syslog(LOG_DEBUG, "Sending Eyeball to server");
-		sgTCPSend(sg_serial, sizeof(SansgridSerial));
-	} else {
-		syslog(LOG_DEBUG, "New device doesn't wish to mate, not doing anything");
-		return 1;
 	}
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_EYEBALLING);
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
+
+	// Send packet to the server
+	syslog(LOG_DEBUG, "Sending Eyeball to server");
+	sgTCPSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
 }
