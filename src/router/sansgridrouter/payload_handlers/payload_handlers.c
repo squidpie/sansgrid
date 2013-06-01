@@ -670,7 +670,10 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 			// Server denies sensor challenge request
-			routerFreeDevice(routing_table, sg_serial->ip_addr);
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+					SG_DEVSTATUS_SQUAWKING);
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			//routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		case SG_SQUAWK_SERVER_RESPOND:
 			// Server Responds to challenge
@@ -686,6 +689,8 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_FORGET_ME:
 			// Sensor requires server to forget it
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
@@ -770,6 +775,8 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
+	// Make sure device is allowed to send this packet.
+	// Make an exception if it's a disconnection request
 	if (sg_chirp->datatype != SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
 			&& sg_chirp->datatype == SG_CHIRP_SENSOR_DISCONNECT) {
 		if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
