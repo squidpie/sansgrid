@@ -121,7 +121,7 @@ static int32_t routerRefreshDevice(uint8_t ip_addr[IP_SIZE]) {
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
-	sg_irstatus.datatype = 0xfd;
+	sg_irstatus.datatype = SG_SERVSTATUS;
 	strcpy(sg_irstatus.status, "online");
 	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 	memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
@@ -692,6 +692,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
 			// error
@@ -722,7 +723,7 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
-	if (sg_heartbeat->datatype != 0xfd) {
+	if (sg_heartbeat->datatype != SG_SERVSTATUS) {
 		syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
 				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	} else {
@@ -744,7 +745,7 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 				routerRefreshDevice(sg_serial->ip_addr);
 			}
 			break;
-		case 0xfd:
+		case SG_SERVSTATUS:
 			routerHandleServerStatus(routing_table, sg_serial);
 			break;
 		default:
@@ -838,7 +839,7 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 	syslog(LOG_INFO, "Handling Router<-->Server packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	// FIXME: Get rid of magic payload type number 0xfd
-	if (sg_irstatus->datatype == 0xfd) {
+	if (sg_irstatus->datatype == SG_SERVSTATUS) {
 		if (!strcmp(sg_irstatus->status, "stale")
 				|| !strcmp(sg_irstatus->status, "lost"))
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
