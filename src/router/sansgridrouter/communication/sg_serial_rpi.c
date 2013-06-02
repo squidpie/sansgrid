@@ -300,12 +300,14 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Transfer about to occur
 	if (queueTryDequeue(tx_buffer, (void**)&sg_serial_out) >= 0) {
 		// Data needs to be sent
+		sg_serial_out->control = SG_SERIAL_CTRL_VALID_DATA;
 		*sg_serial = sg_serial_out;
 		memcpy(buffer, sg_serial_out, *size);
 		sending = 1;
 	} else {
 		// No data needs to be sent
 		*sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
+		(*sg_serial)->control = SG_SERIAL_CTRL_NO_DATA;
 		sending = 0;
 	}
 

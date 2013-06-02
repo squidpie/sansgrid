@@ -189,7 +189,6 @@ void *heartbeatRuntime(void *arg) {
 	SansgridHeartbeat sg_hb;
 	SansgridIRStatus sg_irstatus;
 	SansgridChirp sg_chirp;
-	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 	struct timespec req, epoch;
 	int hb_status = 0;
 	uint32_t rdid;
@@ -205,7 +204,8 @@ void *heartbeatRuntime(void *arg) {
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
-	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
+	memset(&sg_hb, 0x0, sizeof(SansgridHeartbeat));
+	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 	routingTableForEachDevice(routing_table, ip_addr);
 	count = routingTableGetDeviceCount(routing_table)-1;
 	while (1) {
@@ -255,7 +255,7 @@ void *heartbeatRuntime(void *arg) {
 		if (!routingTableIsDeviceLost(routing_table, ip_addr)) {
 			syslog(LOG_DEBUG, "heartbeat: sending to device %u", routingTableIPToRDID(routing_table, ip_addr));
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+			memcpy(sg_serial->payload, &sg_hb, sizeof(SansgridHeartbeat));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 			queueEnqueue(dispatch, sg_serial);
 			sg_serial = NULL;
