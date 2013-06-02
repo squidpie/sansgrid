@@ -100,7 +100,7 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	if (length/2 > hexsize) {
 		syslog(LOG_DEBUG, "atox: truncating string %s", str);
 		length = hexsize*2;
-	}
+	} 
 
 	//offset = hexsize - ((length+1)/2);
 
@@ -577,7 +577,6 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	int i;
 	int cap = 0;
 	int field_not_zero = 0;
-	int first_byte = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
 
@@ -595,15 +594,6 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	}
 	if (field_not_zero) {
 		for (i=0; i<cap; i++) {
-			if (value[i] == 0x0)
-				continue;
-			else {
-				first_byte = i;
-				break;
-			}
-		}
-		sprintf(payload, "%s%x", payload, value[i]);
-		for (i=first_byte+1; i<cap; i++) {
 			sprintf(payload, "%s%.2x", payload, value[i]);
 		}
 	} else {
