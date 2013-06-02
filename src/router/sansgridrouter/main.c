@@ -311,8 +311,8 @@ void *flyRuntime(void *arg) {
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 			memset(sg_serial, 0x0, sizeof(SansgridSerial));
 			routingTableGetEssid(routing_table, sg_fly.network_name);
-			for(uint32_t i=strlen(sg_fly.network_name); i<sizeof(sg_fly.network_name); i++)
-				sg_fly.network_name[i] = i;
+			//for(uint32_t i=strlen(sg_fly.network_name); i<sizeof(sg_fly.network_name); i++)
+			//	sg_fly.network_name[i] = i;
 			memcpy(sg_serial->payload, &sg_fly, sizeof(SansgridFly));
 			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 			routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
