@@ -31,7 +31,7 @@
 
 //#define PUSH_BUTTON 1
 //#define DUE 1
-//#define LED 13
+#define LED 4
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
@@ -46,8 +46,13 @@ void setup(){
     //sg_config.mate = true; 
     
     // Enable Slave Select
-    pinMode(SLAVE_SELECT, OUTPUT);
-    digitalWrite(SLAVE_SELECT, HIGH);
+    pinMode( SLAVE_SELECT , OUTPUT );
+    digitalWrite( SLAVE_SELECT , HIGH );
+    
+    // LED Signal
+    pinMode( LED , OUTPUT );
+    digitalWrite( LED , HIGH );
+    
     // Set SansgridSerial data_out control byte
     sg_serial.control[0] = 0xAD;
     
@@ -79,7 +84,7 @@ void setup(){
     //sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
-    //sg_config.nokey = true;
+    sg_config.nokey = true;
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
@@ -94,7 +99,7 @@ void loop(){
         sensorConnect( &sg_config , &sg_serial );  
     }
     // DEBUG message
-    //Serial.println( "Connected to Network" );
+    Serial.println( "Connected to Network" );
     // Signal Input Code goes here in this loop
     while(sg_config.nest == true ){  
         // Delay between sending Packets atleast 1 second
@@ -114,7 +119,14 @@ void loop(){
                 // Received Chirp from Sensor
                 // Need to process payload to perform action
                 // on Signal. Put code in here.
-              
+                if( sg_serial.payload[0] == 0x20 ){
+                    if( sg_serial.payload[1] == 0x01 ){
+                        if( sg_serial.payload[2] == 0x31 )
+                            digitalWrite( LED , HIGH );
+                        else
+                            digitalWrite( LED , LOW );
+                  }
+                }      
                 // Reset Chirp to false
                 sg_config.chirp = false; 
             }// End of received Chirp
@@ -129,13 +141,25 @@ void loop(){
             sg_serial.payload[0] = (uint8_t) 0x21;
             // Copy data into Payload
             // Which Signal Id are you using?
-            //sg_serial.payload[1] = sid????
+            sg_serial.payload[1] = (uint8_t) 0x02;
             // What are you transmitting???
-            //sg_serial.payload[2] thru sg_serial.payload[80]
+            if(digitalRead( LED ) == LOW ){
+                sg_serial.payload[2] = (uint8_t) 0x4F;
+                sg_serial.payload[3] = (uint8_t) 0x46;
+                sg_serial.payload[4] = (uint8_t) 0x46;
+            }
+            else if (digitalRead( LED ) == HIGH ){
+                sg_serial.payload[2] = (uint8_t) 0x4F;
+                sg_serial.payload[3] = (uint8_t) 0x4E;
+                sg_serial.payload[4] = (uint8_t) 0x20;
+            }
             // Make sure to pad the unused with 0x00
+            for( int i = 5 ; i < PAYLOAD ; i++ )
+                sg_serial.payload[i] = (uint8_t) 0x00;
             // Transmit Payload over SPI  
             sgSerialSend( &sg_serial , 1 );
         }// End of Send Chirp
+        delay(1000);
     }// End of Nested
 }// End of Loop
 
@@ -145,8 +169,6 @@ void receive(){
     // processing SPI packet
     //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
-    // Display value of received
+    // Display value of received 
     //Serial.println( "Received flag set to true" );
 }
-
-

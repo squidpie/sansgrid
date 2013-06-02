@@ -68,6 +68,7 @@ typedef struct SensorConfig{
     static bool challenge;
     static bool forget;
 	static bool received;
+	static bool connecting;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
     static int8_t sn[ SN ];
@@ -75,7 +76,9 @@ typedef struct SensorConfig{
     static uint8_t ip_address[ IP_ADDRESS ];
     static uint8_t router_ip[ IP_ADDRESS ];
     static uint8_t server_public_key[ SERVER_KEY ];
-    static uint8_t sensor_public_key[ SENSOR_KEY ]; 
+	static uint8_t server_challenge[ SERVER_KEY ];
+    static uint8_t sensor_public_key[ SENSOR_KEY ];
+    static uint8_t sensor_challenge[ SENSOR_KEY ];	
 } SensorConfig;
 
 typedef struct SansgridFly{

@@ -96,7 +96,7 @@ void loop(){
             // Reset received to default value
             sg_config.received = false;
     }
-	else {
+	/*else {
 	 // Set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
             // Set IP address to router ip
@@ -106,7 +106,7 @@ void loop(){
             sg_serial.payload[0] = (uint8_t) 0x21;
             sgSerialSend( &sg_serial , 1 );
 			delay(10000);
-	}
+	}*/
 }// End of Loop
 
 void receive(){

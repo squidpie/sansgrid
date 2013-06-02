@@ -35,7 +35,7 @@
 #define RECEIVE 0xFD        // Control byte for receiving data
 #define TRANSMIT 0xAD       // Control byte for transmit data
 #define SLAVE_SELECT  10    // SS pin 10
-#define DELAY 6				// Delay in Microseconds to process byte over SPI
+#define DELAY 1200				// Delay in Microseconds to process byte over SPI
 
 #ifdef DUE
 #define SLAVE_READY  8      // Hand shake pin identifying Slave has data to send
@@ -76,4 +76,3 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size);
 uint8_t sgSerialClose(void);
 
 #endif // __SG_SERIAL_H
-
