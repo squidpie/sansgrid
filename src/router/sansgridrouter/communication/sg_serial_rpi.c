@@ -84,7 +84,7 @@ static Queue *tx_buffer = NULL;			// transfer buffer
 /**
  * Print a SansgridSerial structure
  */
-static void spiPrintSgSerial(char *buffer) {
+static void spiPrintSgSerial(char *buffer, int size) {
 	// print an sg_serial structure stored in a buffer
 	printf("control byte: %.2x\n", buffer[0]);
 	printf("IP address: ");
@@ -251,9 +251,6 @@ int spiOpen(void) {
  */
 int8_t sgSerialSend(SansgridSerial *sg_serial, uint32_t size) {
 	// Send size bytes of serialdata
-	int fd;
-	char buffer[size+1];
-	int8_t exit_code = 0;
 	SansgridSerial *sg_serial_cp = NULL;
 
 	sg_serial_cp = (SansgridSerial*)malloc(sizeof(SansgridSerial));
@@ -280,8 +277,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
 	SansgridSerial *sg_serial_out = NULL;
 	char buffer[sizeof(SansgridSerial)+1];
+	int fd;
 	// Set when we're sending data
 	int sending = 0;
+	*size = sizeof(SansgridSerial);
 	syslog(LOG_INFO, "Waiting for data over serial");
 	if (!sem_initd) {
 		sem_init(&wait_on_slave, 0, 0);
@@ -299,10 +298,10 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 		sem_wait(&wait_on_slave);
 
 	// Transfer about to occur
-	if (queueTryDequeue(tx_buffer, &sg_serial_out) >= 0) {
+	if (queueTryDequeue(tx_buffer, (void**)&sg_serial_out) >= 0) {
 		// Data needs to be sent
 		*sg_serial = sg_serial_out;
-		memcpy(buffer, sg_serial_out, size);
+		memcpy(buffer, sg_serial_out, *size);
 		sending = 1;
 	} else {
 		// No data needs to be sent
@@ -325,9 +324,9 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 
 	// (debug) Print our data to send 
 	printf("Sending:\n");
-	spiPrintSgSerial(buffer);
+	spiPrintSgSerial(buffer, *size);
 
-	spiTransfer(buffer, size);
+	spiTransfer(buffer, *size);
 	close(fd);
 
 
@@ -337,12 +336,12 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 
 	// (debug) Print what we got 
 	printf("Receiving:\n");
-	spiPrintSgSerial(buffer);
+	spiPrintSgSerial(buffer, *size);
 
 
-	memcpy(*sg_serial, buffer, size);
+	memcpy(*sg_serial, buffer, *size);
 	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA) {
-		queueEnqueue(dispatch, sgSerialCP(sg_serial));
+		queueEnqueue(dispatch, sgSerialCP(*sg_serial));
 		*size = sizeof(SansgridSerial);
 	} else {
 		// No need for sg_serial anymore
