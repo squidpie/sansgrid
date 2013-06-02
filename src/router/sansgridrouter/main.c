@@ -262,9 +262,8 @@ void *heartbeatRuntime(void *arg) {
 		}
 		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
 			// device status changed... either went stale or was lost
-			// FIXME: remove magic number by specifying this as payload type
 			printf("hb_status = %x\n", hb_status);
-			sg_irstatus.datatype = 0xfd;
+			sg_irstatus.datatype = SG_SERVSTATUS;
 			rdid = routingTableIPToRDID(routing_table, ip_addr);
 			wordToByte(sg_irstatus.rdid, &rdid, sizeof(rdid));
 			if (routingTableIsDeviceLost(routing_table, ip_addr)) {
@@ -278,7 +277,7 @@ void *heartbeatRuntime(void *arg) {
 				syslog(LOG_NOTICE, "Device %i has just gone stale", routingTableIPToRDID(routing_table, ip_addr));
 			}
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			sg_serial->control = 0xad;
+			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 			memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 			queueEnqueue(dispatch, sg_serial);

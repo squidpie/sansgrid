@@ -121,7 +121,7 @@ static int32_t routerRefreshDevice(uint8_t ip_addr[IP_SIZE]) {
 	sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 	memset(sg_serial, 0x0, sizeof(SansgridSerial));
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
-	sg_irstatus.datatype = 0xfd;
+	sg_irstatus.datatype = SG_SERVSTATUS;
 	strcpy(sg_irstatus.status, "online");
 	memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 	memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
@@ -189,6 +189,7 @@ enum SansgridDeviceStatusEnum sgPayloadGetType(enum SansgridDataTypeEnum dt) {
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 		case SG_SQUAWK_SERVER_RESPOND:
 		case SG_SQUAWK_SENSOR_ACCEPT_RESPONSE:
+		case SG_SQUAWK_FORGET_ME:
 			// Squawking
 			return SG_DEVSTATUS_SQUAWKING;
 			break;
@@ -351,31 +352,31 @@ int routerHandleEyeball(RoutingTable *routing_table, SansgridSerial *sg_serial) 
 	// Store IP in the routing table
 	if (sg_eyeball->mode == SG_EYEBALL_MATE) {
 		syslog(LOG_DEBUG, "New device wishes to mate");
-		if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
-			// no IP address given
-			// Assign an IP address
-			syslog(LOG_INFO, "Assigning IP dynamically for new device");
+	} else {
+		syslog(LOG_DEBUG, "New device doesn't wish to mate");
+	}
+
+	if (!memcmp(sg_serial->ip_addr, ip_addr, sizeof(ip_addr))) {
+		// no IP address given
+		// Assign an IP address
+		syslog(LOG_INFO, "Assigning IP dynamically for new device");
+		routingTableAssignIP(routing_table, ip_addr);
+		memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
+	} else {
+		// IP address given
+		if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr) == 1) {
+			syslog(LOG_INFO, "Couldn't statically assign IP for new device");
 			routingTableAssignIP(routing_table, ip_addr);
 			memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
-		} else {
-			// IP address given
-			if (routingTableAssignIPStatic(routing_table, sg_serial->ip_addr) == 1) {
-				syslog(LOG_INFO, "Couldn't statically assign IP for new device");
-				routingTableAssignIP(routing_table, ip_addr);
-				memcpy(&sg_serial->ip_addr, ip_addr, IP_SIZE);
-			}
 		}
-		routingTableSetCurrentPacket(routing_table, 
-				sg_serial->ip_addr, SG_DEVSTATUS_EYEBALLING);
-		routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
-
-		// Send packet to the server
-		syslog(LOG_DEBUG, "Sending Eyeball to server");
-		sgTCPSend(sg_serial, sizeof(SansgridSerial));
-	} else {
-		syslog(LOG_DEBUG, "New device doesn't wish to mate, not doing anything");
-		return 1;
 	}
+	routingTableSetCurrentPacket(routing_table, 
+			sg_serial->ip_addr, SG_DEVSTATUS_EYEBALLING);
+	routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr, SG_DEVSTATUS_PECKING);
+
+	// Send packet to the server
+	syslog(LOG_DEBUG, "Sending Eyeball to server");
+	sgTCPSend(sg_serial, sizeof(SansgridSerial));
 
 	return 0;
 }
@@ -669,7 +670,10 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_SERVER_DENY_SENSOR:
 			// Server denies sensor challenge request
-			routerFreeDevice(routing_table, sg_serial->ip_addr);
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+					SG_DEVSTATUS_SQUAWKING);
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			//routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		case SG_SQUAWK_SERVER_RESPOND:
 			// Server Responds to challenge
@@ -682,6 +686,13 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_NESTING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
+			break;
+		case SG_SQUAWK_FORGET_ME:
+			// Sensor requires server to forget it
+			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
+					SG_DEVSTATUS_SQUAWKING);
+			sgTCPSend(sg_serial, sizeof(SansgridSerial));
+			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
 			// error
@@ -712,7 +723,7 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 	sansgrid_heartbeat_union.serialdata = sg_serial->payload;
 	sg_heartbeat = sansgrid_heartbeat_union.formdata;
 
-	if (sg_heartbeat->datatype != 0xfd) {
+	if (sg_heartbeat->datatype != SG_SERVSTATUS) {
 		syslog(LOG_INFO, "Handling Heartbeat packet: device %u",
 				routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	} else {
@@ -734,7 +745,7 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 				routerRefreshDevice(sg_serial->ip_addr);
 			}
 			break;
-		case 0xfd:
+		case SG_SERVSTATUS:
 			routerHandleServerStatus(routing_table, sg_serial);
 			break;
 		default:
@@ -765,6 +776,8 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 	sg_chirp_union.serialdata = sg_serial->payload;
 	sg_chirp = sg_chirp_union.formdata;
 	
+	// Make sure device is allowed to send this packet.
+	// Make an exception if it's a disconnection request
 	if (sg_chirp->datatype != SG_CHIRP_NETWORK_DISCONNECTS_SENSOR
 			&& sg_chirp->datatype == SG_CHIRP_SENSOR_DISCONNECT) {
 		if (chkValidCTRLPath(routing_table, sg_serial->ip_addr, 
@@ -826,7 +839,7 @@ int routerHandleServerStatus(RoutingTable *routing_table, SansgridSerial *sg_ser
 	syslog(LOG_INFO, "Handling Router<-->Server packet: device %u",
 			routingTableIPToRDID(routing_table, sg_serial->ip_addr));
 	// FIXME: Get rid of magic payload type number 0xfd
-	if (sg_irstatus->datatype == 0xfd) {
+	if (sg_irstatus->datatype == SG_SERVSTATUS) {
 		if (!strcmp(sg_irstatus->status, "stale")
 				|| !strcmp(sg_irstatus->status, "lost"))
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));

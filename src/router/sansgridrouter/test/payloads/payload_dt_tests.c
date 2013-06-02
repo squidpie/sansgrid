@@ -263,6 +263,7 @@ int testPayload(PayloadTestStruct *test_struct) {
 					SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE
 					: SG_SQUAWK_SENSOR_RESPOND_NO_REQUIRE_CHALLENGE;
 			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
+			test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_SQUAWKING;
 			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
 					routerHandleSquawk, "Squawking (Sensor response)");
 		}
@@ -297,7 +298,7 @@ int testPayload(PayloadTestStruct *test_struct) {
 			payloadMkSquawkSensor(&sg_squawk, test_struct);
 			sg_squawk.datatype = SG_SQUAWK_SENSOR_ACCEPT_RESPONSE;
 			memcpy(&sg_serial.payload, &sg_squawk, sizeof(SansgridSquawk));
-			test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;;
+			test_struct->squawk_sensor->next_packet = SG_DEVSTATUS_NESTING;
 			exit_code = testPayloadSpecific(&sg_serial, test_struct->squawk_sensor,
 					routerHandleSquawk, "Squawking (Sensor Accept/Reject)");
 		}
