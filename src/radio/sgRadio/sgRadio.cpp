@@ -1,5 +1,26 @@
-#include "sgRadio.h"
+/* sansgridRadio Arduino sgRadio interface object
+ *
+ * Copyright (C) 2013 SansGrid
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *
+ */
 
+
+#include "sgRadio.h"
 
 /***********************
 *  SansgridRadio Class *
@@ -51,6 +72,9 @@ bool SansgridRadio::setDestAddr(uint64_t addr) {
 
 void SansgridRadio::processSpi() {
 	SansgridDataTypeEnum type;
+	uint8_t output_sn[XB_SN_LN];
+	uint8_t key[IP_LENGTH];
+	int index;
 	//Radio->println("Process Spi"); 
 	if (payload == NULL) {
 		Radio->println("Payload is invalid");
@@ -59,98 +83,86 @@ void SansgridRadio::processSpi() {
 
 	memcpy(&type,payload,1);
 	
-	switch (type) {
-		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
-			//Radio->println("HeartBeat Received");
-			return;
-		case SG_EYEBALL:
-			if(MODE(SENSOR)) {
-				// Set Destination to Broadcast
-				// setDestAddr(0x0);
-			}
-			break;
-			
+	switch (payload[0]) {
 		case SG_FLY:
 			if(MODE(ROUTER)) {
 				// Set Destination to Broadcast
-				// setDestAddr(BROADCAST);			
+				memset(output_sn, 0, XB_SN_LN);
 			}
 			break;
-			
 		case SG_PECK:
 			if(MODE(ROUTER)) {
 				// Set Destination to Broadcast
-				// setDestAddr(BROADCAST);
-				sn_table->snipInsertIp(&payload[PECK_A_IP], &payload[PECK_SN]);		// store IP at device key for XBsn
+				// store IP at device key for XBsn
+				index = sn_table->snipInsertIp((payload + PECK_A_IP), (payload + PECK_SN));
+				Radio->print("IpInsertion: ");
+				Radio->println(index);
+				Radio->write(0xFE);
+				Radio->write((payload + PECK_SN), XB_SN_LN);
+				Radio->write(0xFE);
 			}
+			memset(output_sn, 0, XB_SN_LN);
 			break;
-	
 		case SG_HATCH: 
 			// router ip received
-			if (MODE(SENSOR)) 
+			if (MODE(SENSOR)) { 
 				router_mode = ROUTER;
-//				setDestAddr(BROADCAST);
-				//Radio->println("Hello Router");
-				//dela/y(50);
+			}	
+			// Set destination to invalid so that receiving sensors discard packet, should maybe make this just not send, but this hack works for now.
+			memset(output_sn, 0xFE, XB_SN_LN);
 			break;
-		
-		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			if (MODE(ROUTER)) {
-				//setDestAddr(sn_table->snipSnFromIp(ip));
-				//sn_table->snipRemove(ip);
+				sn_table->snipSnFromIp(output_sn, ip);
+				sn_table->snipRemove(output_sn);
+				}
+			break;
+		case SG_CHIRP_SENSOR_DISCONNECT:
+			if (MODE(SENSOR)) {
+				on_network = false;
+				memset(router_ip, 0, IP_LENGTH);
+				memcpy(output_sn, xbsn, XB_SN_LN);
 			}
 			break;
-		
-		case SG_CHIRP_SENSOR_DISCONNECT:
-			// clean up and prepare to leave network
-			break;
-		
 		default:
-			if (MODE(ROUTER)) 
-				//setDestAddr(sn_table->snipSnFromIp(ip));
+			if (MODE(ROUTER)) {
+				//address a specific sensor XBee module
+				sn_table->snipSnFromIp(output_sn, ip);
+			}
+			else {
+				// Identify orginating sensor XBee module
+				memcpy(output_sn, xbsn, XB_SN_LN);
+			}
 			break;
 	}
 	
-	//Radio->println("Copying back to packet_out_[f0/f1]");
-	//delay(50);
-	if (MODE(ROUTER)) {
-		uint64_t sn_tmp = sn_table->snipSnFromIp(ip);
-		memcpy(origin_xbsn,&sn_tmp,XB_SN_LN); // TODO this might not work
-		memcpy(&pkt0_frag[1],origin_xbsn,XB_SN_LN);
-		memcpy(&pkt1_frag[1],origin_xbsn,XB_SN_LN);
-	}
+	// Prep fragment memory for transmission
+	memcpy(&pkt0_frag[1], output_sn, XB_SN_LN);
 	memcpy(&pkt0_frag[PACKET_HEADER_SZ],payload,F0_PYLD_SZ);
-	//Radio->write(pkt0_frag,sizeof(pkt0_frag));
-	//delay(50);
+
+	memcpy(&pkt1_frag[1], output_sn, XB_SN_LN);
 	memcpy(&pkt1_frag[PACKET_HEADER_SZ],(payload+F0_PYLD_SZ),F1_PYLD_SZ);
-	//Radio->write(pkt1_frag,MAX_XB_PYLD);
-	//delay(50);
 }
 
 bool SansgridRadio::defrag() {
 	bool rv = false;
-	if (incoming_packet[PKT_FRAME] == 0) {
+	if (incoming_packet[PKT_FRAME] == 0x00) {
 		frag_buffer[next][FRAG_PENDING] = 1;
 		memcpy(&frag_buffer[next][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN);
 		memcpy(&frag_buffer[next][FRAG_F0],&incoming_packet[PKT_PYLD],F0_PYLD_SZ);
-		//debug print
-		//Radio->write(next);
-		//uint8_t * addr = &frag_buffer[next][FRAG_SN]; 
-		//Radio->write((unsigned int)addr); delay(100);
-		//Radio->write(0xFF);
 		if ((++next) == FRAG_BUF_SZ) next = 0;
 	}
-	else {
+	else if (incoming_packet[PKT_FRAME] == 0x01) {
 		for (int i = 0; i < FRAG_BUF_SZ; i++) {
-			//Radio->write(i);
-			//uint8_t * addr = &frag_buffer[i][FRAG_SN];
-		//	Radio->write((unsigned int)addr); delay(100);
-			//Radio->write(0xFF);
 			if (frag_buffer[i][FRAG_PENDING] && !memcmp(&frag_buffer[i][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN)){
-				//Radio->println("Frame 2 received"); delay(100);
 				frag_buffer[i][FRAG_PENDING] = 0;
 				memcpy(&frag_buffer[i][FRAG_F1], &incoming_packet[PKT_PYLD],F1_PYLD_SZ);
-				memcpy(packet_buffer, &frag_buffer[i][FRAG_F0],SG_PACKET_SZ);
+				for (int k = 0; k < SG_PYLD_SZ; k++) {
+					packet_buffer[k] = frag_buffer[i][FRAG_F0 + k];
+				}
+				//memcpy(&packet_buffer[0], &frag_buffer[i][FRAG_F0],SG_PYLD_SZ);
+				//memcpy(packet_buffer, &frag_buffer[i][FRAG_F0],F0_PYLD_SZ);
+				//memcpy(&packet_buffer[F0_PYLD_SZ], &incoming_packet[PKT_PYLD], F1_PYLD_SZ);
 				memcpy(origin_xbsn, &frag_buffer[i][FRAG_SN], XB_SN_LN); // TODO check for correctness
 				rv = true;
 				break;
@@ -160,50 +172,90 @@ bool SansgridRadio::defrag() {
 	return rv;
 }
 
-void SansgridRadio::processPacket() {
-  int index;
-	char * tmp;
-	uint8_t key[XB_SN_LN];
-	
-	
-	SansgridDataTypeEnum type;
-	memcpy(&type,packet_buffer,1);
-	
-	switch (type) {
+bool SansgridRadio::processPacket() {
+	bool send_packet = true;
+	int index;
+	switch (packet_buffer[0]) {
+		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
+			//Radio->println("Received Pulse");
+			send_packet = false;
+			memset(packet_buffer, 0, PAYLOAD_SIZE);
+			packet_buffer[0] = SG_HEARTBEAT_SENSOR_TO_ROUTER;
+			timeout = 1;
+			break;
+		case SG_HATCH:
+			send_packet = false;
+			break;
+		case SG_FLY:
+			if (MODE(SENSOR) && (!on_network)) {
+				memset(ip, 0xFF, IP_LENGTH);
+			}
+			else {
+				send_packet = false;
+			}
+			break;
+		case SG_NEST:
+			if(MODE(SENSOR) && !on_network) {
+				on_network = true;
+				memcpy(ip, router_ip, IP_LENGTH);
+			}
+			else {
+				send_packet = false;
+			}
+			break;
+		case SG_PECK:
+			if(MODE(SENSOR) && !on_network) {
+				memcpy(router_ip, &packet_buffer[PECK_R_IP], IP_LENGTH);
+				memset(ip, 0xFF, IP_LENGTH);
+			}
+			else {
+				send_packet = false;
+			}
+			break;
 		case SG_EYEBALL:
 			if(MODE(ROUTER)) {
-				// insert assigned ip at matched key  entry
-				sn_table->snipInsertSn(origin_xbsn, packet_buffer[EYEBALL_SN]);
+				index = sn_table->snipInsertSn(origin_xbsn, (packet_buffer + EYEBALL_SN));
+				Radio->print("SnInsertion: ");
+				Radio->println(index);
+				Radio->write(0xFE);
+				Radio->write((packet_buffer + EYEBALL_SN), XB_SN_LN);
+				Radio->write(0xFE);
+			}
+			memset(ip, 0xFF, IP_LENGTH);
+			break;
+		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
+			if (MODE(SENSOR)) {
+				Radio->print("Off network");
+				on_network = false;
+				memcpy(ip, router_ip, IP_LENGTH);
+				memset(router_ip, 0, IP_LENGTH);
+			}
+			else {
+				send_packet = false;
 			}
 			break;
-	
-		case SG_PECK:
-			if(MODE(SENSOR)) {
-				// Set Destination 
-				//setDestAddr(*((uint64_t *)origin_xbsn));
-				//sn_table->snipInsertSn(origin_xbsn, &packet_buffer[PECK_SN]);
-				//sn_table->snipInsertIp(&payload[PECK_R_IP], &payload[PECK_SN]);
-			}
-			break;
-
-		case  SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
-			break;
-		
 		case SG_CHIRP_SENSOR_DISCONNECT:
-			// clean up and prepare to leave network
 			if (MODE(ROUTER)) {
-				//sn_table->snipRemove(snipIpFromSn(origin_xbsn));
+				sn_table->snipRemove(origin_xbsn);
 			}
-			break;
-		
+			else {
+				send_packet = false;
+			}
+		case 0x27:
+			//drop sensor
 		default:
+			if (MODE(ROUTER)) {
+				sn_table->snipIpFromSn(ip, origin_xbsn);
+			}
+			else {
+				memcpy(ip, router_ip, IP_LENGTH);
+			}
 			break;
 	}
+	
 	SpiData->control = SG_SERIAL_CTRL_VALID_DATA;
-	memset(SpiData->ip_addr, 0x00, IP_SIZE);
-	SpiData->ip_addr[15] = 0xFF;
-	//memcpy(&SpiData->ip_addr, &ip_lookup, IP_SIZE);
-	memcpy(SpiData->payload, packet_buffer, sizeof(SpiData->payload));
+	memcpy(SpiData->payload, packet_buffer, SG_PYLD_SZ);
+	return send_packet;
 }
 
 void SansgridRadio::loadFrame(int frame) {
@@ -234,22 +286,21 @@ void SansgridRadio::init(HardwareSerial * xbee_link, SansgridSerial * serial_lin
 	ip = serial_link->ip_addr;
 
 	// Read XB Serial from XBee module
-	memset(xbsn,0xaa,XB_SN_LN);
+	memset(xbsn,0x0,XB_SN_LN);
 	setXBsn();
 	// Prepare packet fragmentation buffers
-	memset(pkt0_frag,0xaa,MAX_XB_PYLD);
-	memset(pkt1_frag,0xbb,MAX_XB_PYLD);
+	memset(pkt0_frag,0x0,MAX_XB_PYLD);
+	memset(pkt1_frag,0x0,MAX_XB_PYLD);
 	pkt0_frag[PKT_FRAME] = 0x0;
 	pkt1_frag[PKT_FRAME] = 0x1;
 	memcpy(&pkt0_frag[PKT_XBSN],xbsn,XB_SN_LN);
 	memcpy(&pkt1_frag[PKT_XBSN],xbsn,XB_SN_LN);
-
-	next = 0;
-
 	memset(frag_buffer,0,FRAG_BUF_SZ * RADIO_PKT_SZ);
 	
-	//Radio->write(pkt0_frag, MAX_XB_PYLD);
-	//Radio->write(pkt1_frag, MAX_XB_PYLD);
+	on_network = false;
+	next = 0;
+	timeout = 1;	
+	
 	return;
 }
 
@@ -283,16 +334,16 @@ void SansgridRadio::setXBsn() {
 
 int SansgridRadio::read() {
 	int i = 0;
-  while(Radio->available() > 0 && i < MAX_XB_PYLD) {
-    delay(2);
-    incoming_packet[i] = Radio->read();
-		//Radio->write(incoming_packet[i]);
-		i++;
+  //while(Radio->available() > 0 && i < MAX_XB_PYLD) {
+  while(Radio->available() || i < MAX_XB_PYLD) {
+	delay(2);
+	incoming_packet[i] = Radio->read();
+	i++;
   }
 	if (MODE(SENSOR)) {
 		uint8_t brdcst[XB_SN_LN];
 		memset(brdcst,0x0,XB_SN_LN);
-		if ((memcmp((incoming_packet + 1),xbsn,XB_SN_LN) != 0) || (memcmp((incoming_packet + 1),brdcst,XB_SN_LN) != 0))  {
+		if ((memcmp(&incoming_packet[1],xbsn,XB_SN_LN) != 0) && (memcmp(&incoming_packet[1],brdcst,XB_SN_LN) != 0))  {
 			return 0;
 		}
 	}
@@ -302,9 +353,17 @@ int SansgridRadio::read() {
 void SansgridRadio::set_mode(RadioMode mode) {
 	router_mode = mode;
 }
-
+/*
+void write_unlock() {
+	write_lock = false;
+}
+*/
 void SansgridRadio::write() {
-  Radio->write(pending_packet,MAX_XB_PYLD);
+	//while (write_lock) {}
+	Radio->write(pending_packet,MAX_XB_PYLD);
+	//write_lock = true;
+	delay(500);
+	//write_clear.after(500, write_unlock);
 }
 
 void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
@@ -349,9 +408,12 @@ void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 }
 
 
-uint8_t * SansgridRadio::genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn) {
-	uint8_t * key;
-	key = new uint8_t[SNIPBYTEWIDTH];
+void SansgridRadio::genDevKey(uint8_t * key, uint8_t * man_id, uint8_t * mod_id, uint8_t * dev_sn) {
+
+	memcpy(key, dev_sn, 8);
+	memcpy((key + 8), mod_id, 4);
+	memcpy((key + 12), man_id, 4);
+/*
 	for (int i = 0; i < SNIPBYTEWIDTH/2; i+=2) {
 		key[i] = man_id[i];
 		key[i+1] = mod_id[i];
@@ -359,7 +421,8 @@ uint8_t * SansgridRadio::genDevKey(uint8_t * man_id, uint8_t * mod_id, uint8_t *
 	for (int i = 0; i < SNIPBYTEWIDTH; i++) {
 		key[i] ^= dev_sn[i];
 	}
-	return key;
+*/
+	return;
 }
 
 
@@ -450,14 +513,5 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 		i_str+=increment;
 	}
 	return;
-}
-
-// Stubs
-void write_spi() {
-  // stub
-}
-
-void read_spi() {
-  // stub
 }
 
