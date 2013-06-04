@@ -513,7 +513,7 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 		if (divider[0] == ':')
 			divider[0] = '\0';
 		size = (strlen(moved_ip)+1)/2;
-		atox(hexarray, moved_ip, sizeof(hexarray));
+		atox(hexarray, moved_ip, size);
 		for (index = base; index < base+size; index++) {
 			ip_addr[index] = hexarray[index-base];
 		}
