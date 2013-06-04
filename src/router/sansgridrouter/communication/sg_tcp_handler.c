@@ -97,6 +97,11 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	if (str == NULL)
 		return;
 	length = strlen(str);
+	if (length/2 > hexsize) {
+		syslog(LOG_DEBUG, "atox: truncating string %s", str);
+		length = hexsize*2;
+	} 
+
 	//offset = hexsize - ((length+1)/2);
 
 	for (i_str=0; i_str<length;) {
@@ -144,7 +149,7 @@ char *match(Dictionary dict[], int size, char *key) {
 		if (dict[i].key == NULL) {
 			// Guard against garbage data in dict
 			return NULL;
-		} else if (!strcmp(key, dict[i].key)) {
+		} else if (!strncmp(key, dict[i].key, strlen(key))) {
 			// matched
 			return dict[i].value;
 		}
@@ -488,8 +493,8 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
-			dict[size].key = &key[sizeof(DELIM_KEY)-2];
-			dict[size].value = (value == NULL ? NULL : &value[sizeof(DELIM_VAL)-2]);
+			dict[size].key = key+sizeof(DELIM_KEY)-2;
+			dict[size].value = (value == NULL ? NULL : value+sizeof(DELIM_VAL)-2);
 			size++;
 		} else
 			break;
@@ -572,7 +577,6 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	int i;
 	int cap = 0;
 	int field_not_zero = 0;
-	int first_byte = 0;
 	const char *delim_key = DELIM_KEY;
 	const char *delim_val = DELIM_VAL;
 
@@ -590,15 +594,6 @@ int addHexField(const char *key, uint8_t *value, uint32_t size, char *payload) {
 	}
 	if (field_not_zero) {
 		for (i=0; i<cap; i++) {
-			if (value[i] == 0x0)
-				continue;
-			else {
-				first_byte = i;
-				break;
-			}
-		}
-		sprintf(payload, "%s%x", payload, value[i]);
-		for (i=first_byte+1; i<cap; i++) {
 			sprintf(payload, "%s%.2x", payload, value[i]);
 		}
 	} else {

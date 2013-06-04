@@ -1,14 +1,36 @@
-//#define DUE
+/* sansgridRadio Arduino implementation
+ *
+ * Copyright (C) 2013 SansGrid
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ *
+ */
+
+#define DUE
 
 #include <Arduino.h>
 #include <stdio.h>
 #include <assert.h>
+//#include <Timer.h>
 
 #ifndef DUE
 	#include <SPI.h>
 #endif
 
-#include "sgSerial.h"
+//#include "sgSerial.h"
 #include "sgRadio.h"
 
 #define __ASSERT_USE_STDERR
@@ -59,20 +81,11 @@ volatile bool spi_setup;
 uint8_t spi_rw;
 uint8_t cmd;
 
+unsigned int pos = 0;
+
 uint8_t spi_rx[SPI_MAX_BUFFER];
 uint8_t spi_tx[SPI_MAX_BUFFER];
-/* = { 0xAD,// Control Byte 1 BYTE
-        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xA8,
-        0x00,0x01, // IP Address 16 BYTES
-        0xF0, // Payload (Data Type) 1 BYTE 18b
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,  // 56B + 18B
-        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	// + 14
-        0x00,0x00,0x53,0x61,0x6E,0x73,0x67,0x72,0x69,0x64 };
 
-*/
 int freeRam( void ){
     // Value of start of Stack and current end of Stack
     extern int __heap_start, *__brkval;
@@ -83,6 +96,8 @@ int freeRam( void ){
 }
 
 void setup() {
+	pinMode(SLAVE_READY, OUTPUT);
+	digitalWrite(SLAVE_READY, HIGH);
 
 	// Open serial com with XBee
 	Serial.begin(XB_BAUD);
@@ -93,15 +108,11 @@ void setup() {
   
 	// Initialize sansgrid Radio Class
 	sgRadio.init(&Serial, &SpiData, &RouteTable);
-	if(digitalRead(ROUTER_MODE_PIN) == HIGH) {
-		sgRadio.set_mode(ROUTER);
-	}
-
+	sgRadio.set_mode(SENSOR);
+	
 	// Initialize SPI Pins for Uno and Due
 	pinMode(MISO, OUTPUT);
 	digitalWrite(MISO, LOW);
-	pinMode(SLAVE_READY, OUTPUT);
-	digitalWrite(SLAVE_READY, HIGH);
 	
 	// Init Due Spi Pins
 	#ifdef DUE
@@ -136,14 +147,13 @@ void setup() {
 	#endif
 	// Allow spi interrupts to operate as normal
 	spi_setup = false;
-	
 	#if DEBUG
 		Serial.println("Setup Complete");
 		delay(50);
 	#endif
 }
 
-void loop() {   		
+void loop() {
 	// Check for spi errors and resolve
 	if (spi_err) {
 		digitalWrite(SLAVE_READY, HIGH);
@@ -159,10 +169,10 @@ void loop() {
 	// Check for completion of Spi transfer, process packet and send out over
 	// radio
 	if (process_flag) {
-		Serial.println("processing spi completion");
 		cmd = 0;
 		spi_rw = 1;
-		if (spi_active) {
+		pos = 0;
+		if (spi_active && (tx_pos > NUM_BYTES)) {
 			spi_active = false;
 			tx_pos = 0;
 			memset(spi_tx, 0, SPI_MAX_BUFFER);
@@ -191,17 +201,13 @@ void loop() {
 			// Dump invalid packets, such as debug messages
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
-        
-				#if DEBUG
-					Serial.println("throwing out the bath water");
-					delay(50);
-				#endif
-				// flush serial input and return to loop
+				// flush  input and return to loop
 				while (Serial.available() > 0) { Serial.read(); }
 				return;
 			}
 
 			else if (!sgRadio.read()) {
+				//Serial.println("Throwing out a fragment");
 				// This packet is not addressed to this XBee, disregard
 				return;
 			}
@@ -209,27 +215,24 @@ void loop() {
 			// process packet as fragment, if fragment 2, send over spi to host
 			// device
 			if(sgRadio.defrag()) {
-				sgRadio.processPacket();
-				memcpy(spi_tx,&SpiData,sizeof(SpiData));
-				spi_rw = 0;
-				spi_active = true;
-				//#if DEBUG
-					Serial.println("Sending SPI");
-					delay(50);
-					//Serial.write(spi_tx,sizeof(SpiData));
-					//delay(1000);
-				//#endif
-				// Initiate Spi Slave write
-				#ifdef DUE
-					spi_outbyte = spi_tx[0];
-				#endif
-
-	
-
-
-
-				spi_active = true;
-				digitalWrite(SLAVE_READY, LOW);
+				if (sgRadio.processPacket()) {
+					memcpy(spi_tx,&SpiData,sizeof(SpiData));
+					spi_rw = 0;
+					spi_active = true;
+					// Initiate Spi Slave write
+					#ifdef DUE
+						spi_outbyte = spi_tx[0];
+					#endif
+					digitalWrite(SLAVE_READY, LOW);
+				}
+				else if (SpiData.payload[0] == SG_HEARTBEAT_SENSOR_TO_ROUTER) {
+					//Serial.println("Responding to Heartbeat");
+					sgRadio.processSpi();
+					sgRadio.loadFrame(0);
+					sgRadio.write();
+					sgRadio.loadFrame(1);
+					sgRadio.write();
+				}
 			}
 		}
 	}
@@ -239,8 +242,14 @@ void loop() {
 
 	// SPI Interrupt Service Routine
 	ISR (SPI_STC_vect) {
-		// Read byte from SPI SPDR register	
-		uint8_t c = SPDR;
+		// Read byte from SPI SPDR register
+/*		Serial.write(spi_tx[pos]);
+		spi_rx[pos] = SPDR;
+		SPDR = spi_tx[pos++];
+		if (pos > NUM_BYTES) {
+			process_flag = true;
+		}
+*/		uint8_t c = SPDR;
 		switch(cmd) {
 			case 0x00:
 				cmd = c;
@@ -249,13 +258,13 @@ void loop() {
 				if (rx_pos < NUM_BYTES) {
 					spi_rx[rx_pos++] = c;
 				}
-				if (rx_pos >= NUM_BYTES - 1) {
+				if (rx_pos >= NUM_BYTES) {
 					process_flag = true;
 				}
 				break;
 			case 0xFD:
-				SPDR = spi_tx[tx_pos++];
-				if (tx_pos >= NUM_BYTES) {
+					SPDR = spi_tx[tx_pos++];
+				if (tx_pos > NUM_BYTES) {
 					process_flag = true;
 				}
 				break;
@@ -264,7 +273,7 @@ void loop() {
 				break;
 			}
 		// Call Command Byte
-		/*
+/*
 		switch(spi_rw){
 			case 1:
 					// Receive SPI Packet from Master
@@ -382,15 +391,21 @@ void spi_enable() {
 			break;
 		case HIGH:
 			detachInterrupt(SCK);
-			//memcpy(rx, spi_rx, NUM_BYTES);
+			if (spi_rx[0] == 0xAD) {
+				spi_rw = 1;
+			}
+			else {
+				spi_rw = 0;
+			}
 			memset(spi_tx, SPI_NO_DATA, SPI_MAX_BUFFER);
 			//memset(spi_rx, 0x00, SPI_MAX_BUFFER);
 			if (spi_rw) process_flag = true;
+			spi_rw = 1;
+			spi_active = false;
 			bitptr = 0;
 			byteptr = 0;
 			spi_inbyte = 0;
 			spi_outbyte = 0;
-			spi_active = false;
 			digitalWrite(MISO, LOW);
 			digitalWrite(SLAVE_READY, HIGH);
 			break;
