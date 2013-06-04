@@ -35,6 +35,7 @@
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
+boolean Send = false;
 
 void setup(){
     // This allows for debugging by displaying information 
@@ -84,7 +85,7 @@ void setup(){
     //sg_config.mock = true;
     //sg_config.squawk = true;
     //sg_config.chirp = true;
-    sg_config.nokey = true;
+    //sg_config.nokey = true;
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
@@ -109,13 +110,16 @@ void loop(){
             // Received Packet
             //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( &sg_serial , 1 );
+            // Test code
+            Serial.println( sg_serial.payload[0] , HEX );
             // Process packet to verify Chirp received
-            payloadHandler( &sg_config , &sg_serial);
+            payloadHandlerB( &sg_config , &sg_serial);
             //Serial.println( "setting received to false");
-            // Reset received to default value
+            // Reset receive d to default value
             sg_config.received = false;
             // Process received Chirp packet
             if( sg_config.chirp == true ){
+                Serial.println( "Chirp Received" );
                 // Received Chirp from Sensor
                 // Need to process payload to perform action
                 // on Signal. Put code in here.
@@ -128,7 +132,8 @@ void loop(){
                   }
                 }      
                 // Reset Chirp to false
-                sg_config.chirp = false; 
+                sg_config.chirp = false;
+                Send = true; 
             }// End of received Chirp
         }
         // Code to Send Chirp
@@ -157,9 +162,11 @@ void loop(){
             for( int i = 5 ; i < PAYLOAD ; i++ )
                 sg_serial.payload[i] = (uint8_t) 0x00;
             // Transmit Payload over SPI  
-            sgSerialSend( &sg_serial , 1 );
+            if( Send == true ){
+                sgSerialSend( &sg_serial , 1 );
+                Send = false;
+            }
         }// End of Send Chirp
-        delay(1000);
     }// End of Nested
 }// End of Loop
 

@@ -71,7 +71,7 @@ typedef struct SensorConfig{
 	static bool connecting;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
-    static int8_t sn[ SN ];
+    static uint8_t sn[ SN ];
     static int8_t network_name[ DATA ];
     static uint8_t ip_address[ IP_ADDRESS ];
     static uint8_t router_ip[ IP_ADDRESS ];
@@ -90,7 +90,7 @@ typedef struct SansgridEyeball{
     static uint8_t dt[ DT ];
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
-    static int8_t sn[ SN ];
+    static uint8_t sn[ SN ];
     static uint8_t profile[ PROFILE ];
     static uint8_t mode[ MODE ];
     static uint8_t padding[ EYEBALL_PADDING ];
@@ -104,7 +104,7 @@ typedef struct SansgridPeck{
     uint8_t recognition[ RECOGNITION ];
     uint8_t manid[ MANID ];
     uint8_t modnum[ MODNUM ];
-    int8_t sn[ SN ];
+    uint8_t sn[ SN ];
     uint8_t padding[ PECK_PADDING ];
 } SansgridPeck;
 

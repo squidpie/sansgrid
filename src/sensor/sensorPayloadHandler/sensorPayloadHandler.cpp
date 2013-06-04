@@ -161,7 +161,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // If sensor requires a challenge and flag
             // is set to true, send datatype 0x16, otherwise
             // sent datatype 0x15
-            if( sg_config->challenge )
+            if( sg_config->nokey == false )
                 sg_serial->payload[0] = (uint8_t) 0x16;
             else
                 sg_serial->payload[0] = (uint8_t) 0x15;
@@ -169,6 +169,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // sending reply squawk of data type
             // 0x15 or 0x16.
             sg_config->squawk = true;
+			sg_config->challenge = true;
             break;
         case 0x12 :    
             // Squawk - Server doesn't need challenge
@@ -188,7 +189,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Server requires authentication, call function
             // to authenticate Server and Sensor Public Key
             // store authentication in Squawk payload
-            if( sg_config->challenge == true )
+            if( sg_config->nokey == false )
                 sg_serial->payload[0] = (uint8_t) 0x16;
             else
                 sg_serial->payload[0] = (uint8_t) 0x15;
@@ -207,7 +208,10 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Server requires authentication, call function
             // to authenticate Server and Sensor Public Key
             // store authentication in Squawk payload
-            authenticateKey( sg_config , &sg_squawk_sensor_noauth );
+            if( sg_config->challenge == true ){
+			    authenticateKey( sg_config , &sg_squawk_sensor_noauth );
+				sg_config->challenge = false;
+			}
             // Transmit Squawk payload
 			transmitSquawk ( sg_serial , &sg_squawk_sensor_noauth );
             // Set squawk flag to false, wait for another Squawk or Nest
@@ -226,6 +230,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
 			    sg_squawk_acknowledge.data[ i + 1 ] = sg_config->sensor_challenge[i];
             // Transmit Squawk payload
             transmitSquawk( sg_serial , &sg_squawk_acknowledge );
+			sg_serial->payload[0] = (uint8_t) 0x17;
 			break;
 		case 0x17 :    
             // Squawk - Sensor response to challenge.
@@ -242,6 +247,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Set squawk flag to false, wait for another Squawk or Nest
             // payload to be received.
             sg_config->squawk = false;
+			sg_config->challenge = false;
             break;
         case 0x1b :    
             // Squawk - Server denies sensor's challenge response.
@@ -286,12 +292,14 @@ void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
                 sg_serial->payload[0] = (uint8_t) 0x1d;
                 transmitSquawk( sg_serial , &sg_squawk_accept_response );
             }
+			
             // If not, Sensor denied challenge, attempt to mate again by
             // setting fly and squawk flag to false and wait for fly payload
             // to begin mate process again.
             else{
                 sg_config->fly = false;
 				sg_config->connecting = false;
+				sg_config->challenge = false;
             }
             sg_config->squawk = false;
             break;
