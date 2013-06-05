@@ -692,7 +692,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
-			routerFreeDevice(routing_table, sg_serial->ip_addr);
+			//routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
 			// error
