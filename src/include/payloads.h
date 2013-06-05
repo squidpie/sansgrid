@@ -524,21 +524,21 @@ enum SansgridPeckRecognitionEnum {
  * are simplified to SG_DEVSTATUS_CHIRPING.
  */
 enum SansgridDeviceStatusEnum {
-	SG_DEVSTATUS_NULL,				///< Error
-	SG_DEVSTATUS_HATCHING,			///< Hatching status
-	SG_DEVSTATUS_FLYING,			///< Flying status
-	SG_DEVSTATUS_EYEBALLING,		///< Eyeballing Status
-	SG_DEVSTATUS_PECKING,			///< Pecking Status
-	SG_DEVSTATUS_SINGING,			///< Singing Status
-	SG_DEVSTATUS_MOCKING,			///< Mocking Status
-	SG_DEVSTATUS_PEACOCKING,		///< Peacocking Status
-	SG_DEVSTATUS_NESTING,			///< Nesting Status
-	SG_DEVSTATUS_SQUAWKING,			///< Squawking Status
-	SG_DEVSTATUS_HEARTBEAT,			///< Heartbeat Status
-	SG_DEVSTATUS_CHIRPING,			///< Chirping Status
+	SG_DEVSTATUS_NULL = 0,					///< Error
+	SG_DEVSTATUS_HATCHING = (1<<1),			///< Hatching status
+	SG_DEVSTATUS_FLYING = (1<<2),		///< Flying status
+	SG_DEVSTATUS_EYEBALLING = (1<<3),	///< Eyeballing Status
+	SG_DEVSTATUS_PECKING = (1<<4),		///< Pecking Status
+	SG_DEVSTATUS_SINGING = (1<<5),		///< Singing Status
+	SG_DEVSTATUS_MOCKING = (1<<6),		///< Mocking Status
+	SG_DEVSTATUS_PEACOCKING = (1<<7),	///< Peacocking Status
+	SG_DEVSTATUS_NESTING = (1<<8),		///< Nesting Status
+	SG_DEVSTATUS_SQUAWKING = (1<<9),	///< Squawking Status
+	SG_DEVSTATUS_HEARTBEAT = (1<<10),	///< Heartbeat Status
+	SG_DEVSTATUS_CHIRPING = (1<<11),	///< Chirping Status
 	
 	// Compound types
-	SG_DEVSTATUS_LEASED 			///< Device Associated with Network
+	SG_DEVSTATUS_LEASED = (1<<12), 		///< Device Associated with Network
 };
 
 #endif

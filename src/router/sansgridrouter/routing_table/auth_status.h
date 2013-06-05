@@ -43,12 +43,12 @@ int deviceAuthEnable(DeviceAuth *dev_auth);
 int deviceAuthIsEnabled(DeviceAuth *dev_auth);
 DeviceAuth *deviceAuthInit(int strictness);
 void deviceAuthDestroy(DeviceAuth *dev_auth);
-int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt);
+int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint32_t gdt);
 int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt);
-int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt);
-uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth);
-uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth);
-int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt);
+int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint32_t gdt);
+enum SansgridDeviceStatusEnum deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth);
+enum SansgridDeviceStatusEnum deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth);
+int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, enum SansgridDeviceStatusEnum gdt);
 
 
 
