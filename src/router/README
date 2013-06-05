@@ -7,61 +7,72 @@ sansgrid server and any number of sansgrid sensors.
 Requirements
 ------------
 In order to build sansgridrouter you need:
-1. 	check - unit testing framework for C
-2.	lighttpd - web server for getting responses from 
-	the SansGrid server 
-3. 	the wiringPi library for Raspberry Pi.
-	Only for Raspberry Pi systems - other systems
-	have no GPIO support.
-4.	Autotools - only if the build files (eg configure and Makefile) need to be
-	generated.
+1.  check - unit testing framework for C
+2.  lighttpd - web server for getting responses from 
+    the SansGrid server 
+3.  the wiringPi library for Raspberry Pi.
+    Only for Raspberry Pi systems - other systems
+    have no GPIO support.
+4.  Autotools - only if the build files (eg configure and Makefile) need to be
+    generated.
 
 
 Installation
 ------------
-Edit API and put it in your ????/var/??? directory.
+Move API-router.php from src/server/www and put it in your /var/www directory.
+Rename API-router.php to API.php.
 Go to the toplevel router dir.
 
-	cd sansgrid/src/router
+    cd sansgrid/src/router
 
 If the configure script needs to be regenerated, you'll need to generate them with
 
-	./autogen.sh
+    ./autogen.sh
 
 Then you can create a build directory and move into it.
 
-	mkdir build
-	cd build
+    mkdir build
+    cd build
 
 Run Configure
 
-	../configure
+    ../configure
 
 If you would like sansgridrouter to be installed
 in a different dir, you can specify the prefix as
 
-	../configure --prefix=/path/to/exec/dir/
+    ../configure --prefix=/path/to/exec/dir/
 
 If configuration was successful, compile sansgridrouter,
 and install if desired:
 
-	make
-	make install
+    make
+    make install
+
+If you installed sansgridrouter to a path other than
+/usr/local/bin, you'll need to update /var/www/API.php.
+Edit /var/www/API-router.php and change 
+
+    $caller = "/usr/local/bin/sansgridrouter --packet=";
+
+to
+
+    $caller = "/path/to/sansgridrouter --packet=";
 
 To remove from the system, type
 
-	make uninstall
+    make uninstall
 
 
 Running sansgridrouter
 ----------------------
 To run sansgridrouter as a daemon:
 
-	sansgridrouter
+    sansgridrouter
 
 To run sansgridrouter without forking off a new process, run in the foreground:
 
-	sansgridrouter --foreground
+    sansgridrouter --foreground
 
 
 Configuration
@@ -71,19 +82,19 @@ at runtime, and/or via configuration file named sansgrid.conf.
 A default configuration file has been provided, called sansgridrouter.conf.example.
 To load using the configuration file, place sansgrid.conf either in 
 
-	/home/USER/.sansgrid/
+    /home/USER/.sansgrid/
 
 or in  the /etc/ directory. Valid configuration options are:
-	
-	key = '0123'				The router's key used for handshaking with server
-	url = 127.0.0.1				The Server's IP address
-	essid = 'sansgrid'			Broadcasted ESSID
-	strictness = 1				Default Strictness
-								0 = loose
-								1 = filtered
-								2 = strict
-	netmask = '0123:4567::00'	Base IP address used for sensors
-	heartbeat = 5				Heartbeat interval, in seconds
+    
+    key = '0123'                The router's key used for handshaking with server
+    url = 127.0.0.1             The Server's IP address
+    essid = 'sansgrid'          Broadcasted ESSID
+    strictness = 1              Default Strictness
+                                0 = loose
+                                1 = filtered
+                                2 = strict
+    netmask = '0123:4567::00'   Base IP address used for sensors
+    heartbeat = 5               Heartbeat interval, in seconds
 
 
 Startup Options
@@ -91,21 +102,21 @@ Startup Options
 These options are passed when the daemon is starting via command-
 line argument. These are also documented by running
 
-	sansgridrouter --help
+    sansgridrouter --help
 
-  -c  --config=[CONFIGFILE]		Parse a different config file from default
-  -f  --foreground				Run the daemon in the foreground
-  -v  --verbose					Add a verbosity level.
-								Each v added increases verbosity.
-								verbosity currently changes how much is written
-								to the log files. This argument 
-								logs warnings and above.
-  -vv							Logs Notices and above
-  -vvv							Logs Info and above
-  -vvvv							Logs Debug and above (everything)
-  -q  --quiet					Drop a verbosity level
-  -h  --help					Full usage information
-      --version					Sansgrid Version
+  -c  --config=[CONFIGFILE]     Parse a different config file from default
+  -f  --foreground              Run the daemon in the foreground
+  -v  --verbose                 Add a verbosity level.
+                                Each v added increases verbosity.
+                                verbosity currently changes how much is written
+                                to the log files. This argument 
+                                logs warnings and above.
+  -vv                           Logs Notices and above
+  -vvv                          Logs Info and above
+  -vvvv                         Logs Debug and above (everything)
+  -q  --quiet                   Drop a verbosity level
+  -h  --help                    Full usage information
+      --version                 Sansgrid Version
 
 
 Runtime Options
@@ -113,43 +124,44 @@ Runtime Options
 These options are passed via a client to a running sansgridrouter
 system. They are invoked by a calling convention of:
 
-	sansgridrouter COMMAND [ARGS]
+    sansgridrouter COMMAND [ARGS]
 
 or
 
-	sansgridrouter COMMAND=ARG
+    sansgridrouter COMMAND=ARG
 
 The commands are as follows:
 
 Daemon Querying: These commands return information from a running daemon.
 
-	running			[R] returns whether or not the sansgridrouter daemon is running
-	devices			[R] returns the number of devices being managed by sansgridrouter
-	status			[R] prints a detailed status of the running system
+    running         [R] returns whether or not the sansgridrouter daemon is running
+    devices         [R] returns the number of devices being managed by sansgridrouter
+    status          [R] prints a detailed status of the running system
 
 Daemon Commands: These commands change the state of the router daemon.
-	packet=[PACKET]	[W] Injects a sansgridrouter intrarouter packet into the system.
-						Used by the server to send packets to devices.
-	start			[W] Starts a new sansgridrouter daemon.
-	restart			[W] Kills an existing daemon and starts a new one.
-	kill			[W] Kills an existing daemon gracefully.
-	drop [DEVICE]	[W] Drops a sensor from the network gracefully.
-	drop all		[W] Drops all sensors from the network gracefully.
-	pause			[W] Pauses packet processing by stalling the dispatch.
-	resume			[W] Restarts packet processing
+    packet=[PACKET] [W] Injects a sansgridrouter intrarouter packet into the system.
+                        Used by the server to send packets to devices.
+    start           [W] Starts a new sansgridrouter daemon.
+    restart         [W] Kills an existing daemon and starts a new one.
+    kill            [W] Kills an existing daemon gracefully.
+    drop [DEVICE]   [W] Drops a sensor from the network gracefully.
+    drop all        [W] Drops all sensors from the network gracefully.
+    drop queue      [W] Drops all packets from the dispatch queue
+    pause           [W] Pauses packet processing by stalling the dispatch.
+    resume          [W] Restarts packet processing
 
 Daemon Configuration: Modifies how the daemon runs and processes packets
-	auth=			[W] Changes authentication requirements:
-		loose			Device must eyeball. 
-		filtered		Unexpected packets are dropped.
-		strict			Unexpected packets are dropped. The offending sensor is also
-						dropped.
-	network=		[W] Changes whether the router broadcasts its ESSID
-		hidden			Router will not broadcast its ESSID
-		shown			Router will broadcast its ESSID
-	url				[R] Returns the server URL 
-	url=[SERVERIP]	[W]	Changes the server URL to SERVERIP
-	key				[R]	Returns the router's key for server handshakes
-	key=[SERVERKEY]	[W]	Changes the server key to SERVERKEY
-	heartbeat=[PERIOD]
-					[W]	Sets the heartbeat period
+    auth=           [W] Changes authentication requirements:
+        loose           Device must eyeball. 
+        filtered        Unexpected packets are dropped.
+        strict          Unexpected packets are dropped. The offending sensor is also
+                        dropped.
+    network=        [W] Changes whether the router broadcasts its ESSID
+        hidden          Router will not broadcast its ESSID
+        shown           Router will broadcast its ESSID
+    url             [R] Returns the server URL 
+    url=[SERVERIP]  [W] Changes the server URL to SERVERIP
+    key             [R] Returns the router's key for server handshakes
+    key=[SERVERKEY] [W] Changes the server key to SERVERKEY
+    heartbeat=[PERIOD]
+                    [W] Sets the heartbeat period

@@ -33,7 +33,7 @@ $payload = urldecode($_POST['payload']);
 //$payload = escapeshellarg($payload);
 
 // Now give it to the router daemon. 
-$caller = "/home/kane/git/sansgrid/src/router/router_to_server/sansstr.pl";
+$caller = "/usr/local/bin/sansgridrouter --packet=";
 $umm = exec("$caller $payload");
 
 #print "\nAPI-router received the data. Called the following:\n$caller $payload\n$umm\n";
