@@ -73,6 +73,7 @@ typedef struct SensorConfig{
     static uint8_t modnum[ MODNUM ];
     static uint8_t sn[ SN ];
     static int8_t network_name[ DATA ];
+	static uint8_t server_id[ SERVER_ID ];
     static uint8_t ip_address[ IP_ADDRESS ];
     static uint8_t router_ip[ IP_ADDRESS ];
     static uint8_t server_public_key[ SERVER_KEY ];

@@ -1,4 +1,4 @@
-/* SPI Master Test Code
+ /* SPI Master Test Code
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -89,6 +89,7 @@ void setup(){
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
+    sg_config.forget = false;
 }
 
 void loop(){
@@ -137,7 +138,9 @@ void loop(){
             }// End of received Chirp
         }
         // Code to Send Chirp
-        else{
+        if (  Send == true ){
+            // Testing Update
+            Serial.println( "Updated Light Status" );
             // Set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
             // Set IP address to router ip
