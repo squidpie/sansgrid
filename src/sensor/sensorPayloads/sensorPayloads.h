@@ -34,8 +34,8 @@
 #define MODE 1
 #define SERVER_ID 16
 #define RECOGNITION 1
-#define SERVER_KEY 80
-#define SENSOR_KEY 80
+#define SERVER_KEY 64
+#define SENSOR_KEY 64
 #define SENSOR_ID 1
 #define CLASSIFICATION 1
 #define DIRECTION 1
@@ -49,6 +49,7 @@
 #define SENSOR_A 39
 #define DELAY 6
 #define EYEBALL_PADDING 62
+#define MOCK_PADDING 16
 #define PECK_PADDING 15
 #define PEACOCK_PADDING 1
 #define NEST_PADDING 80

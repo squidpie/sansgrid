@@ -82,14 +82,14 @@ void setup(){
     //sg_config.nest = true;
     //sg_config.fly = true;
     //sg_config.sing = true;
-    //sg_config.mock = true;
+    //sg_config.mock = true; 
     //sg_config.squawk = true;
     //sg_config.chirp = true;
     //sg_config.nokey = true;
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
-    sg_config.forget = false;
+    //sg_config.forget = false;
 }
 
 void loop(){

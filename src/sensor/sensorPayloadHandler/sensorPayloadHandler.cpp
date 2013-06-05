@@ -214,7 +214,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // to authenticate Server and Sensor Public Key
             // store authentication in Squawk payload
             if( sg_config->challenge == true ){
-			    authenticateKey( sg_config , &sg_squawk_sensor_noauth );
+			    authenticateServer( sg_config , &sg_squawk_sensor_noauth );
 				sg_config->challenge = false;
 			}
             // Transmit Squawk payload
@@ -248,7 +248,7 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Server requires authentication, call function
             // to authenticate Server and Sensor Public Key
             // store authentication in Squawk payload
-            authenticateKey( sg_config , &sg_squawk_response );
+            authenticateServer( sg_config , &sg_squawk_response );
             // Transmit Squawk payload
 			transmitSquawk( sg_serial , &sg_squawk_response );
             // Set squawk flag to false, wait for another Squawk or Nest
@@ -296,7 +296,7 @@ void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Check to see if Server response matches Sensor
             // Authentication, if so respond with squawk accepting
             // response from server
-            if( compareResponse( sg_config , &sg_squawk_accept_response ) ){
+            if( authenticateSensor( sg_config , &sg_squawk_accept_response ) ){
                 sg_squawk_accept_response.dt[0] = (uint8_t) 0x1d;
                 transmitSquawk( sg_serial , &sg_squawk_accept_response );
             }
@@ -394,13 +394,12 @@ void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial){
 // Authenticate Public Keys from Sensor and Server
 // by XOR each bit and count the ones. Store 16 bit value split
 // between high and low into last two bytes of payload.
-void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
+void authenticateServer( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
     //Serial.println( "Authenticating" );
     uint16_t key_count = 0;
     // Count all ones
     for( int i = 0 ; i < SERVER_KEY ; i++ ){
-        if( sg_config->server_public_key[i] ^ sg_config->server_challenge[i] )
-		    key_count++;
+        key_count = key_count + ( countBits( sg_config->server_public_key[i] ^ sg_config->server_challenge[i] ));
     }
     // Parse 16 bit value into two 8 bit bytes
     uint8_t hi_lo[2] = { (uint8_t)( key_count >> 8 ), (uint8_t)key_count };
@@ -408,27 +407,22 @@ void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
         sg_squawk->data[i] = (uint8_t) 0x00;
     // Store two 8 bit bytes into last two positions of payload
     sg_squawk->data[0] = (uint8_t) hi_lo[0];
-	Serial.println( hi_lo[0] , HEX );
     sg_squawk->data[1] = (uint8_t) hi_lo[1];
-	Serial.println( hi_lo[1] , HEX );
 }
 
 // Compare response from Server to challenge, return value true if 
 // it is the same, and false if it doesn't match.
-bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
+bool authenticateSensor( SensorConfig *sg_config , SansgridSquawk *sg_squawk ){
     bool correct = false;
     uint16_t count = 0;
     // Add up all the ones
     for( int i = 0 ; i < SENSOR_KEY ; i++ ){
-        if( sg_config->sensor_challenge[i] ^ sg_config->sensor_public_key[i] )
-            count++;
+        count = count + ( countBits( sg_config->sensor_public_key[i] ^ sg_config->sensor_challenge[i] ));
     }
     // Parse 16 bit value into two 8 bit bytes
     uint8_t hi_lo[2] = { (uint8_t)( count >> 8 ), (uint8_t)count };
-	Serial.println( hi_lo[0] , HEX );
-	Serial.println( hi_lo[1] , HEX );
     // Check if bytes match what is sent from Server
-    if(( sg_squawk->data[0] == hi_lo[0] ) && ( sg_squawk->data[1] = hi_lo[1] ))
+    if(( sg_squawk->data[0] == hi_lo[0] ) && ( sg_squawk->data[1] == hi_lo[1] ))
         correct = true;
     return correct;
 }
@@ -510,4 +504,11 @@ int freeRam( void ){
     int v; 
 	// Return value left of SRAM
     return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
+
+int16_t countBits(uint8_t value){
+    int16_t  count = 0;
+    for(int i = 0; i < 8; i++)
+        count += (value >> i) & 0x01; // Shift bit[i] to the first position, and mask off the remaining bits.
+    return count;
 }

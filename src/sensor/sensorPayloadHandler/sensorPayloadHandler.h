@@ -30,9 +30,10 @@
 
 void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial );
 void payloadHandlerB( SensorConfig *sg_config , SansgridSerial *sg_serial );
-void authenticateKey( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
-bool compareResponse( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
+void authenticateServer( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
+bool authenticateSensor( SensorConfig *sg_config , SansgridSquawk *sg_squawk );
 void sensorConnect( SensorConfig *sg_config , SansgridSerial *sg_serial );
 int freeRam ( void ); 
+int16_t countBits(uint8_t value);
 
 #endif // __SENSOR_PAYLOAD_HANDLER_H__
