@@ -64,6 +64,7 @@ void payloadMkPeck(SansgridPeck *sg_peck, PayloadTestStruct *test_specs) {
 		sg_peck->router_ip[i] = 0x0;
 		sg_peck->assigned_ip[i] = 0x0;
 	}
+	sg_peck->router_ip[IP_SIZE-1] = 0x1;
 	for (i=0; i<16; i++)
 		sg_peck->server_id[i] = 0x0;
 	sg_peck->recognition = test_specs->peck_mode;

@@ -64,6 +64,7 @@ struct Queue {
 };
 
 
+/// Increment a, set to 0 if a == m
 static void modInc(uint32_t *a, uint32_t m) {
 	// increment and take the modulo.
 	*a = (*a+1) % m;
@@ -72,6 +73,23 @@ static void modInc(uint32_t *a, uint32_t m) {
 }
 
 
+/**
+ * \brief Atomically Enqueue data
+ *
+ * This is meant to be used by other functions to enqueue data.
+ * The function pointed to by sem_fn is used for synchronization.
+ * \param[in]	queue			The dispatch queue
+ * \param[in]	serial_data		The data to enqueue
+ * \param[in]	sem_fn			The synchronization function to use
+ *
+ * Note that data on the queue is not protected at all. 
+ * serial_data should be data that has been allocated on the heap 
+ * to prevent inadvertant modification of the data contained.
+ *
+ * \returns
+ * On enqueue success, returns 0. \n
+ * On failure, returns -1
+ */
 static int enqueue(Queue *queue, void *serial_data, int (*sem_fn)(sem_t*)) {
 	// put a piece of data onto the queue
 	// Use the semaphore function supplied to determine the action
@@ -94,6 +112,18 @@ static int enqueue(Queue *queue, void *serial_data, int (*sem_fn)(sem_t*)) {
 
 
 
+/**
+ * \brief Atomically Dequeue data
+ *
+ * This is meant to be used by other functions to dequeue data.
+ * The function pointed to by sem_fn is used for synchronization.
+ * \param[in]	queue		The dispatch queue
+ * \param[out]	serial_data	The data to dequeue
+ * \param[in]	sem_fn		The synchronization function to use
+ * \returns
+ * On dequeue failure, -1 is returned. \n
+ * Otherwise 0 is returned
+ */
 static int dequeue(Queue *queue, void **serial_data, int (*sem_fn)(sem_t*)) {
 	// take a piece of data off the queue
 
@@ -117,7 +147,7 @@ static int dequeue(Queue *queue, void **serial_data, int (*sem_fn)(sem_t*)) {
 
 /**
  * \brief Initialize the queue
- * \param	size	Max number of entries that can be stored \n
+ * \param	size	Max number of entries that can be stored. \n
  * Note that the size must be greater than 1.
  * \returns
  * On Success, returns a pointer to the queue
@@ -129,7 +159,7 @@ Queue *queueInit(uint32_t size) {
 	Queue *queue;
 
 	if (size < 2)
-		return NULL;		// not enough size will be allocated for the queue to work
+		return NULL;	// not enough size will be allocated for the queue to work
 
 	queue = (Queue*)malloc(sizeof(Queue));
 	if (!queue) {
@@ -207,7 +237,15 @@ int queueMaxSize(Queue *queue) {
 /**
  * \brief Try to enqueue data, fail if data can't be enqueued
  *
- * If data can't be enqueued, return right away with a failure
+ * If data can't be enqueued, return right away with a failure. \n
+ * Note that data on the queue is not protected at all. 
+ * serial_data should be data that has been allocated on the heap 
+ * to prevent inadvertant modification of the data contained.
+ * \param[in]	queue		The dispatch queue
+ * \param[in]	serial_data	The data to enqueue
+ * \returns
+ * If data couldn't immediately be enqueued, the function immediately returns -1. \n
+ * On success, return 0
  */
 int queueTryEnqueue(Queue *queue, void *serial_data) {
 	// try to put data onto the queue
@@ -222,7 +260,17 @@ int queueTryEnqueue(Queue *queue, void *serial_data) {
  * \brief Enqueue data, block if data can't be enqueued
  *
  * If data can't be enqueued, block until there is a slot
- * available.
+ * available. \n
+ * Note that data on the queue is not protected at all. 
+ * serial_data should be data that has been allocated on the heap 
+ * to prevent inadvertant modification of the data contained.
+ * \param[in]	queue		The dispatch queue
+ * \param[in]	serial_data	The data to enqueue
+ * \returns
+ * If data couldn't immediately be enqueued, the function blocks until there is
+ * space to enqueue. Nevertheless, if there is some synchronization failure,
+ * -1 will be returned. \n
+ * On success, return 0
  */
 int queueEnqueue(Queue *queue, void *serial_data) {
 	// Put data onto the queue
@@ -236,7 +284,13 @@ int queueEnqueue(Queue *queue, void *serial_data) {
 /**
  * \brief Try to dequeue data, fail if data can't be dequeued
  *
- * If data can't be dequeued, return right away with a failure
+ * If data can't be dequeued, return right away with a failure. \n
+ * Note that data on the queue is not protected at all. 
+ * \param[in]	queue		The dispatch queue
+ * \param[out]	serial_data	The data to dequeue
+ * \returns
+ * If data couldn't immediately be dequeued, the function immediately returns -1. \n
+ * On success, return 0
  */
 int queueTryDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.
@@ -252,6 +306,14 @@ int queueTryDequeue(Queue *queue, void **serial_data) {
  *
  * If data can't be dequeued, block until there is 
  * data in the queue
+ * Note that data on the queue is not protected at all. 
+ * \param[in]	queue		The dispatch queue
+ * \param[out]	serial_data	The data to dequeue
+ * \returns
+ * If data couldn't immediately be dequeued, the function blocks until there is
+ * something on the queue to dequeue. Nevertheless, if there is 
+ * some synchronization failure, -1 will be returned. \n
+ * On success, return 0
  */
 int queueDequeue(Queue *queue, void **serial_data) {
 	// Take data off the queue.

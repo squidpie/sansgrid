@@ -87,6 +87,8 @@ int isRunning(void) {
 
 /// Initialize and fork off the daemon
 int daemon_init(void) {
+	// Initialize and fork off the daemon
+
 	pid_t pid;
 	pid_t sid;
 
@@ -188,6 +190,10 @@ int sgConfigDropDevice(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 		// drop all devices
 		routerFreeAllDevices(routing_table);
 		strcpy(str, "All devices freed");
+	} else if (!strcmp(str, "drop queue")) {
+		// drop queue
+		router_opts.dumping_dispatch = 1;
+		router_opts.dispatch_pause = 0;
 	} else if ((device = atoi(&str[5])) != 0) {
 		// drop device
 		routingTableRDIDToIP(routing_table, device, ip_addr);
@@ -327,6 +333,7 @@ int sgConfigSetAuth(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
  * Set the network status: shown, or not shown
  */
 int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
+	// Set the network status: shown, or not shown
 	int exit_code = 0;
 	if (strstr(str, "hidden")) {
 		router_opts.hidden_network = 1;
@@ -346,6 +353,7 @@ int sgConfigSetNetwork(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
 
 /// Get the status of the router
 int sgConfigGetStatus(int s2, char str[SG_SOCKET_BUFF_SIZE]) {
+	// Get the status of the router
 	syslog(LOG_DEBUG, "sansgrid daemon: checking status");
 	//sprintf(str, "%i", routingTableGetDeviceCount(routing_table));
 	int devnum = routingTableGetDeviceCount(routing_table);

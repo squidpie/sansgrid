@@ -29,7 +29,6 @@
 // bits  are shifted in as MSB or LSB, and sets the clock frequency. Function 
 // is called prior to sending or receiving any data over the serial line. 
 uint8_t sgSerialOpen(void){
-    //Serial.println( "Opening SPI" );
     // Initialize Sensor SPI communication
     SPI.begin();
     // Set order bits are shifted onto the SPI bus
@@ -60,7 +59,6 @@ uint8_t sgSerialSetAsSensor(void){
 
 // Send size bytes of serial data over SPI.
 uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
-    Serial.println( "Sending" );
     // Buffer to store data array to send to Slave over SPI
     uint8_t data_out[ NUM_BYTES ];
     // Copy SansgridSerial data to buffer
@@ -83,7 +81,6 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
         SPI.transfer( data_out[i] );
 		// Delay to allow Slave to process byte
         delayMicroseconds(DELAY);
-        //Serial.println( data_out[i] );
     }
 	// Place Slave Select High again (Chip Enable, Chip Select)
 	digitalWrite( SLAVE_SELECT , HIGH );
@@ -94,13 +91,8 @@ uint8_t sgSerialSend(SansgridSerial *sg_serial, int size ){
 
 // Receive size bytes of serial data over SPI.
 uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
-	Serial.println( "Receiving" );
     // Array of size NUM_BYTES to store SPI packet
     uint8_t data_in[NUM_BYTES];
-    // Test data_in
-    data_in[0] = 0xfd;
-    for( int i = 1 ; i < 18 ; i++ )
-        data_in[i] = 0xF0;
     // Dummy byte sent to slave 
     uint8_t rec = 0xFD;
     // Open SPI bus
@@ -132,13 +124,8 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     }
 	// Place Slave Select High again (Chip Enable, Chip Select)
 	digitalWrite( SLAVE_SELECT , HIGH );
-	// Test Code to Serial print data sent 
-	// over SPI to verify data received 
-    /*for( int i = 0 ; i < NUM_BYTES ; i++){
-        // Send a byte over SPI and store
-        // byte received in data_in buffer
-        Serial.println( data_in[i], HEX );
-    }*/
+	/*for( int i = 0 ; i < NUM_BYTES ; i++ )
+	    Serial.println( data_in[i] , HEX );*/
     // Close SPI bus - NOT USED
     //sgSerialClose();
 	// Copy data from array into SansgridSerial structure

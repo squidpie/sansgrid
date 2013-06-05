@@ -34,8 +34,8 @@ int testEyeballPayload(PayloadTestStruct *test_struct) {
 	if (exit_code)
 		return exit_code;
 	test_struct->eyeball_mode = SG_EYEBALL_NOMATE;
-	eyeball.read_dir = SG_TEST_COMM_WRITE_NONE;
-	eyeball.expected_exit_code = 1;
+	eyeball.read_dir = SG_TEST_COMM_WRITE_TCP;
+	eyeball.expected_exit_code = 0;
 	test_struct->eyeball = &eyeball;
 	return testPayload(test_struct);
 }

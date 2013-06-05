@@ -93,7 +93,6 @@ void loop() {
 
 // SPI Interrupt Service Routine
 ISR (SPI_STC_vect) {
-    //Serial.println( "ISR" );
     uint8_t c = SPDR;
     switch(cmd) {
         case 0x00:

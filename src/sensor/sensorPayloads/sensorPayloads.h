@@ -68,14 +68,18 @@ typedef struct SensorConfig{
     static bool challenge;
     static bool forget;
 	static bool received;
+	static bool connecting;
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
-    static int8_t sn[ SN ];
+    static uint8_t sn[ SN ];
     static int8_t network_name[ DATA ];
+	static uint8_t server_id[ SERVER_ID ];
     static uint8_t ip_address[ IP_ADDRESS ];
     static uint8_t router_ip[ IP_ADDRESS ];
     static uint8_t server_public_key[ SERVER_KEY ];
-    static uint8_t sensor_public_key[ SENSOR_KEY ]; 
+	static uint8_t server_challenge[ SERVER_KEY ];
+    static uint8_t sensor_public_key[ SENSOR_KEY ];
+    static uint8_t sensor_challenge[ SENSOR_KEY ];	
 } SensorConfig;
 
 typedef struct SansgridFly{
@@ -87,7 +91,7 @@ typedef struct SansgridEyeball{
     static uint8_t dt[ DT ];
     static uint8_t manid[ MANID ];
     static uint8_t modnum[ MODNUM ];
-    static int8_t sn[ SN ];
+    static uint8_t sn[ SN ];
     static uint8_t profile[ PROFILE ];
     static uint8_t mode[ MODE ];
     static uint8_t padding[ EYEBALL_PADDING ];
@@ -101,7 +105,7 @@ typedef struct SansgridPeck{
     uint8_t recognition[ RECOGNITION ];
     uint8_t manid[ MANID ];
     uint8_t modnum[ MODNUM ];
-    int8_t sn[ SN ];
+    uint8_t sn[ SN ];
     uint8_t padding[ PECK_PADDING ];
 } SansgridPeck;
 

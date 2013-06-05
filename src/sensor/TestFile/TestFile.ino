@@ -1,4 +1,4 @@
-/* SPI Master Test Code
+ /* SPI Master Test Code
  * Specific to the Arduino DUE Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -31,10 +31,11 @@
 
 //#define PUSH_BUTTON 1
 //#define DUE 1
-//#define LED 13
+#define LED 4
 
 SensorConfig sg_config;
 SansgridSerial sg_serial;
+boolean Send = false;
 
 void setup(){
     // This allows for debugging by displaying information 
@@ -46,8 +47,13 @@ void setup(){
     //sg_config.mate = true; 
     
     // Enable Slave Select
-    pinMode(SLAVE_SELECT, OUTPUT);
-    digitalWrite(SLAVE_SELECT, HIGH);
+    pinMode( SLAVE_SELECT , OUTPUT );
+    digitalWrite( SLAVE_SELECT , HIGH );
+    
+    // LED Signal
+    pinMode( LED , OUTPUT );
+    digitalWrite( LED , HIGH );
+    
     // Set SansgridSerial data_out control byte
     sg_serial.control[0] = 0xAD;
     
@@ -83,6 +89,7 @@ void setup(){
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
+    sg_config.forget = false;
 }
 
 void loop(){
@@ -94,7 +101,7 @@ void loop(){
         sensorConnect( &sg_config , &sg_serial );  
     }
     // DEBUG message
-    //Serial.println( "Connected to Network" );
+    Serial.println( "Connected to Network" );
     // Signal Input Code goes here in this loop
     while(sg_config.nest == true ){  
         // Delay between sending Packets atleast 1 second
@@ -104,23 +111,36 @@ void loop(){
             // Received Packet
             //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( &sg_serial , 1 );
+            // Test code
+            Serial.println( sg_serial.payload[0] , HEX );
             // Process packet to verify Chirp received
-            payloadHandler( &sg_config , &sg_serial);
+            payloadHandlerB( &sg_config , &sg_serial);
             //Serial.println( "setting received to false");
-            // Reset received to default value
+            // Reset receive d to default value
             sg_config.received = false;
             // Process received Chirp packet
             if( sg_config.chirp == true ){
+                Serial.println( "Chirp Received" );
                 // Received Chirp from Sensor
                 // Need to process payload to perform action
                 // on Signal. Put code in here.
-              
+                if( sg_serial.payload[0] == 0x20 ){
+                    if( sg_serial.payload[1] == 0x01 ){
+                        if( sg_serial.payload[2] == 0x31 )
+                            digitalWrite( LED , HIGH );
+                        else
+                            digitalWrite( LED , LOW );
+                  }
+                }      
                 // Reset Chirp to false
-                sg_config.chirp = false; 
+                sg_config.chirp = false;
+                Send = true; 
             }// End of received Chirp
         }
         // Code to Send Chirp
-        else{
+        if (  Send == true ){
+            // Testing Update
+            Serial.println( "Updated Light Status" );
             // Set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
             // Set IP address to router ip
@@ -129,12 +149,26 @@ void loop(){
             sg_serial.payload[0] = (uint8_t) 0x21;
             // Copy data into Payload
             // Which Signal Id are you using?
-            //sg_serial.payload[1] = sid????
+            sg_serial.payload[1] = (uint8_t) 0x02;
             // What are you transmitting???
-            //sg_serial.payload[2] thru sg_serial.payload[80]
+            if(digitalRead( LED ) == LOW ){
+                sg_serial.payload[2] = (uint8_t) 0x4F;
+                sg_serial.payload[3] = (uint8_t) 0x46;
+                sg_serial.payload[4] = (uint8_t) 0x46;
+            }
+            else if (digitalRead( LED ) == HIGH ){
+                sg_serial.payload[2] = (uint8_t) 0x4F;
+                sg_serial.payload[3] = (uint8_t) 0x4E;
+                sg_serial.payload[4] = (uint8_t) 0x20;
+            }
             // Make sure to pad the unused with 0x00
+            for( int i = 5 ; i < PAYLOAD ; i++ )
+                sg_serial.payload[i] = (uint8_t) 0x00;
             // Transmit Payload over SPI  
-            sgSerialSend( &sg_serial , 1 );
+            if( Send == true ){
+                sgSerialSend( &sg_serial , 1 );
+                Send = false;
+            }
         }// End of Send Chirp
     }// End of Nested
 }// End of Loop
@@ -145,8 +179,6 @@ void receive(){
     // processing SPI packet
     //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
-    // Display value of received
+    // Display value of received 
     //Serial.println( "Received flag set to true" );
 }
-
-

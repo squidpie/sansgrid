@@ -104,7 +104,7 @@ struct RoutingTable {
 
 
 /**
- * \brief Make sure the table is valid
+ * \brief Make sure the table is non-null
  *
  * This makes sure the table has a nonnull address.
  * If the table isn't allocated, the program exits 
@@ -120,17 +120,30 @@ static int tableAssertValid(RoutingTable *table) {
 }
 
 
+/**
+ * \brief Check to see if the table is full
+ *
+ * If no more devices can be allocated, return 1. \n
+ * Otherwise return 0.
+ */
 static int tableChkFull(RoutingTable *table) {
-	if (table->table_alloc >= ROUTING_ARRAYSIZE) {
-		syslog(LOG_WARNING, "routing table full");
+	// Return 1 if table is full, 0 if not
+	if (table->table_alloc >= ROUTING_ARRAYSIZE-3) {
+		syslog(LOG_NOTICE, "routing table full");
 		return 1;
 	}
 	return 0;
 }
 
 
+/**
+ * \brief Check to see if the table is empty
+ *
+ * If no devices are allocated, return 1. \n
+ * Otherwise return 0.
+ */
 static int tableChkEmpty(RoutingTable *table) {
-	if (table->table_alloc == 0) {
+	if (table->table_alloc < 2) {
 		syslog(LOG_NOTICE, "routing table empty");
 		return 1;
 	}
@@ -139,7 +152,15 @@ static int tableChkEmpty(RoutingTable *table) {
 
 
 
-static int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tableptr) {
+/**
+ * \brief Mask the table pointer with a given base to make the IP address
+ * \param[out]	ip_addr		Constructed IP address
+ * \param[in]	base		Netmask to use
+ * \param[in]	tableptr	Table Index of device
+ */
+static int maskip(uint8_t ip_addr[IP_SIZE], 
+		uint8_t base[IP_SIZE], 
+		uint32_t tableptr) {
 	// Mask the tableptr with the base to make an ip address
 	
 	int i, ioffset;
@@ -158,6 +179,13 @@ static int maskip(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE], uint32_t tabl
 
 
 
+/**
+ * \brief Take an IP address and return where it should be in the routing table
+ * \param[in]	ip_addr		IP address of device to find
+ * \param[in]	base		Netmask to use
+ * \returns
+ * The location the device would be in
+ */
 static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZE]) {
 	// Take a location and show where it should be in the routing table
 
@@ -183,8 +211,12 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
  * into an array of uint8_t, respecting endianness.
  * This is an unsafe function. It does no bounds checking.
  * bytes[] isn't size-checked. it must be 4x the size of wordsize.
+ * \param[out]	bytes		A returned array of bytes
+ * \param[in]	words		An array of words to use
+ * \param[in]	bytesize	Number of bytes to convert
  */
 void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
+	// Convert an array of words into an array of bytes
 
 	uint32_t i;
 	uint32_t endianconv;
@@ -207,8 +239,16 @@ void wordToByte(uint8_t *bytes, uint32_t *words, size_t bytesize) {
  * This is an unsafe function. It does no bounds checking.
  * bytesize must be a multiple of 4.
  * words[] isn't size-checked. it must be >= (bytesize/4)+1.
+ * \param[out]	words		An array of words taken from an array of bytes
+ * \param[in]	bytes		An array of bytes to use
+ * \param[in]	bytesize	Number of bytes to convert
+ * \returns
+ * If bytesize isn't a multiple of 4, 
+ * the conversion isn't done and -1 is returned. \n
+ * Otherwise return 0
  */
 int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
+	// Convert an array of words into an array of bytes
 	
 	uint32_t i;
 	uint32_t endianconv;
@@ -229,6 +269,10 @@ int byteToWord(uint32_t *words, uint8_t *bytes, size_t bytesize) {
 /** \brief Initialize the Routing Table
  *
  * Initializes the routing table with a base subnet and an essid.
+ * \param[in]	base	Netmask to use
+ * \param[in]	essid	Network ESSID to assign
+ * \returns
+ * On success, a pointer to a new routing table structure is returned.
  */
 RoutingTable *routingTableInit(uint8_t base[IP_SIZE], char essid[80]) {
 	// Initialize the routing table
@@ -300,6 +344,7 @@ RoutingTable *routingTableDestroy(RoutingTable *table) {
  * Stores the network ESSID in essid
  */
 void routingTableGetEssid(RoutingTable *table, char essid[80]) {
+	// Get the ESSID from the routing table
 
 	tableAssertValid(table);
 	strncpy(essid, table->essid, sizeof(table->essid));
@@ -327,7 +372,7 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 		return 1;
 
 	index = locationToTablePtr(ip_addr, table->base) % ROUTING_ARRAYSIZE;
-	if (index < 2)
+	if (index < 1 || index == (ROUTING_ARRAYSIZE-1))
 		return 1;
 
 	if (routingTableLookup(table, ip_addr) == 0) {
@@ -344,7 +389,8 @@ int32_t routingTableAssignIPStatic(RoutingTable *table, uint8_t ip_addr[IP_SIZE]
 			table->routing_table[index]->rdid = rdid_pool++;
 			table->rdid_pool = rdid_pool;
 		}
-		syslog(LOG_NOTICE, "New device with rdid %u entering network", table->routing_table[index]->rdid);
+		syslog(LOG_NOTICE, "New device with rdid %u entering network", 
+				table->routing_table[index]->rdid);
 
 		table->routing_table[index]->hb = hbInitDefault();
 		table->routing_table[index]->auth = deviceAuthInit(table->default_strictness);
@@ -377,7 +423,9 @@ int32_t routingTableAssignIP(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
 	tableptr = table->tableptr;
 
 	// Find next available slot
-	while (table->routing_table[tableptr] || tableptr < 2) {
+	while (table->routing_table[tableptr] 
+			|| tableptr < 2
+			|| tableptr == (ROUTING_ARRAYSIZE-1)) {
 		tableptr = (tableptr + 1) % ROUTING_ARRAYSIZE;
 	}
 	maskip(ip_addr, table->base, tableptr);	// create IP address
@@ -551,7 +599,9 @@ uint32_t routingTableIPToRDID(RoutingTable *table, uint8_t ip_addr[IP_SIZE]) {
  * 0 if device was matched \n
  * -1 if device was not matched
  */
-int32_t routingTableRDIDToIP(RoutingTable *table, uint32_t rdid, uint8_t ip_addr[IP_SIZE]) {
+int32_t routingTableRDIDToIP(RoutingTable *table, 
+		uint32_t rdid, 
+		uint8_t ip_addr[IP_SIZE]) {
 	// convert an rdid to an IP address
 	for (uint32_t i=0; i<ROUTING_ARRAYSIZE; i++) {
 		if (table->routing_table[i]) {

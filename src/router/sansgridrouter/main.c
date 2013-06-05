@@ -41,8 +41,19 @@
 #include <semaphore.h>
 /// \file
 
+
+/**
+ * \mainpage SansGrid Router: sansgridrouter
+ *
+ * \section intro_sec Introduction
+ *
+ * SansGrid is a distributed sensor infrastructure for the Internet of Things.
+ * This is the router that communicates between a server and sensors.
+ */
+
 void usage(int status);
 int spiSetup(void);
+int spiTeardown(void);
 
 
 /**
@@ -70,10 +81,24 @@ void *dispatchRuntime(void *arg) {
 			syslog(LOG_ERR, "Dispatch Queue Failed, Quitting");
 			exit(EXIT_FAILURE);
 		}
-		printf("Got packet of type %x\n", sg_serial->payload[0]);
 		while (router_opts.dispatch_pause) {
 			sleep(1);
 		}
+
+		if (router_opts.dumping_dispatch) {
+			// Remove everything from the dispatch
+			do {
+				if (sg_serial) {
+					free(sg_serial);
+					sg_serial = NULL;
+				}
+				queueDequeue(dispatch, (void**)&sg_serial);
+			} while (queueSize(dispatch) > 0);
+			router_opts.dumping_dispatch = 0;
+			continue;
+		}
+
+		printf("Got packet of type %x\n", sg_serial->payload[0]);
 		if (sg_serial->payload[0] == SG_SERVSTATUS) {
 			routerHandleServerStatus(routing_table, sg_serial);
 		} else {
@@ -164,7 +189,6 @@ void *heartbeatRuntime(void *arg) {
 	SansgridHeartbeat sg_hb;
 	SansgridIRStatus sg_irstatus;
 	SansgridChirp sg_chirp;
-	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 	struct timespec req, epoch;
 	int hb_status = 0;
 	uint32_t rdid;
@@ -172,10 +196,16 @@ void *heartbeatRuntime(void *arg) {
 	uint32_t current_packet;
 	uint64_t nano_add = 0;
 	uint64_t sec_add = 0;
+	int oldstatus;
+
+	// We have to make sure this thread can be cancelled whenever.
+	// Otherwise we may miss the signal
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldstatus);
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
 	memset(&sg_chirp, 0x0, sizeof(SansgridChirp));
-	memset(sg_hb.padding, 0x0, sizeof(sg_hb.padding));
+	memset(&sg_hb, 0x0, sizeof(SansgridHeartbeat));
+	sg_hb.datatype = SG_HEARTBEAT_ROUTER_TO_SENSOR;
 	routingTableForEachDevice(routing_table, ip_addr);
 	count = routingTableGetDeviceCount(routing_table)-1;
 	while (1) {
@@ -225,16 +255,15 @@ void *heartbeatRuntime(void *arg) {
 		if (!routingTableIsDeviceLost(routing_table, ip_addr)) {
 			syslog(LOG_DEBUG, "heartbeat: sending to device %u", routingTableIPToRDID(routing_table, ip_addr));
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			memcpy(sg_serial->payload, &sg_hb, sizeof(SG_HEARTBEAT_ROUTER_TO_SENSOR));
+			memcpy(sg_serial->payload, &sg_hb, sizeof(SansgridHeartbeat));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 			queueEnqueue(dispatch, sg_serial);
 			sg_serial = NULL;
 		}
 		if ((hb_status = routingTableHeartbeatDevice(routing_table, ip_addr)) != 0) {
 			// device status changed... either went stale or was lost
-			// FIXME: remove magic number by specifying this as payload type
 			printf("hb_status = %x\n", hb_status);
-			sg_irstatus.datatype = 0xfd;
+			sg_irstatus.datatype = SG_SERVSTATUS;
 			rdid = routingTableIPToRDID(routing_table, ip_addr);
 			wordToByte(sg_irstatus.rdid, &rdid, sizeof(rdid));
 			if (routingTableIsDeviceLost(routing_table, ip_addr)) {
@@ -248,7 +277,7 @@ void *heartbeatRuntime(void *arg) {
 				syslog(LOG_NOTICE, "Device %i has just gone stale", routingTableIPToRDID(routing_table, ip_addr));
 			}
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
-			sg_serial->control = 0xad;
+			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 			memcpy(sg_serial->payload, &sg_irstatus, sizeof(SansgridIRStatus));
 			memcpy(sg_serial->ip_addr, ip_addr, IP_SIZE);
 			queueEnqueue(dispatch, sg_serial);
@@ -282,6 +311,8 @@ void *flyRuntime(void *arg) {
 			sg_serial = (SansgridSerial*)malloc(sizeof(SansgridSerial));
 			memset(sg_serial, 0x0, sizeof(SansgridSerial));
 			routingTableGetEssid(routing_table, sg_fly.network_name);
+			//for(uint32_t i=strlen(sg_fly.network_name); i<sizeof(sg_fly.network_name); i++)
+			//	sg_fly.network_name[i] = i;
 			memcpy(sg_serial->payload, &sg_fly, sizeof(SansgridFly));
 			sg_serial->control = SG_SERIAL_CTRL_VALID_DATA;
 			routingTableGetBroadcast(routing_table, sg_serial->ip_addr);
@@ -482,7 +513,7 @@ int parseIPv6(char *ip_str, uint8_t ip_addr[16]) {
 		if (divider[0] == ':')
 			divider[0] = '\0';
 		size = (strlen(moved_ip)+1)/2;
-		atox(hexarray, moved_ip, sizeof(hexarray));
+		atox(hexarray, moved_ip, size);
 		for (index = base; index < base+size; index++) {
 			ip_addr[index] = hexarray[index-base];
 		}
@@ -633,6 +664,9 @@ int parseConfFile(const char *path, RouterOpts *ropts) {
 
 
 
+/**
+ * \brief Sansgrid Router Startup point
+ */
 int main(int argc, char *argv[]) {
 	pthread_t 	serial_read_thread,		// thread for reading over SPI
 				dispatch_thread,		// thread for reading from dispatch
@@ -892,6 +926,7 @@ int main(int argc, char *argv[]) {
 	sem_destroy(&router_opts.hb_wait);
 	queueDestroy(dispatch);
 	routingTableDestroy(routing_table);
+	spiTeardown();
 
 	return 0;
 }
@@ -929,6 +964,7 @@ Daemon Commands\n\
       kill                   shutdown the router daemon\n\
       drop [DEVICE]          drop a device\n\
       drop all               drop all devices\n\
+      drop queue             drop all enqueued items\n\
       pause                  don't send any packets\n\
       resume                 continue sending packets\n\
 \n\

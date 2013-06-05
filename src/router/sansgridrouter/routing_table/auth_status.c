@@ -48,8 +48,9 @@ struct DeviceAuth {
 };
 
 
-/// Make sure the device authentication is valid
+/// Make sure the device authentication is non-null
 static int devauthAssertValid(DeviceAuth *dev_auth) {
+	// Make sure device authentication structure is non-null
 	if (dev_auth == NULL) {
 		syslog(LOG_WARNING, "DeviceAuth is NULL when it shouldn't be");
 		return -1;
@@ -109,7 +110,7 @@ int deviceAuthEnableFiltered(DeviceAuth *dev_auth) {
  * is then disconnected from the network.
  */
 int deviceAuthEnable(DeviceAuth *dev_auth) {
-	// authenticate devices
+	// Enable strict authentication
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthEnable");
 		return -1;
@@ -185,6 +186,7 @@ void deviceAuthDestroy(DeviceAuth *dev_auth) {
  * On error, return -1
  */
 int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
+	// Check whether a general payload is valid input from device
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
 		return -1;

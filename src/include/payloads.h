@@ -433,7 +433,7 @@ enum SansgridDataTypeEnum {
 	/// ESSID Broadcast
 	SG_FLY = 0xF0,
 	/// Eyeballing
-	SG_EYEBALL = 0x00,
+	SG_EYEBALL = 0xeb,
 	/// Pecking
 	SG_PECK = 0x01,
 	/// Singing with key
@@ -476,6 +476,8 @@ enum SansgridDataTypeEnum {
 	SG_CHIRP_NETWORK_DISCONNECTS_SENSOR = 0x25,
 	/// Chirp: Sensor is disconnecting from network
 	SG_CHIRP_SENSOR_DISCONNECT = 0x26,
+	/// Squawk: Cancel Squawk. Server Requires sensor to forget it
+	SG_SQUAWK_FORGET_ME = 0x27,
 	/// Internal
 	SG_SERVSTATUS = 0xfd,
 };

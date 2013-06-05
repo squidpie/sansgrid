@@ -19,7 +19,7 @@
  *
  */
 
-#define _POSIX_C_SOURCE 200809L		// Required for nanosleep()
+#define _POSIX_C_SOURCE 200809L		///< Required for nanosleep()
 
 #include <syslog.h>
 #include <stdio.h>
@@ -30,6 +30,7 @@
 #include "../payload_handlers/payload_handlers.h"
 #include "../sansgrid_router.h"
 /** \file */
+
 
 
 
@@ -49,6 +50,7 @@
  * The saved argument should start initialized as a pointer to NULL.
  */
 int extract_keyvalue(char *str, char **key, char **value, char **saved) {
+	// Extract the next keyvalue from str
 	*key = (*saved == NULL) ? strtok_r(&str[1],	DELIM_VAL,	saved) : 
 				  strtok_r(NULL,	DELIM_VAL,	saved);
 
@@ -88,6 +90,7 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	char chunk[3];
 	uint32_t length;
 	uint32_t uval;
+	int32_t offset;
 
 	for (i_hex=0; i_hex<hexsize; i_hex++)
 		hexarray[i_hex] = 0x0;
@@ -95,6 +98,16 @@ void atox(uint8_t *hexarray, char *str, uint32_t hexsize) {
 	if (str == NULL)
 		return;
 	length = strlen(str);
+	if ((length+1)/2 > hexsize) {
+		syslog(LOG_DEBUG, "atox: truncating string %s", str);
+		length = hexsize*2;
+	} else if ((length+1)/2 < hexsize) {
+		syslog(LOG_DEBUG, "atox: left-padding string %s", str);
+		offset = hexsize - (length+1)/2;
+		return atox(hexarray+offset, str, hexsize-offset);
+	}
+
+
 	//offset = hexsize - ((length+1)/2);
 
 	for (i_str=0; i_str<length;) {
@@ -142,7 +155,7 @@ char *match(Dictionary dict[], int size, char *key) {
 		if (dict[i].key == NULL) {
 			// Guard against garbage data in dict
 			return NULL;
-		} else if (!strcmp(key, dict[i].key)) {
+		} else if (!strncmp(key, dict[i].key, strlen(key))) {
 			// matched
 			return dict[i].value;
 		}
@@ -153,25 +166,45 @@ char *match(Dictionary dict[], int size, char *key) {
 
 /**
  * \brief Find the rdid from the dictionary
+ * \param[in]	dict	Populated Dictionary Structure
+ * \param[in]	size	Number of entries in the Dictionary
+ * \returns
+ * If the Device Identifier rdid could not be found, -1 is returned. \n
+ * On success, 0 is returned.
  */
 static int32_t translateRdid(Dictionary dict[], int size) {
+	// Find the rdid from the dictionary
 	uint32_t rdid_return;
-	rdid_return = atoi(match(dict, size, "rdid"));
+	char *rdid_str = match(dict, size, "rdid");
+
+	//rdid_return = atoi(match(dict, size, "rdid"));
+	rdid_return = (rdid_str != NULL ? atoi(rdid_str) : -1);
 	return rdid_return;
 }
 
 
 
+/**
+ * \brief Build a SansgridEyeball from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get an eyeball datatype from the payload
 	SansgridEyeball sg_eyeball;
 
-	atox(&sg_eyeball.datatype,		match(dict, size, "dt"), 		1*sizeof(uint8_t));
-	atox(sg_eyeball.manid, 			match(dict, size, "manid"),		4*sizeof(uint8_t));
-	atox(sg_eyeball.modnum, 		match(dict, size, "modnum"),	4*sizeof(uint8_t));
-	atox(sg_eyeball.serial_number,	match(dict, size, "sn"), 		8*sizeof(uint8_t));
-	atox(&sg_eyeball.profile, 		match(dict, size, "profile"), 	1*sizeof(uint8_t));
-	atox(&sg_eyeball.mode, 			match(dict, size, "mode"), 		1*sizeof(uint8_t));
+	atox(&sg_eyeball.datatype,		match(dict, size, "dt"), 	1*sizeof(uint8_t));
+	atox(sg_eyeball.manid, 			match(dict, size, "manid"),	4*sizeof(uint8_t));
+	atox(sg_eyeball.modnum, 		match(dict, size, "modnum"),4*sizeof(uint8_t));
+	atox(sg_eyeball.serial_number,	match(dict, size, "sn"), 	8*sizeof(uint8_t));
+	atox(&sg_eyeball.profile, 		match(dict, size, "profile"),1*sizeof(uint8_t));
+	atox(&sg_eyeball.mode, 			match(dict, size, "mode"), 	1*sizeof(uint8_t));
 
 	memset(sg_eyeball.padding, 0x0, 62*sizeof(uint8_t));
 
@@ -182,19 +215,29 @@ static int32_t convertEyeball(Dictionary dict[], int size, SansgridSerial *sg_se
 
 
 
+/**
+ * \brief Build a SansgridPeck from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peck datatype from the payload
 	SansgridPeck sg_peck;
 	uint32_t rdid;
 
-	atox(&sg_peck.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	//atox(sg_peck.router_ip, 		match(dict, size, "router_ip"),	IP_SIZE);
-	//atox(sg_peck.assigned_ip,		match(dict, size, "server_ip"),	IP_SIZE);
-	atox(sg_peck.server_id,			match(dict, size, "sid"),		16*sizeof(uint8_t));
-	atox(&sg_peck.recognition,		match(dict, size,"recognition"),1*sizeof(uint8_t));
-	atox(sg_peck.manid,				match(dict, size, "manid"),		4*sizeof(uint8_t));
-	atox(sg_peck.modnum,			match(dict, size, "modnum"),	4*sizeof(uint8_t));
-	atox(sg_peck.serial_number,		match(dict, size, "sn"),		8*sizeof(uint8_t));
+	atox(&sg_peck.datatype, 	match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_peck.assigned_ip,	match(dict, size, "server_ip"),	IP_SIZE);
+	atox(sg_peck.server_id,		match(dict, size, "sid"),		16*sizeof(uint8_t));
+	atox(&sg_peck.recognition,	match(dict, size,"recognition"),1*sizeof(uint8_t));
+	atox(sg_peck.manid,			match(dict, size, "manid"),		4*sizeof(uint8_t));
+	atox(sg_peck.modnum,		match(dict, size, "modnum"),	4*sizeof(uint8_t));
+	atox(sg_peck.serial_number,	match(dict, size, "sn"),		8*sizeof(uint8_t));
 
 	memset(sg_peck.padding, 0x0, 15*sizeof(uint8_t));
 	routingTableGetRouterIP(routing_table, sg_peck.router_ip);
@@ -207,12 +250,25 @@ static int8_t convertPeck(Dictionary dict[], int size, SansgridSerial *sg_serial
 	return translateRdid(dict, size);
 }
 
+
+
+/**
+ * \brief Build a SansgridSing from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a sing datatype from the payload
 	SansgridSing sg_sing;
 
-	atox(&sg_sing.datatype,			match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(sg_sing.pubkey, 			match(dict, size, "servpubkey"),80*sizeof(uint8_t));
+	atox(&sg_sing.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_sing.pubkey, 		match(dict, size, "servpubkey"),80*sizeof(uint8_t));
 
 	memcpy(sg_serial->payload, &sg_sing, sizeof(SansgridSing));
 	
@@ -221,12 +277,23 @@ static int8_t convertSing(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 
 
+/**
+ * \brief Build a SansgridMock from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a mock datatype from the payload
 	SansgridMock sg_mock;
 
-	atox(&sg_mock.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(sg_mock.pubkey,			match(dict, size, "senspubkey"),80*sizeof(uint8_t));
+	atox(&sg_mock.datatype, 	match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_mock.pubkey,		match(dict, size, "senspubkey"),80*sizeof(uint8_t));
 
 	memcpy(sg_serial->payload, &sg_mock, sizeof(SansgridMock));
 	
@@ -235,43 +302,55 @@ static int8_t convertMock(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 
 
+/**
+ * \brief Build a SansgridPeacock from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a peacock datatype from the payload
 	char *label = NULL;
 	SansgridPeacock sg_peacock;
 
-	atox(&sg_peacock.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.datatype,	match(dict, size, "dt"),		1*sizeof(uint8_t));
 
-	atox(&sg_peacock.IO_A_id,		match(dict, size, "sida"),		1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_class,	match(dict, size, "classa"),	1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_A_direc,	match(dict, size, "dira"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_id,	match(dict, size, "sida"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_class,match(dict, size, "classa"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_A_direc,match(dict, size, "dira"),		1*sizeof(uint8_t));
 	if ((label = match(dict, size, "labela")) == NULL) {
-		memset(sg_peacock.IO_A_label, 0x0,							30*sizeof(char));
+		memset(sg_peacock.IO_A_label, 0x0,						30*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_A_label, label, 30);
 	}
 	if ((label = match(dict, size, "unitsa")) == NULL) {
-		memset(sg_peacock.IO_A_units, 0x0,							6*sizeof(char));
+		memset(sg_peacock.IO_A_units, 0x0,						6*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_A_units, label, 6);
 	}
 	
 
-	atox(&sg_peacock.IO_B_id,		match(dict, size, "sidb"),		1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_class,	match(dict, size, "classb"),	1*sizeof(uint8_t));
-	atox(&sg_peacock.IO_B_direc,	match(dict, size, "dirb"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_id,	match(dict, size, "sidb"),		1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_class,match(dict, size, "classb"),	1*sizeof(uint8_t));
+	atox(&sg_peacock.IO_B_direc,match(dict, size, "dirb"),		1*sizeof(uint8_t));
 	if ((label = match(dict, size, "labelb")) == NULL) {
-		memset(sg_peacock.IO_B_label, 0x0,							30*sizeof(char));
+		memset(sg_peacock.IO_B_label, 0x0,						30*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_B_label, label, 30);
 	}
 	if ((label = match(dict, size, "unitsb")) == NULL) {
-		memset(sg_peacock.IO_B_units, 0x0,							6*sizeof(char));
+		memset(sg_peacock.IO_B_units, 0x0,						6*sizeof(char));
 	} else {
 		strncpy(sg_peacock.IO_B_units, label, 6);
 	}
 
-	atox(&sg_peacock.additional_IO_needed, match(dict, size, "additional"), 1*sizeof(uint8_t));
+	atox(&sg_peacock.additional_IO_needed, 
+			match(dict, size, "additional"), 1*sizeof(uint8_t));
 	sg_peacock.padding = 0x0;
 
 	memcpy(sg_serial->payload, &sg_peacock, sizeof(SansgridPeacock));
@@ -281,11 +360,22 @@ static int8_t convertPeacock(Dictionary dict[], int size, SansgridSerial *sg_ser
 
 
 
+/**
+ * \brief Build a SansgridNest from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a nest datatype from the payload
 	SansgridNest sg_nest;
 
-	atox(&sg_nest.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(&sg_nest.datatype, 	match(dict, size, "dt"),		1*sizeof(uint8_t));
 	
 	memset(sg_nest.padding, 0x0, 80*sizeof(uint8_t));
 
@@ -296,12 +386,23 @@ static int8_t convertNest(Dictionary dict[], int size, SansgridSerial *sg_serial
 
 
 
+/**
+ * \brief Build a SansgridSquawk from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a squawk datatype from the payload
 	SansgridSquawk sg_squawk;
 	
-	atox(&sg_squawk.datatype, 		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(sg_squawk.data,			match(dict, size, "data"),		80*sizeof(uint8_t));
+	atox(&sg_squawk.datatype, 	match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_squawk.data,		match(dict, size, "data"),		80*sizeof(uint8_t));
 
 	memcpy(sg_serial->payload, &sg_squawk, sizeof(SansgridSquawk));
 
@@ -310,14 +411,25 @@ static int8_t convertSquawk(Dictionary dict[], int size, SansgridSerial *sg_seri
 
 
 
+/**
+ * \brief Build a SansgridChirp from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
 static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_serial) {
 	// Get a chirp datatype from the payload
 	SansgridChirp sg_chirp;
 
-	atox(&sg_chirp.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(&sg_chirp.sid,		match(dict, size, "sid"),	1*sizeof(uint8_t));
-	strncpy((char*)sg_chirp.data, 			match(dict, size, "data"),	79);
-	//atox(sg_chirp.data,				match(dict, size, "data"),		79*sizeof(uint8_t));
+	atox(&sg_chirp.datatype,	match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(&sg_chirp.sid,			match(dict, size, "sid"),	1*sizeof(uint8_t));
+	strncpy((char*)sg_chirp.data, 		match(dict, size, "data"),	79);
+	//atox(sg_chirp.data,		match(dict, size, "data"),		79*sizeof(uint8_t));
 	
 	memcpy(sg_serial->payload, &sg_chirp, sizeof(SansgridChirp));
 
@@ -326,14 +438,28 @@ static int8_t convertChirp(Dictionary dict[], int size, SansgridSerial *sg_seria
 
 
 
-static int8_t convertIRStatus(Dictionary dict[], int size, SansgridSerial *sg_serial) {
+/**
+ * \brief Build a SansgridIRStatus from entries in the dictionary
+ * \param[in]	dict		Populated Dictionary Structure
+ * \param[in]	size		Number of entries in the Dictionary
+ * \param[out]	sg_serial	Outputted SansgridSerial Structure
+ *
+ * Note that sg_serial must point to a valid chunk of memory.
+ * \returns
+ * The Device Identifier rdid is returned when found. \n
+ * If the rdid is missing, return -1.
+ */
+static int8_t convertIRStatus(
+		Dictionary dict[], 
+		int size, 
+		SansgridSerial *sg_serial) {
 	// Get an router<-->server datatype from the payload
 	SansgridIRStatus sg_irstatus;
 	char *status = NULL;
 
 	memset(&sg_irstatus, 0x0, sizeof(SansgridIRStatus));
-	atox(&sg_irstatus.datatype,		match(dict, size, "dt"),		1*sizeof(uint8_t));
-	atox(sg_irstatus.rdid,			match(dict, size, "rdid"),			1*sizeof(uint8_t));
+	atox(&sg_irstatus.datatype,	match(dict, size, "dt"),		1*sizeof(uint8_t));
+	atox(sg_irstatus.rdid,		match(dict, size, "rdid"),		1*sizeof(uint8_t));
 	if ((status = match(dict, size, "status")) != NULL) {
 		strcpy(sg_irstatus.status, status);
 	}
@@ -363,6 +489,7 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	int32_t size = 0;
 	int8_t exit_code = 0;
 	uint32_t rdid_32;
+	char *rdid_str;
 	char *saved 	= NULL,
 		 *key 		= NULL,
 		 *value 	= NULL;
@@ -372,8 +499,8 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	syslog(LOG_DEBUG, "processing packet %s", payload);
 	do {
 		if (extract_keyvalue(payload, &key, &value, &saved) == 1) {
-			dict[size].key = &key[sizeof(DELIM_KEY)-2];
-			dict[size].value = (value == NULL ? NULL : &value[sizeof(DELIM_VAL)-2]);
+			dict[size].key = key+sizeof(DELIM_KEY)-2;
+			dict[size].value = (value == NULL ? NULL : value+sizeof(DELIM_VAL)-2);
 			size++;
 		} else
 			break;
@@ -384,7 +511,13 @@ int8_t sgServerToRouterConvert(char *payload, SansgridSerial *sg_serial) {
 	// Find payload type
 	atox(&datatype, match(dict, size, "dt"), 1*sizeof(uint8_t));
 	//atox(rdid, 		match(dict, size, "rdid"), 4*sizeof(uint8_t));
-	rdid_32 = atoi(match(dict, size, "rdid"));
+	rdid_str = match(dict, size, "rdid");
+	if (rdid_str == NULL) {
+		syslog(LOG_WARNING, "Couldn't find rdid in payload %s", payload);
+		rdid_32 = 0;
+	} else {
+		rdid_32 = atoi(rdid_str);
+	}
 	if (datatype == ~0x0) {
 		return -1;
 	}
@@ -573,7 +706,19 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 
 	memset(rdid, 0x0, sizeof(rdid));
 	routingTableGetBroadcast(routing_table, broadcast);
-	if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
+	if (datatype == SG_DEVSTATUS_PECKING) {
+		// Peck is a special case because the IP field of sg_serial is broadcast.
+		// So we need to grab the IP from the payload
+		memcpy(&sg_peck, sg_serial->payload, sizeof(SansgridPeck));
+		if ((rdid_32 = routingTableIPToRDID(routing_table, sg_peck.assigned_ip)) == 0) {
+			syslog(LOG_NOTICE, "No device found: %u", 
+					routingTableIPToRDID(routing_table, sg_peck.assigned_ip));
+			return -1;
+		} else {
+			wordToByte(rdid, &rdid_32, 4);
+			addIntField("rdid", rdid, 4, payload);
+		}
+	} else if (!memcmp(sg_serial->ip_addr, broadcast, IP_SIZE)) {
 		// broadcast address
 		addHexField("rdid", rdid, 4, payload);
 	} else if ((rdid_32 = routingTableIPToRDID(routing_table, sg_serial->ip_addr)) == 0) {
