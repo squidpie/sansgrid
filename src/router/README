@@ -165,3 +165,28 @@ Daemon Configuration: Modifies how the daemon runs and processes packets
     key=[SERVERKEY] [W] Changes the server key to SERVERKEY
     heartbeat=[PERIOD]
                     [W] Sets the heartbeat period
+
+
+Testing
+-------
+sansgridrouter uses the check unit testing library. To compile unit tests, type
+
+    make check
+
+This will build sgtest. Running this steps through all tests and returns any tests
+that failed. To run, type
+
+    ./sgtest
+
+The options are as follows:
+
+    ./sgtest --help
+
+  -n  --nofork               don't fork off (good for debugging segfaults
+  -v  --verbose              Be verbose (warnings)
+  -vv                        Be more verbose (notices)
+  -vvv                       Be even more verbose (info)
+  -vvvv                      Be very very verbose (debug)
+  -h, --help                 display help and exit
+
+The tests are stored under src/router/sansgridrouter/test.
