@@ -34,7 +34,7 @@ function takeSensorOffline ($rdid) {
 	$id_sensor = $row['id_sensor'];
 
 	// If we don't see this rdid, then we're done I guess.
-	if ( $id_sensor == " ")
+	if ( $id_sensor == "")
 		return;
 
 	// Log it
@@ -79,7 +79,7 @@ function sendChirpData ($rdid, $sig_id, $data) {
 
 	// Build payload
 	$payload = appendToPayload($SG['ff_del'], 	"rdid",	$rdid);
-	$payload = appendToPayload($payload, 		"dt",	"26");
+	$payload = appendToPayload($payload, 		"dt",	"20");
 	$payload = appendToPayload($payload, 		"sid", 	$sig_id);
 	$payload = appendToPayload($payload, 		"data",	$data);
 

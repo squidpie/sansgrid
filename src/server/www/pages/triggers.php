@@ -331,7 +331,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 ?>
 <html>
 <head>
-<title><? print $SG['project_title'];?></title>
+<title>Trigger - <? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
 
 <script>

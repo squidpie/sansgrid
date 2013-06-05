@@ -63,7 +63,7 @@ if ( $row['count'] == 0 ) {
 ?>
 <html>
 <head>
-<title><? print $SG['project_title'];?></title>
+<title>Pipeline - <? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
 <? print returnRefresh(); ?>
 </head>

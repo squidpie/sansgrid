@@ -102,7 +102,7 @@ $page .= "</form>";
 ?>
 <html>
 <head>
-<title><? print $SG['project_title'];?></title>
+<title>Known Sensors - <? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
 </head>
 

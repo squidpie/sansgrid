@@ -35,19 +35,19 @@ function returnLogTable () {
 		$msg  = "<table class=\"sansgrid\">\n";
 		$msg .= "<tr>\n";
 		$msg .= "<th width=\"100px\">ID</th>\n";
-		$msg .= "<th>Data</th>\n";
+		$msg .= "<th style=\"max-width: 400px; word-wrap: break-word;\">Data</th>\n";
 		$msg .= "<th width=\"200px\">Time</th>\n";
 		$msg .= "</tr>\n";
 
 		# Let's get the data...
-		$query = "SELECT * FROM log ORDER BY time DESC";
+		$query = "SELECT * FROM log ORDER BY id_log DESC";
 		$result = mysqli_query($db, $query) or die ("Error: Can't get log data.");
 
 		# ...and populate our table
 		while ( $row = mysqli_fetch_assoc($result) ) {
 			$msg .= "<tr>\n";
 			$msg .= "<td class=\"alignc\">" . $row['id_log'] . "</td>\n";
-			$msg .= "<td>" . $row['log'] . "</td>\n";
+			$msg .= "<td style=\"max-width: 400px; word-wrap: break-word;\">" . $row['log'] . "</td>\n";
 			$msg .= "<td class=\"alignc\">" . $row['time'] . "</td>\n";
 			$msg .= "</tr>\n";
 		}

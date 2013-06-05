@@ -61,13 +61,11 @@ function get_header() {
 	$msg .= "\t\t</li>\n";
 	$msg .= "\t\t<li><a href=\"#\">Tools</a>\n";
 	$msg .= "\t\t\t<ul>\n";
-	$msg .= "\t\t\t\t<li><a href=\"#\">Settings</a></li>\n";
 	$msg .= "\t\t\t\t<li><a href=\"$url/pages/triggers.php\">Triggers</a></li>\n";
 	$msg .= "\t\t\t\t<li><a href=\"#\">Admin</a>\n";
 	$msg .= "\t\t\t\t\t<ul>\n";
 	$msg .= "\t\t\t\t\t\t<li><a href=\"$url/pages/admin_server.php\">Server</a></li>\n";
 	$msg .= "\t\t\t\t\t\t<li><a href=\"$url/pages/admin_router.php\">Routers</a></li>\n";
-	$msg .= "\t\t\t\t\t\t<li><a href=\"#\">Users</a></li>\n";
 	$msg .= "\t\t\t\t\t</ul>\n";
 	if ($verify_mating == 1) 
 		$msg .= "\t\t\t\t<li><a href=\"$url/pages/mate.php\">Mate</a></li>\n";

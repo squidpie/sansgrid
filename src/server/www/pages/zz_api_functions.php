@@ -69,8 +69,13 @@ function processEyeball ($router_ip, $payload, $db) {
 		// Send Peck
 		xmitToRouter($reply, $router_ip);
 
+		$msg  = "[$router_ip] - Eyeball: Recognized sensor. ";
+		$msg .= "Squawking to commence, sending Peck first.  ";
+		$msg .= "(Sensor: $id_sensor). ";
+		addtolog($msg);
+
 		// Sleep for 1000 ms after Peck before sending Squawk. 
-		usleep(1000000);		
+		//usleep(5000000);		
 		// Sleep for 250 ms after Peck before sending Squawk. 
 		//usleep(250000);		
 
@@ -138,7 +143,7 @@ function processEyeball ($router_ip, $payload, $db) {
 				// Sleep for 250 ms after Peck before sending Sing. 
 				//usleep(250000);		
 				//usleep(1000000);		
-				usleep(5000000);		
+				//usleep(5000000);		
 
 				// Now we Sing
 				generateSing ($rdid, $id_sensor, $manid, $modnum, $sn, $router_ip, $db);
@@ -398,7 +403,9 @@ function generateSquawk ($rdid, $id_sensor, $router_ip, $db) {
 
 		$dt = "11";
 
-		$challenge = generaterandomhash($SG['skl']);
+		//$challenge = generaterandomhash($SG['skl']);
+		
+		$challenge = '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 	}
 
 	$reply = appendtopayload($reply, "dt", 		$dt);
@@ -406,9 +413,7 @@ function generateSquawk ($rdid, $id_sensor, $router_ip, $db) {
 
 
 	// log it
-	$msg  = "[$router_ip] - Eyeball: Recognized sensor. ";
-	$msg .= "Squawking to commence ";
-	$msg .= "(Sensor: $id_sensor). ";
+	$msg  = "Squawking ($dt) sent to (Sensor: $id_sensor). ";
 	if ($challenge == "") {
 		$msg .= "No challenge. ";
 	} else {
@@ -427,11 +432,11 @@ function generateSquawk ($rdid, $id_sensor, $router_ip, $db) {
 		
 		$challenge_response = countones(sgxor($server_key, $challenge));
 
-		$reply = appendtopayload($SG['ff_del'], "rdid", $rdid);
-		$reply = appendtopayload($reply, "dt", 		"__debug__");
-		$reply = appendtopayload($reply, "data", 	"$challenge_response");
-
-		xmittorouter($reply, $router_ip);
+		$msg  = "Debugging Squawk challenge:<br>";
+		$msg .= "Server key: $server_key<br>";
+		$msg .= "Challenge: $challenge<br>";
+		$msg .= "Challenge response: $challenge_response.";
+		addtolog($msg);
 	}
 
 } // End generatesquawk()
@@ -825,12 +830,40 @@ function dropAndForgetSensor($router_ip, $payload, $db) {
 	$rdid 	= $payload['rdid'];
 	$data 	= strtolower($payload['data']);
 
-	// Get the $id_sensor that's tied to $rdid
+	// If the sensor wishes to be forgotten, we have to first identify which
+	// sensor it is.  Since we identify our sensors via $rdid, and $rdid is 
+	// stored either in the 'sensor' database or the 'pipeline', we have to 
+	// check both tables to see if we can find $rdid.
+
+	// Get the $id_sensor that's tied to $rdid from 'sensor'
 	$query  = "SELECT id_sensor FROM sensor WHERE rdid='$rdid'";
 	$result = mysqli_query($db, $query) or die ("Couldn't execute query dafs1.");
 	$row = mysqli_fetch_assoc($result);
 
 	$id_sensor = $row['id_sensor'];
+
+	// If we didn't get an $id_sensor from 'sensor', then let's get 'pipeline'
+	// a try. 
+	if ($id_sensor == "") {
+		// Get the $id_sensor that's tied to $rdid from 'sensor'
+		$query  = "SELECT id_sensor FROM pipeline WHERE rdid='$rdid'";
+		$result = mysqli_query($db, $query) 
+				or die ("Couldn't execute query dafs2.");
+		$row = mysqli_fetch_assoc($result);
+
+		$id_sensor = $row['id_sensor'];
+	}
+
+	
+	// If we STILL don't have an id_sensor then something's poopie. 
+	if ($id_sensor == "") {
+		$msg  = "Attempting to drop sensor by rdid: $rdid, but no sensor ";
+		$msg .= "found.  Sadly quitting.";
+
+		addtolog($msg);
+
+		return;
+	}
 
 	// Delete the sensor from the database. 
 	deleteSensorByID($id_sensor);

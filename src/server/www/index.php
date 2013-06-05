@@ -130,20 +130,25 @@ while ($row = mysqli_fetch_assoc($result)) {
 			$page .= "\t<td width=\"6em\" style=\"text-align:center;\">\n";
 
 
-			// The 'Send' button transmits information regarding the id_sensor,
-			// the id_io, and the class (analog or digital).  This is used to
-			// determine where to send the data (id_sensor, id_io) as well as
-			// which type of data we're processing (analog = textbox, digital =
-			// radio buttons). 
-			$page .= "\t\t<button type=\"submit\" "; 
-			// Analog
-			if ($class == 1 ) {
-				$page .= 	"value=\"an-$id_sensor-$id_io\" ";
-			// Digital 
+			if ($status != "stale") {
+				// The 'Send' button transmits information regarding the 
+				// id_sensor, the id_io, and the class (analog or digital).  This 
+				// is used to determine where to send the data (id_sensor, id_io) 
+				// as well as which type of data we're processing 
+				// (analog = textbox, digital = radio buttons). 
+				$page .= "\t\t<button type=\"submit\" "; 
+				// Analog
+				if ($class == 1 ) {
+					$page .= 	"value=\"an-$id_sensor-$id_io\" ";
+				// Digital 
+				} else {
+					$page .= 	"value=\"di-$id_sensor-$id_io\" ";
+				}
+				$page .= 	"name=\"send\">Send</button>\n";
+
 			} else {
-				$page .= 	"value=\"di-$id_sensor-$id_io\" ";
+				$page .= 	"<i>(stale)</i>\n";
 			}
-			$page .= 	"name=\"send\">Send</button>\n";
 
 			$page .= "\t</td>\n";
 		}
@@ -199,7 +204,8 @@ $page .= "</form>";
 <head>
 <title><? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
-<? print returnRefresh(); ?>
+<? //print returnRefresh(); ?>
+<meta http-equiv="refresh" content="5">
 </head>
 
 <body>

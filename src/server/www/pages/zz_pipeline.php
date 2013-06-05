@@ -46,14 +46,16 @@ function cleanPipeline() {
 
 	// Find out who's late based on the 'maxtime' settings in config.php
 	foreach ($SG['maxtime'] as $latest_tx => $maxtime) {
-		$query  = "SELECT id_sensor FROM pipeline ";
+		$query  = "SELECT * FROM pipeline ";
 		$query .= "WHERE last_update < DATE_SUB(NOW(), INTERVAL $maxtime second) ";
 		$query .= "AND latest_tx='$latest_tx'";
 		$result = mysqli_query($db, $query) 
 			or die ("Error: Can't execute query pl3 ($latest_tx).");
 
 		while ($row = mysqli_fetch_assoc($result)) {
-			$id_sensor = $row['id_sensor'];
+			$id_sensor 	= $row['id_sensor'];
+			$rdid 		= $row['rdid'];
+			$router_ip 	= $row['router_ip'];
 
 			// Remove sensor I/O from 'io' table
 			// !!!!!!!!!!!!!! THIS ISN'T DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
@@ -68,6 +70,16 @@ function cleanPipeline() {
 			$query  = "DELETE FROM pipeline WHERE id_sensor='$id_sensor' ";
 			mysqli_query($db, $query) 
 				or die ("Error: Can't execute query pl5 ($latest_tx).");
+
+			// Send the "disconnect sensor from network" command
+			$reply = appendToPayload($SG['ff_del'], "rdid", 	$rdid);
+			$reply = appendToPayload($reply, 		"dt", 		"25");
+			$reply = appendToPayload($reply, 		"data", 	"");
+
+			xmitToRouter($reply, $router_ip);
+
+			$msg = "Sensor $id_sensor has expired from pipeline.";
+			addToLog($msg);
 
 		}
 	}

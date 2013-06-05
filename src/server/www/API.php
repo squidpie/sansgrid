@@ -24,10 +24,13 @@ if ( ! isset($_POST['payload']) ) {
 	$msg = "[$router_ip] - Missing payload. Terminated connection.";
 	addToLog($msg);
 	die ("Missing payload"); 
+
 // DEBUGGING 
 } else {
-	$msg = "DEBUG:<br>" . debugSplitting($_POST['payload']);
-	addToLog($msg);
+	if ( $SG['debug'] == true ) {
+		$msg = "DEBUG:<br>" . debugSplitting($_POST['payload']);
+		addToLog($msg);
+	}
 }
 
 $ff_del = $SG['ff_del'];
@@ -83,7 +86,7 @@ if (! array_key_exists("dt", $data) ) {
 // We're done parsing out the data.  Now we look at our data type and run
 // the appropriate function for that data type. 
 switch ( hexdec($data["dt"]) ) {
-	case 0:
+	case 235:	// 234 = 0xeb		
 		processEyeball($router_ip, $data, $db);
 		break;
 	case 7:

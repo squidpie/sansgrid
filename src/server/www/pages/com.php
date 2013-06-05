@@ -62,7 +62,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 	
 	$man_list .= "<tr>\n\t<td style=\"text-align:center;\">";
-	$man_list .= $manid;
+	$man_list .= cleanZeroes($manid);
 	$man_list .= "</td>\n\t<td>";
 	$man_list .= "<input type=\"text\" name=\"name[$id_com]\" value=\"$name\" size=\"30\" class=\"sgtext\">";
 	$man_list .= "<button type=\"submit\" "; 
@@ -80,7 +80,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 ?>
 <html>
 <head>
-<title><? print $SG['project_title'];?></title>
+<title>Manufacturer Compendium<? print $SG['project_title'];?></title>
 <link rel="stylesheet" type="text/css" href="<? print $SG['project_url'];?>/style.css"> 
 </head>
 
