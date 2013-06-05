@@ -19,7 +19,7 @@
  *
  */
 
-#define DUE
+//#define DUE
 
 #include <Arduino.h>
 #include <stdio.h>
@@ -72,6 +72,7 @@ SansgridRadio sgRadio;
 	unsigned int byteptr;
 #endif
 
+// Spi flags and varaibles
 int rx_pos;
 int tx_pos;
 volatile bool process_flag;
@@ -83,9 +84,11 @@ uint8_t cmd;
 
 unsigned int pos = 0;
 
+// Spi Read/Write Buffers
 uint8_t spi_rx[SPI_MAX_BUFFER];
 uint8_t spi_tx[SPI_MAX_BUFFER];
 
+// Simple Support function that returns current free RAM
 int freeRam( void ){
     // Value of start of Stack and current end of Stack
     extern int __heap_start, *__brkval;
@@ -154,7 +157,7 @@ void setup() {
 }
 
 void loop() {
-	// Check for spi errors and resolve
+	// Check for spi errors and resest all Spi Flags
 	if (spi_err) {
 		digitalWrite(SLAVE_READY, HIGH);
 		process_flag = false;
@@ -166,18 +169,34 @@ void loop() {
 		rx_pos = 0;
 	}
 	
+	// Check if timeout_counter has rolled over, indicating that the Radio is no longer 
+	// on the SansGrid Network
+	// Generate and send a NETWORK DROPS SENSOR packet to the sensor
+	if (sgRadio.timeout()) {
+		memcpy(spi_tx, &SpiData, sizeof(SpiData));
+		spi_rw = 0;
+		spi_active = true;
+		// Initiate Spi Slave write
+		#ifdef DUE
+			spi_outbyte = spi_tx[0];
+		#endif
+		digitalWrite(SLAVE_READY, LOW);
+	}
+	
 	// Check for completion of Spi transfer, process packet and send out over
 	// radio
 	if (process_flag) {
 		cmd = 0;
 		spi_rw = 1;
 		pos = 0;
+		// Resolve completed Spi writes
 		if (spi_active && (tx_pos > NUM_BYTES)) {
 			spi_active = false;
 			tx_pos = 0;
 			memset(spi_tx, 0, SPI_MAX_BUFFER);
 			digitalWrite(SLAVE_READY, HIGH);	
 		}
+		//Resolve completed Spi reads
 		else {
 			rx_pos = 0;
 			memcpy(&SpiData, spi_rx, sizeof(SpiData));
@@ -201,21 +220,23 @@ void loop() {
 			// Dump invalid packets, such as debug messages
 			byte head = Serial.peek();
 			if (head != 0x00 && head != 0x01) {
-				// flush  input and return to loop
+				// flush serial buffer input and return to loop
 				while (Serial.available() > 0) { Serial.read(); }
 				return;
 			}
 
 			else if (!sgRadio.read()) {
-				//Serial.println("Throwing out a fragment");
 				// This packet is not addressed to this XBee, disregard
+				// Serial.println("Throwing out a fragment");
 				return;
 			}
       
 			// process packet as fragment, if fragment 2, send over spi to host
 			// device
 			if(sgRadio.defrag()) {
+				// Check that packet should be sent to sensor
 				if (sgRadio.processPacket()) {
+					SpiData.control = SG_SERIAL_CTRL_VALID_DATA;
 					memcpy(spi_tx,&SpiData,sizeof(SpiData));
 					spi_rw = 0;
 					spi_active = true;
@@ -225,8 +246,8 @@ void loop() {
 					#endif
 					digitalWrite(SLAVE_READY, LOW);
 				}
+				// Respond to HEARTBEAT without waking the sensor
 				else if (SpiData.payload[0] == SG_HEARTBEAT_SENSOR_TO_ROUTER) {
-					//Serial.println("Responding to Heartbeat");
 					sgRadio.processSpi();
 					sgRadio.loadFrame(0);
 					sgRadio.write();

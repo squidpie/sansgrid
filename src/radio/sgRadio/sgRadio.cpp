@@ -95,11 +95,6 @@ void SansgridRadio::processSpi() {
 				// Set Destination to Broadcast
 				// store IP at device key for XBsn
 				index = sn_table->snipInsertIp((payload + PECK_A_IP), (payload + PECK_SN));
-				Radio->print("IpInsertion: ");
-				Radio->println(index);
-				Radio->write(0xFE);
-				Radio->write((payload + PECK_SN), XB_SN_LN);
-				Radio->write(0xFE);
 			}
 			memset(output_sn, 0, XB_SN_LN);
 			break;
@@ -175,13 +170,14 @@ bool SansgridRadio::defrag() {
 bool SansgridRadio::processPacket() {
 	bool send_packet = true;
 	int index;
+	timeout_counter = 1;			
 	switch (packet_buffer[0]) {
 		case SG_HEARTBEAT_ROUTER_TO_SENSOR:
-			//Radio->println("Received Pulse");
 			send_packet = false;
-			memset(packet_buffer, 0, PAYLOAD_SIZE);
-			packet_buffer[0] = SG_HEARTBEAT_SENSOR_TO_ROUTER;
-			timeout = 1;
+			if (on_network) {
+				memset(packet_buffer, 0, PAYLOAD_SIZE);
+				packet_buffer[0] = SG_HEARTBEAT_SENSOR_TO_ROUTER;
+			}
 			break;
 		case SG_HATCH:
 			send_packet = false;
@@ -215,17 +211,11 @@ bool SansgridRadio::processPacket() {
 		case SG_EYEBALL:
 			if(MODE(ROUTER)) {
 				index = sn_table->snipInsertSn(origin_xbsn, (packet_buffer + EYEBALL_SN));
-				Radio->print("SnInsertion: ");
-				Radio->println(index);
-				Radio->write(0xFE);
-				Radio->write((packet_buffer + EYEBALL_SN), XB_SN_LN);
-				Radio->write(0xFE);
 			}
 			memset(ip, 0xFF, IP_LENGTH);
 			break;
 		case SG_CHIRP_NETWORK_DISCONNECTS_SENSOR:
 			if (MODE(SENSOR)) {
-				Radio->print("Off network");
 				on_network = false;
 				memcpy(ip, router_ip, IP_LENGTH);
 				memset(router_ip, 0, IP_LENGTH);
@@ -236,13 +226,13 @@ bool SansgridRadio::processPacket() {
 			break;
 		case SG_CHIRP_SENSOR_DISCONNECT:
 			if (MODE(ROUTER)) {
+				sn_table->snipIpFromSn(ip, origin_xbsn);
 				sn_table->snipRemove(origin_xbsn);
 			}
 			else {
 				send_packet = false;
 			}
-		case 0x27:
-			//drop sensor
+			break;
 		default:
 			if (MODE(ROUTER)) {
 				sn_table->snipIpFromSn(ip, origin_xbsn);
@@ -252,7 +242,6 @@ bool SansgridRadio::processPacket() {
 			}
 			break;
 	}
-	
 	SpiData->control = SG_SERIAL_CTRL_VALID_DATA;
 	memcpy(SpiData->payload, packet_buffer, SG_PYLD_SZ);
 	return send_packet;
@@ -277,6 +266,21 @@ void SansgridRadio::loadFrame(int frame) {
 
 }
 
+bool SansgridRadio::timeout(void) {
+	bool timeout_flag = false;
+	if (!on_network || MODE(ROUTER)) return timeout_flag;
+	timeout_counter++;
+	if (timeout_counter == 0) {
+		timeout_flag = true;
+		SpiData->control = SG_SERIAL_CTRL_VALID_DATA;
+		memcpy(ip, router_ip, IP_LENGTH);
+		memset(router_ip, 0, IP_LENGTH);
+		SpiData->payload[0] = SG_CHIRP_NETWORK_DISCONNECTS_SENSOR;
+		on_network = false;
+	}
+	return timeout_flag;
+}
+
 void SansgridRadio::init(HardwareSerial * xbee_link, SansgridSerial * serial_link, SnIpTable * table_link) {
 	Radio = xbee_link;
 	sn_table = table_link;
@@ -299,7 +303,7 @@ void SansgridRadio::init(HardwareSerial * xbee_link, SansgridSerial * serial_lin
 	
 	on_network = false;
 	next = 0;
-	timeout = 1;	
+	timeout_counter = 1;	
 	
 	return;
 }
@@ -353,19 +357,18 @@ int SansgridRadio::read() {
 void SansgridRadio::set_mode(RadioMode mode) {
 	router_mode = mode;
 }
-/*
-void write_unlock() {
-	write_lock = false;
-}
-*/
+
+
+// Write pending packet to the radio
+// Each write REQUIRES a 500ms delay between packets.
+// To meet this requirement, delay 250ms at head and tail of function
 void SansgridRadio::write() {
-	//while (write_lock) {}
+	delay(250);
 	Radio->write(pending_packet,MAX_XB_PYLD);
-	//write_lock = true;
-	delay(500);
-	//write_clear.after(500, write_unlock);
+	delay(250);
 }
 
+// XBee service function to enter AT Mode and issue provided command
 void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 	int i = 0;
 	while (Radio->available() > 0) { Radio->read();}
@@ -385,25 +388,22 @@ void SansgridRadio::atCmd(uint8_t * result,const char * cmd) {
 	}
 	Radio->println();
 	i = 0;
-	
 	while(Radio->available() > 0) {
 		Radio->read();
 	}
-	
-		Radio->println(cmd);
-
-		delay(1200);
-		uint8_t buffer[8];
-		i = 0;
-		while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
-		  buffer[i] = Radio->read();
-			i++;
-			delay(2);
-		}	
-		Radio->println();
-		delay(100);
-		Radio->println("ATCN");
-		delay(1000);
+	Radio->println(cmd);
+	delay(1200);
+	uint8_t buffer[8];
+	i = 0;
+	while(Radio->available() > 0 && i < 8 ){//PACKET_SZ) {
+	  buffer[i] = Radio->read();
+		i++;
+		delay(2);
+	}	
+	Radio->println();
+	delay(100);
+	Radio->println("ATCN");
+	delay(1000);
 	memcpy(result,&buffer[0],8);
 }
 

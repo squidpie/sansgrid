@@ -45,11 +45,11 @@ void SnIpTable::snipRemove(uint8_t * sn) {
 }
 
 void SnIpTable::snipExpand() {
-	//int new_size = size * SNIPEXPANDFACTOR;
-	//SnIpEntry * expanded = new SnIpEntry[new_size];
-	//memcpy(table,expanded,(size*sizeof(SnIpEntry)));
-	//delete table;
-	//table = expanded;
+	/*int new_size = size * SNIPEXPANDFACTOR;
+	SnIpEntry * expanded = new SnIpEntry[new_size];
+	memcpy(table,expanded,(size*sizeof(SnIpEntry)));
+	delete table;
+	table = expanded;*/
 }
 
 int SnIpTable::snipFindSn(uint8_t * sn){
@@ -63,7 +63,7 @@ int SnIpTable::snipFindSn(uint8_t * sn){
 }
 
 int SnIpTable::snipFindDevSn(uint8_t * dev) {
-int index;
+	int index;
 	for (index = 0; index < size; index++) {
 		if (!memcmp(table[index].dev_sn, dev, SNIP_XB_WIDTH)) {
 			return index;
@@ -149,8 +149,16 @@ int SnIpTable::snipGetIndex() {
 }
 
 int SnIpTable::snipInsertSn(uint8_t * sn, uint8_t * dev){
-	int insert_pos = snipGetIndex();
-	if (insert_pos < 0) return -1;
+	int insert_pos = snipFindDevSn(dev);
+	if (insert_pos < 0) {
+		insert_pos = snipGetIndex();
+		if (insert_pos < 0) return -1;
+	}
+	else {
+		memset(table[insert_pos].sn, 0, SNIP_XB_WIDTH);
+		memset(table[insert_pos].ip, 0, SNIP_IP_WIDTH);
+		memset(table[insert_pos].dev_sn, 0, SNIP_XB_WIDTH);
+	}
 	snipInsert(sn, insert_pos, SN);
 	snipInsert(dev, insert_pos, DEV);
 	return insert_pos;
