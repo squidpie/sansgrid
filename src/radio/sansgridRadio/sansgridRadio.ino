@@ -244,6 +244,7 @@ void loop() {
 					#ifdef DUE
 						spi_outbyte = spi_tx[0];
 					#endif
+					Serial.write(spi_tx, NUM_BYTES);
 					digitalWrite(SLAVE_READY, LOW);
 				}
 				// Respond to HEARTBEAT without waking the sensor

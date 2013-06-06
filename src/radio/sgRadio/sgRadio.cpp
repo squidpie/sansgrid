@@ -337,13 +337,15 @@ void SansgridRadio::setXBsn() {
 }
 
 int SansgridRadio::read() {
+	uint8_t ack[9];
 	int i = 0;
-  //while(Radio->available() > 0 && i < MAX_XB_PYLD) {
-  while(Radio->available() || i < MAX_XB_PYLD) {
-	delay(2);
-	incoming_packet[i] = Radio->read();
-	i++;
-  }
+	//while(Radio->available() > 0 && i < MAX_XB_PYLD) {
+	while(Radio->available() || i < MAX_XB_PYLD) {
+		delay(2);
+		incoming_packet[i] = Radio->read();
+		i++;
+	}
+	
 	if (MODE(SENSOR)) {
 		uint8_t brdcst[XB_SN_LN];
 		memset(brdcst,0x0,XB_SN_LN);
@@ -351,6 +353,10 @@ int SansgridRadio::read() {
 			return 0;
 		}
 	}
+	ack[0] = ACK;
+	memcpy((ack + 1),(incoming_packet + 1), XB_SN_LN)
+	Radio->write(ack, XB_SN_LN + 1);
+	delay(500);
 	return i;
 }
 
@@ -363,9 +369,37 @@ void SansgridRadio::set_mode(RadioMode mode) {
 // Each write REQUIRES a 500ms delay between packets.
 // To meet this requirement, delay 250ms at head and tail of function
 void SansgridRadio::write() {
-	delay(250);
-	Radio->write(pending_packet,MAX_XB_PYLD);
-	delay(250);
+	uint8_t ack[SG_ACK_SZ];
+	bool ack_rx = false;
+	int i = 0;
+	int wait = 0;
+	//delay(250);
+	//Radio->write(pending_packet,MAX_XB_PYLD);
+	//delay(250);
+	// Transmit 5 times or until ACK frame is received
+	for (int attempts = 0; attempts < 5 && !ack_rx; attempts++) {
+		Radio->write(pending_packet, MAX_XB_PYLD);
+		delay(500);
+		Radio->println("sent fragment");
+		// wait for ACK packet returned
+		do{
+			if (Radio->peek() != ACK) {
+				while(Radio->available() > 0) {
+					Radio->read();
+				}
+			}
+			else if (Radio->peek() == ACK) {
+				while( (Radio->available() > 0) && (i < SG_ACK_SZ)) {
+					ack[i] = Radio->read();
+				}
+				if (MODE(SENSOR) && memcmp((ack + 1), xbsn, XB_SN_LN)) break; 
+				ack_rx = true;
+				break;
+			}
+			delay(250);
+			wait = wait + 1;
+		} while ((wait < 11) && !ack_rx);
+	}
 }
 
 // XBee service function to enter AT Mode and issue provided command
