@@ -185,7 +185,7 @@ void deviceAuthDestroy(DeviceAuth *dev_auth) {
  * If the general payload is not a valid payload, return 0 \n
  * On error, return -1
  */
-int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
+int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint32_t gdt) {
 	// Check whether a general payload is valid input from device
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthIsPayloadTypeValid");
@@ -197,15 +197,15 @@ int deviceAuthIsGeneralPayloadTypeValid(DeviceAuth *dev_auth, uint8_t gdt) {
 		return -1;
 	} else if (dev_auth->strictness == DEV_AUTH_LOOSE) {
 		// only valid if device has eyeballed
-		if (dev_auth->auth_place != SG_DEVSTATUS_NULL) {
+		if ((dev_auth->auth_place & SG_DEVSTATUS_NULL) == 0) {
 			return 1;
 		} else {
 			return 0;
 		}
 	} else if ((dev_auth->next_expected_packet == SG_DEVSTATUS_LEASED) &&
-			(gdt == SG_DEVSTATUS_CHIRPING || gdt == SG_DEVSTATUS_HEARTBEAT)) {
+			((gdt & SG_DEVSTATUS_CHIRPING) > 0 || (gdt & SG_DEVSTATUS_HEARTBEAT) > 0)) {
 		return 1;
-	} else if (dev_auth->next_expected_packet == gdt) {
+	} else if ((dev_auth->next_expected_packet & gdt) > 0) {
 		return 1;
 	} else {
 		return 0;
@@ -229,7 +229,7 @@ int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
 	// return 0 if it is invalid
 	// return -1 on error
 	
-	uint8_t gdt;
+	uint32_t gdt;
 	if (global_strictness == 0)
 		return 1;
 	if (devauthAssertValid(dev_auth) == -1) {
@@ -250,7 +250,7 @@ int deviceAuthIsSGPayloadTypeValid(DeviceAuth *dev_auth, uint8_t dt) {
  * 0 on success \n
  * -1 on error
  */
-int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
+int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint32_t gdt) {
 	// Set the next expected payload 
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthSetNextGeneralPayload");
@@ -265,7 +265,7 @@ int deviceAuthSetNextGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
 /**
  * \brief Get the next expected general payload type
  */
-uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
+enum SansgridDeviceStatusEnum deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
 	// Get the next expected payload
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthSetNextGeneralPayload");
@@ -279,7 +279,7 @@ uint8_t deviceAuthGetNextGeneralPayload(DeviceAuth *dev_auth) {
 /**
  * \brief Get the current general payload for device
  */
-uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
+enum SansgridDeviceStatusEnum deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
 	// Get the current general payload
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthGetCurrentGeneralPayload");
@@ -293,7 +293,7 @@ uint8_t deviceAuthGetCurrentGeneralPayload(DeviceAuth *dev_auth) {
 /**
  * \brief Set the current general payload for device
  */
-int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, uint8_t gdt) {
+int32_t deviceAuthSetCurrentGeneralPayload(DeviceAuth *dev_auth, enum SansgridDeviceStatusEnum gdt) {
 	// Set the current general payload
 	if (devauthAssertValid(dev_auth) == -1) {
 		syslog(LOG_INFO, "NULL in deviceAuthGetCurrentGeneralPayload");

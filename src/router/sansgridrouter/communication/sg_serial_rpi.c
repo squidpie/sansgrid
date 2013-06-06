@@ -275,11 +275,13 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	// Transmit/Receive serialdata, size of packet stored in size
 	// Code from
 	// https://git.drogon.net/?p=wiringPi;a=blob;f=examples/isr.c;h=2bef54af13a60b95ad87fbfc67d2961722eb016e;hb=HEAD
+	int i;
 	SansgridSerial *sg_serial_out = NULL;
 	char buffer[sizeof(SansgridSerial)+1];
 	int fd;
 	// Set when we're sending data
 	int sending = 0;
+	int exit_code = 0;
 	*size = sizeof(SansgridSerial);
 	syslog(LOG_INFO, "Waiting for data over serial");
 	if (!sem_initd) {
@@ -331,20 +333,16 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 	spiTransfer(buffer, *size);
 	close(fd);
 
-
-	pthread_mutex_unlock(&transfer_lock);
-	// UNLOCKED
-
-
 	// (debug) Print what we got 
 	printf("Receiving:\n");
 	spiPrintSgSerial(buffer, *size);
-
 
 	memcpy(*sg_serial, buffer, *size);
 	if (buffer[0] == SG_SERIAL_CTRL_VALID_DATA) {
 		queueEnqueue(dispatch, sgSerialCP(*sg_serial));
 		*size = sizeof(SansgridSerial);
+		// Radio can't get spammed. Throttle sending
+		exit_code = 0;
 	} else {
 		// No need for sg_serial anymore
 		//free(sg_serial);
@@ -353,13 +351,23 @@ int8_t sgSerialReceive(SansgridSerial **sg_serial, uint32_t *size) {
 				&& sending == 0) {
 			// Didn't send valid data, and didn't get valid data
 			syslog(LOG_WARNING, "Bad data on SPI");
-			sleep(1);
-			return -1;
+			exit_code = -1;
 		}
 	}
 
+	for (i=0; i<3; i++) {
+		sleep(1);
+		if (!digitalRead(SLAVE_INT_PIN))
+			break;
+	}
 
-	return 0;
+
+	pthread_mutex_unlock(&transfer_lock);
+	// UNLOCKED
+
+
+
+	return exit_code;
 }
 
 

@@ -643,7 +643,6 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		case SG_SQUAWK_SERVER_NOCHALLENGE_SENSOR:
 			// Server Responds without challenge to sensor
-			// TODO: Confirm datatype addition
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
@@ -652,7 +651,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			// Sensor respond to server challenge,
 			// no sensor challenge needed
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
-					SG_DEVSTATUS_SQUAWKING);
+					SG_DEVSTATUS_SQUAWKING | SG_DEVSTATUS_NESTING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_SQUAWK_SENSOR_RESPOND_REQUIRE_CHALLENGE:
@@ -692,7 +691,7 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routingTableSetNextExpectedPacket(routing_table, sg_serial->ip_addr,
 					SG_DEVSTATUS_SQUAWKING);
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
-			routerFreeDevice(routing_table, sg_serial->ip_addr);
+			//routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
 			// error

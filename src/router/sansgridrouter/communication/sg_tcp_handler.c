@@ -702,7 +702,7 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 	}
 	payload[0] = '\0';
 	uint8_t payload_type = sg_serial->payload[0];
-	uint8_t datatype = sgPayloadGetType(payload_type);
+	enum SansgridDeviceStatusEnum datatype = sgPayloadGetType(payload_type);
 
 	memset(rdid, 0x0, sizeof(rdid));
 	routingTableGetBroadcast(routing_table, broadcast);
@@ -788,7 +788,6 @@ int sgRouterToServerConvert(SansgridSerial *sg_serial, char *payload) {
 			addHexField("data", sg_squawk.data, 64, payload);
 			break;
 		case SG_DEVSTATUS_HEARTBEAT:
-		case 0xfd:
 			// Heartbeat
 			memcpy(&sg_irstatus, sg_serial->payload, sizeof(SansgridIRStatus));
 			addCharField("status", sg_irstatus.status, sizeof(sg_irstatus.status), payload);
