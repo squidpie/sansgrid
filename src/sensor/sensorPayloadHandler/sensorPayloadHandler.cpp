@@ -50,6 +50,12 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
             // Parse SansgridSerial into a peck payload
             // struct
             parsePeck( sg_serial , &sg_peck );
+			// Check to see if payload was meant for this sensor
+			for( int i = 0 ; i < MANID ; i++){
+				if( sg_config->manid[i] != sg_peck.manid[i] ){
+					break;
+				}
+			}
 			// Check to see if router IP is the same as stored
 			// if it is not then set forget flag to notify server
 			// in a squawk that sensor has forgotten it, please
@@ -60,9 +66,8 @@ void payloadHandler( SensorConfig *sg_config , SansgridSerial *sg_serial){
 				}
 			}
 			// Set forget if count doesn't match IP_ADDRESS
-			if( val != SERVER_ID ){
+			if( val != SERVER_ID )
 				sg_config->forget = true;
-			}
 			else
 			    sg_config->forget = false;
 			Serial.println( sg_config->forget );
