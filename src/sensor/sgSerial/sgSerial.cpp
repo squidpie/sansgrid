@@ -124,8 +124,6 @@ uint8_t sgSerialReceive(SansgridSerial *sg_serial, int size){
     }
 	// Place Slave Select High again (Chip Enable, Chip Select)
 	digitalWrite( SLAVE_SELECT , HIGH );
-	/*for( int i = 0 ; i < NUM_BYTES ; i++ )
-	    Serial.println( data_in[i] , HEX );*/
     // Close SPI bus - NOT USED
     //sgSerialClose();
 	// Copy data from array into SansgridSerial structure

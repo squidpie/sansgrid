@@ -1,5 +1,5 @@
- /* SPI Master Test Code
- * Specific to the Arduino DUE Platform
+ /* Sensor 1 Code
+ * Specific to the Arduino UNO Platform
  *
  * Copyright (C) 2013 SansGrid
  * 
@@ -39,8 +39,8 @@ SensorConfig sg_config;
 SansgridSerial sg_serial;
 boolean Send = false;
 TKThermistor therm(I0);
-float F, Fsaved;
-char * temperature;
+double F;
+char temperature[20]; 
 int32_t time = 0;
 
 void setup(){
@@ -85,13 +85,13 @@ void setup(){
     // and uncomment all sg_config.<fly,sing,squawk,Chirp,challenge...>
     // either false or true.
     //sg_config.mate = false;
-    //sg_config.nest = true;
+    sg_config.nest = true;
     //sg_config.fly = true;
     //sg_config.sing = true;
     //sg_config.mock = true; 
     //sg_config.squawk = true;
     //sg_config.chirp = true;
-    //sg_config.nokey = true;
+    sg_config.nokey = true;
     //sg_config.challenge = true;
     //sg_config.received = true;
     //sg_serial.payload[0] = (uint8_t) 0xF0;
@@ -103,20 +103,17 @@ void loop(){
     // Attempt to connect to network untill nested and
     // nest flag is true.
     while( sg_config.nest == false ){
-        //Serial.println(freeRam());
+        Serial.println(freeRam());
         sensorConnect( &sg_config , &sg_serial );  
     }
-    // DEBUG message
-    Serial.println( "Connected to Network" );
+    Serial.println( "Connected" );
     // Signal Input Code goes here in this loop
     while(sg_config.nest == true ){  
         // Received packet over SPI
         if( sg_config.received == true ){
+            Serial.println( freeRam() );
             // Received Packet
-            //Serial.println( "RECEIVING SPI PACKET" );
             sgSerialReceive( &sg_serial , 1 );
-            // Test code
-            Serial.println( sg_serial.payload[0] , HEX );
             // Process packet to verify Chirp received
             payloadHandlerB( &sg_config , &sg_serial);
             //Serial.println( "setting received to false");
@@ -124,7 +121,6 @@ void loop(){
             sg_config.received = false;
             // Process received Chirp packet
             if( sg_config.chirp == true ){
-                Serial.println( "Chirp Received" );
                 // Received Chirp from Sensor
                 // Need to process payload to perform action
                 // on Signal. Put code in here.
@@ -144,7 +140,8 @@ void loop(){
         // Code to Send Chirp
         if(  time == 0 ){
             F = therm.getFahrenheit();
-            temperature = floatToString(F);
+            memset( temperature , 0 , 10 );
+            floatToString( F , temperature );
             Serial.println( temperature );
             // Set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
@@ -161,7 +158,7 @@ void loop(){
             for( int i = 0 ; i < 6; i++ )
                 sg_serial.payload[i + 2] = temperature[i];
             // Transmit Payload over SPI  
-            //sgSerialSend( &sg_serial , 1 ); 
+            sgSerialSend( &sg_serial , 1 );
         }// End of Send Chirp*/
         time++;
         if( time >= 3000000 )
@@ -173,23 +170,17 @@ void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, set received flag to initiate
     // processing SPI packet
-    //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
-    // Display value of received 
-    //Serial.println( "Received flag set to true" );
 }
 
-char*  floatToString( float num ){
+void floatToString( float num, char buffer[20]){
    int whole_part = num;
    int digit = 0, reminder = 0;
    int log_value = log10(num), index = log_value;
    long wt = 0;
 
-   // String containg result
-   char* str = new char[20];
-
    //Initilise stirng to zero
-   memset(str, 0 ,20);
+   memset(buffer, 0 ,20);
 
    //Extract the whole part from float num
    for(int  i = 1 ; i < log_value + 2 ; i++){
@@ -198,13 +189,13 @@ char*  floatToString( float num ){
        digit = (reminder - digit) / (wt/10);
 
        //Store digit in string
-       str[index--] = digit + 48;
+       buffer[index--] = digit + 48;
        if (index == -1)
           break;    
    }
 
    index = log_value + 1;
-   str[index] = '.';
+   buffer[index] = '.';
 
    float fraction_part  = num - whole_part;
    float tmp1 = fraction_part,  tmp =0;
@@ -216,9 +207,8 @@ char*  floatToString( float num ){
       digit = tmp;
 
       //Store digit in string
-      str[++index] = digit +48;           // ASCII value of digit  = digit + 48
+      buffer[++index] = digit +48;           // ASCII value of digit  = digit + 48
       tmp1 = tmp - digit;
-   }    
-   return str;
+   }
 }
 
