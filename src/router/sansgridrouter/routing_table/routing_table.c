@@ -198,7 +198,9 @@ static uint32_t locationToTablePtr(uint8_t ip_addr[IP_SIZE], uint8_t base[IP_SIZ
 		offset[i] = ip_addr[i] - base[i];
 	byteToWord(location, offset, IP_SIZE*sizeof(uint8_t));
 
-	index = location[IP_SIZE/4-1] % ROUTING_ARRAYSIZE;
+	index = location[IP_SIZE/4-1];
+	if (index >= ROUTING_ARRAYSIZE)
+		return 0;
 
 	return index;
 }

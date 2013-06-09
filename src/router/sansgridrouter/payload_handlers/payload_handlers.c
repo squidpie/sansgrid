@@ -419,6 +419,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_PECK_MATE:
+		case SG_PECK_SERVER_WAIT:
 			// Sensor Not Recognized;
 			// Server will mate
 			// Next packet: Mate
