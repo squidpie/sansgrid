@@ -434,6 +434,10 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		case SG_PECK_SENSOR_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Sensor refuses mate
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			routerFreeDevice(routing_table,
+					sg_peck->assigned_ip);
+			break;
 		default:
 			// fallthrough/error
 			syslog(LOG_WARNING, "Peck: Recognition is not recognized: %x\n",
