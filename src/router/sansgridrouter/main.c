@@ -726,8 +726,10 @@ int main(int argc, char *argv[]) {
 				if (long_options[option_index].flag != 0)
 					break;
 				if (!strcmp(long_options[option_index].name, "version")) {
-					printf("Not implemented yet!\n");
-					exit(EXIT_FAILURE);
+					printf("sansgridrouter (SansGrid) 1.00\n\n");
+					printf("This is free software: you are free to change and redistribute it.\n");
+					printf("There is NO WARRANTY, to the extent permitted by law.\n");
+					exit(EXIT_SUCCESS);
 				}
 				printf("option %s ", long_options[option_index].name);
 				if (optarg)
