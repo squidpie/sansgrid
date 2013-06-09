@@ -79,6 +79,10 @@
 #define FRAG_F0  		9
 #define FRAG_F1  		50
 
+#define SG_ACK_SZ 9
+#define ACK 0xAC
+
+
 /*! RadioMode Enum
 	Marker for Radio in Sensor or Router mode
 */

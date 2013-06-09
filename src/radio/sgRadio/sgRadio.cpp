@@ -141,11 +141,18 @@ void SansgridRadio::processSpi() {
 
 bool SansgridRadio::defrag() {
 	bool rv = false;
+	int insert_pos = next;
 	if (incoming_packet[PKT_FRAME] == 0x00) {
-		frag_buffer[next][FRAG_PENDING] = 1;
-		memcpy(&frag_buffer[next][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN);
-		memcpy(&frag_buffer[next][FRAG_F0],&incoming_packet[PKT_PYLD],F0_PYLD_SZ);
-		if ((++next) == FRAG_BUF_SZ) next = 0;
+		for (int i = 0; i < FRAG_BUF_SZ; i++) {
+			if (frag_buffer[i][FRAG_PENDING] && !memcmp(&frag_buffer[i][FRAG_SN], &incoming_packet[PKT_XBSN], XB_SN_LN)) {
+				insert_pos = i;
+				break;
+			}
+		}
+		frag_buffer[insert_pos][FRAG_PENDING] = 1;
+		memcpy(&frag_buffer[insert_pos][FRAG_SN],&incoming_packet[PKT_XBSN],XB_SN_LN);
+		memcpy(&frag_buffer[insert_pos][FRAG_F0],&incoming_packet[PKT_PYLD],F0_PYLD_SZ);
+		if ((insert_pos == next) && (++next) == FRAG_BUF_SZ) next = 0;
 	}
 	else if (incoming_packet[PKT_FRAME] == 0x01) {
 		for (int i = 0; i < FRAG_BUF_SZ; i++) {
@@ -338,12 +345,13 @@ void SansgridRadio::setXBsn() {
 
 int SansgridRadio::read() {
 	int i = 0;
-  //while(Radio->available() > 0 && i < MAX_XB_PYLD) {
-  while(Radio->available() || i < MAX_XB_PYLD) {
-	delay(2);
-	incoming_packet[i] = Radio->read();
-	i++;
-  }
+	//while(Radio->available() > 0 && i < MAX_XB_PYLD) {
+	while(Radio->available() && i < MAX_XB_PYLD) {
+		delay(2);
+		incoming_packet[i] = Radio->read();
+		i++;
+	}
+	
 	if (MODE(SENSOR)) {
 		uint8_t brdcst[XB_SN_LN];
 		memset(brdcst,0x0,XB_SN_LN);
@@ -364,7 +372,7 @@ void SansgridRadio::set_mode(RadioMode mode) {
 // To meet this requirement, delay 250ms at head and tail of function
 void SansgridRadio::write() {
 	delay(250);
-	Radio->write(pending_packet,MAX_XB_PYLD);
+	Radio->write(pending_packet, MAX_XB_PYLD);
 	delay(250);
 }
 
