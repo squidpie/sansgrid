@@ -32,7 +32,7 @@ void transmitEyeball( SansgridSerial *tx , SansgridEyeball *sg_eyeball ){
     memcpy( tx->payload + DT + MANID + MODNUM + SN , sg_eyeball->profile , PROFILE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE , sg_eyeball->mode , MODE );
     memcpy( tx->payload + DT + MANID + MODNUM + SN + PROFILE + MODE , sg_eyeball->padding, EYEBALL_PADDING);
-    Serial.println( "Eyeball" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
@@ -41,7 +41,7 @@ void transmitMock( SansgridSerial *tx , SansgridMock *sg_mock ){
     memcpy( tx->payload + DT , sg_mock->sensor_public_key , SENSOR_KEY );
     for( int i = DT + SENSOR_KEY ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
-    Serial.println( "Mock" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
@@ -59,21 +59,21 @@ void transmitPeacock( SansgridSerial *tx , SansgridPeacock *sg_peacock ){
     memcpy( tx->payload + DT + SENSOR_A + SENSOR_ID + CLASSIFICATION + DIRECTION + LABEL , sg_peacock->units_b , UNITS );
     tx->payload[79] = sg_peacock->additional[0];
     tx->payload[80] = sg_peacock->padding[0];
-    Serial.println( "Peacock" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
 void transmitSquawk( SansgridSerial *tx , SansgridSquawk *sg_squawk ){
     memcpy( tx->payload , sg_squawk->dt , DT );
     memcpy( tx->payload + DT , sg_squawk->data , DATA );
-    Serial.println( "Squawk" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
 void transmitChirp( SansgridSerial *tx , SansgridChirp *sg_chirp ){
     memcpy( tx->payload , sg_chirp->dt , DT );
     memcpy( tx->payload + DT , sg_chirp->data , DATA );
-    Serial.println( "Chirp" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
@@ -81,7 +81,7 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
     memcpy( tx->payload , sg_heartbeat->dt , DT );
     for( int i = DT ; i < PAYLOAD ; i++)
         tx->payload[i] = 0x00;
-    Serial.println( "Heartbeat" );
+    delay(1000);
     sgSerialSend( tx , 1 );
 }
 
@@ -89,7 +89,6 @@ void transmitHeartbeat( SansgridSerial *tx , SansgridHeartbeat *sg_heartbeat){
 void parseFly( SansgridSerial *rx , SansgridFly *sg_fly ){
     memcpy( sg_fly->dt , rx->payload , DT );
     memcpy( sg_fly->network_name , rx->payload + 1 , DATA );
-	Serial.println( "Fly" );
 }
 
 void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck ){
@@ -101,34 +100,28 @@ void parsePeck( SansgridSerial *rx , SansgridPeck *sg_peck ){
     memcpy( sg_peck->manid , rx->payload + DT + IP_ADDRESS + IP_ADDRESS + SERVER_ID + RECOGNITION , MANID );
     memcpy( sg_peck->modnum, rx->payload + DT + IP_ADDRESS + IP_ADDRESS + SERVER_ID + RECOGNITION + MANID , MODNUM );
     memcpy( sg_peck->sn , rx->payload + DT + IP_ADDRESS + IP_ADDRESS + SERVER_ID + RECOGNITION + MANID + MODNUM , SN );
-	Serial.println( "Peck" );
 }
 
 void parseSing( SansgridSerial *rx , SansgridSing *sg_sing ){
     memcpy( sg_sing->dt , rx->payload , DT );
     memcpy( sg_sing->server_public_key , rx->payload + DT , SERVER_KEY );
-	Serial.println( "Sing");
 }
 
 void parseSquawk( SansgridSerial *rx , SansgridSquawk *sg_squawk ){
     memcpy( sg_squawk->dt , rx->payload , DT );
     memcpy( sg_squawk->data , rx->payload + DT , DATA );
-	Serial.println( "Squawk" );
 }
 
 void parseNest( SansgridSerial *rx , SansgridNest *sg_nest ){
     memcpy( sg_nest->dt , rx->payload , DT );
-	Serial.println( "Nest" );
 }
 
 void parseHeartbeat( SansgridSerial *rx , SansgridHeartbeat *sg_heartbeat ){
     memcpy( sg_heartbeat->dt , rx->payload , DT );
-	Serial.println( "Heartbeat" );
 }
 
 void parseChirp( SansgridSerial *rx , SansgridChirp *sg_chirp ){
     memcpy( sg_chirp->dt , rx->payload , DT );
 	memcpy( sg_chirp->sid, rx->payload + DT , SID );
     memcpy( sg_chirp->data , rx->payload + DT + SID , DATA );
-	Serial.println( "Chirp" );
 }

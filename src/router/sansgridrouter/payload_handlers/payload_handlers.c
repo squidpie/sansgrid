@@ -419,6 +419,7 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sgSerialSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		case SG_PECK_MATE:
+		case SG_PECK_SERVER_WAIT:
 			// Sensor Not Recognized;
 			// Server will mate
 			// Next packet: Mate
@@ -433,8 +434,14 @@ int routerHandlePeck(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 		case SG_PECK_SENSOR_REFUSES_MATE:
 			// Sensor Not Recognized;
 			// Sensor refuses mate
+			sgSerialSend(sg_serial, sizeof(SansgridSerial));
+			routerFreeDevice(routing_table,
+					sg_peck->assigned_ip);
+			break;
 		default:
 			// fallthrough/error
+			syslog(LOG_WARNING, "Peck: Recognition is not recognized: %x\n",
+					sg_peck->recognition);
 			routerFreeDevice(routing_table, 
 					sg_peck->assigned_ip);
 			return 1;
@@ -481,6 +488,8 @@ int routerHandleSing(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			// error
+			syslog(LOG_WARNING, "Sing: datatype not recognized: %x\n",
+					sg_sing->datatype);
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
@@ -530,6 +539,8 @@ int routerHandleMock(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			sgTCPSend(sg_serial, sizeof(SansgridSerial));
 			break;
 		default:
+			syslog(LOG_WARNING, "mock: datatype not recognized: %x\n",
+					sg_mock->datatype);
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
@@ -695,6 +706,8 @@ int routerHandleSquawk(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			break;
 		default:
 			// error
+			syslog(LOG_WARNING, "Squawk: datatype not recognized: %x\n",
+					sg_squawk->datatype);
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
@@ -748,6 +761,8 @@ int routerHandleHeartbeat(RoutingTable *routing_table, SansgridSerial *sg_serial
 			routerHandleServerStatus(routing_table, sg_serial);
 			break;
 		default:
+			syslog(LOG_WARNING, "Heartbeat: datatype not recognized: %x\n",
+					sg_heartbeat->datatype);
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return 1;
 			break;
@@ -814,6 +829,8 @@ int routerHandleChirp(RoutingTable *routing_table, SansgridSerial *sg_serial) {
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			break;
 		default:
+			syslog(LOG_WARNING, "Chirp: datatype not recognized: %x\n",
+					sg_chirp->datatype);
 			routerFreeDevice(routing_table, sg_serial->ip_addr);
 			return -1;
 			break;

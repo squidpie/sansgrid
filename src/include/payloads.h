@@ -511,7 +511,9 @@ enum SansgridPeckRecognitionEnum {
 	/// Server Refuses Mating
 	SG_PECK_SERVER_REFUSES_MATE = 0x02,
 	/// Sensor Refuses Mating
-	SG_PECK_SENSOR_REFUSES_MATE = 0x03
+	SG_PECK_SENSOR_REFUSES_MATE = 0x03,
+	/// Server Waiting for permission
+	SG_PECK_SERVER_WAIT = 0x04,
 };
 
 
