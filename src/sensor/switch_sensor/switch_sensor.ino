@@ -1,4 +1,5 @@
-/* Sensor Payload Handler Implementation
+/* System Test Sensor 2 
+ * Ashley Murray
  * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -20,54 +21,63 @@
  *
  */
 
-
+// libraries made to allow sensor code to work with Sangride protocol
 #include <sgSerial.h>
 #include <sensorPayloads.h>
 #include <sensorPayloadHandler.h>
 #include <sensorParse.h>
 #include <SPI.h>
 
-//Code for switch digital I/O
+// This is the code for a pair of sensors that each have an LED and a switch. The switch 
+// is interrupt driven and sets the state of a variable accordingly. The state 
+// determines if a command is sent out to turn the LED on the other sensor on or off. A
+// trigger system would be implemented in order to make it work. This code was not used
+// during the demonstration of the capstone project due to hardware issues.
 
-//sets led to pin 4 and switch to pin 5
-#define SLAVE_READY 2
-#define SWITCH_LED 4
+//sets the switch led to pin 9
+#define SWITCH_LED 9
 
-//initialization
-int switch_state = 0; //state of dip switch
-int led_state = 0;
-int sid = 0;
-int led_value = 0;
+// state of dip switch
+int switch_state = 0;
+// state of led
+int led_state = 0;      
 
+// local instances of functions
 SensorConfig sg_config;
 SansgridSerial sg_serial;
+boolean Send = false;
 
-//setting up the pins to proper i/o
+// variable for how often to send a chirp 
+int32_t time = 0;
+
+// setting up the pins to proper i/o
 void setup() {
+  
+  // initializes led to output and turns it off
   pinMode(SWITCH_LED, OUTPUT); 
+  digitalWrite(SWITCH_LED, LOW);
+  
+  // initializes slave select as output
   pinMode(SLAVE_SELECT, OUTPUT);
   digitalWrite(SLAVE_SELECT, LOW);  
-  // initialize led to off
-  digitalWrite(SWITCH_LED, LOW);
+  
+  // This allows for debugging by displaying information 
+  // in Arduino IDE terminal, just click the eyeglass top
+  // right to see output after programming.
   Serial.begin(9600);
-  //Initialize interrupt for Slave Ready pin
-  //#ifdef DUE 
-  //attachInterrupt( SLAVE_READY , receive , RISING );
-  //#else
-  //attachInterrupt( 0 , receive , FALLING );
-  //#endif // end of DUE
-  attachInterrupt( 1 , dipSwitch , CHANGE );
+  
+  // initialize interrupt for Slave Ready pin
+  #ifdef DUE 
+  attachInterrupt( SLAVE_READY , receive , FALLING );
+  #else
+  attachInterrupt( 0 , receive , FALLING );
+  #endif // end of DUE
+  
+  // switch interrupt
+  attachInterrupt( 1 , dipSwitch , RISING );
   
   // Set Mate, true is automatic, false is push button based
-  sg_config.mate = true; 
-  
-  // Set SansgridSerial data_out control byte
-  sg_serial.control[0] = 0xAD;
-    
-  // Call Sensor Configuration which sets the:
-  // Serial Number, Model Number, Manufacture ID, Sensor Public Key
-  // Sensor signal A and B
-  //configureSensor( &sg_config );     **Said it was not declared in this scope so commented out for right now**
+  //sg_config.mate = true; 
    
   // Commenting and Uncommenting these will intiate 
   // sending Test Packets, these will not be needed in final
@@ -76,13 +86,13 @@ void setup() {
   // and uncomment all sg_config.<fly,sing,squawk,chirp,challenge...>
   // either false or true.
   //sg_config.mate = false;
-  sg_config.nest = true;
+  //sg_config.nest = true;
   //sg_config.fly = true;
   //sg_config.sing = true;
   //sg_config.mock = true;
   //sg_config.squawk = true;
   //sg_config.chirp = true;
-  //sg_config.nokey = true;
+  sg_config.nokey = true;
   //sg_config.challenge = true;
 }
 
@@ -97,112 +107,131 @@ void loop(){
   
     // DEBUG message
     Serial.println( "Connected to Network" );
+    
     // Signal Input Code goes here in this loop
     while(sg_config.nest == true ){  
-        // Delay between sending Packets atleast 1 second
-        delay(1000);
+
         // Received packet over SPI
         if ( sg_config.received == true ){
-            // Received Packet
-            Serial.println( "RECEIVING SPI PACKET" );
+            // received packet
             sgSerialReceive( &sg_serial , 1 );
-            // Process packet to verify Chirp received
-            payloadHandler( &sg_config , &sg_serial);
-            Serial.println( "setting received to false");
-            // Reset received to default value
+            // process packet to verify Chirp received
+            payloadHandlerB( &sg_config , &sg_serial);
+            // reset received to default value
             sg_config.received = false;
-            // Process received Chirp packet
+            
+            // process received Chirp packet
             if( sg_config.chirp == true ){
+              Serial.println("Chirp Received");
               
+              // Received Chirp from Sensor
+              // Need to process payload to perform action
+              // on Signal. Put code in here.
+              // data coming from server
               if (sg_serial.payload[0] == 0x20){
-                sid = sg_serial.payload[1];
-                if (sid == 0x31){
-                  led_value = sg_serial.payload[2];
-                  if (led_value == 0x31) //comparing value to ascii 1
-                    digitalWrite(SWITCH_LED, HIGH); // turn LED on
-                  else
-                    digitalWrite(SWITCH_LED, LOW); // turn LED off
+                //sensor id = b  
+                  if(sg_serial.payload[1] == 0x02){     
+                    //if data = 1, turn on led    
+                    if(sg_serial.payload[2] == 0x31)   
+                            digitalWrite(SWITCH_LED, HIGH);      
+                    else
+                            digitalWrite(SWITCH_LED, LOW); //turn led off
                 }
               }
-                // Reset Chirp to false
+                // reset Chirp to false
                 sg_config.chirp = false; 
-            }// End of received Chirp
+                Send = true;
+            }// end of received Chirp
         }
-        // Code to Send Chirp
-        else{
-            // Set control byte to valid data
+        // code to send Chirp
+        if (time == 0){
+            // set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
-            // Set IP address to router ip
+            // set ip address to router ip
             memcpy( sg_serial.ip_addr , sg_config.router_ip , IP_ADDRESS );
-            // Set Datatype to 0x21, Sensor to Server Chirp
+            // data from sensor to server
             sg_serial.payload[0] = (uint8_t) 0x21;
-            // Copy data into Payload
-            // Which Signal Id are you using?
-            sg_serial.payload[1] = (uint8_t) 0x02; //switch's sid, led's sid will be 0x01
-            //if switch is on, send code to server to tell it to turn led on on other arduino
+            // signal id = a
+            sg_serial.payload[1] = (uint8_t) 0x01; 
+            
+            // if switch is on, send code to server to tell it to 
+            // turn led on on other sensor
             if (switch_state == 1) {
       
-              //zero out the payload to ensure no unwanted data
+              // zero out the payload to ensure no unwanted data
               for(int x = 0; x < DATA_SIZE; x++)
                 sg_serial.payload[x+2] = (uint8_t) 0x0;
+              // put a 1 in payload data to send to server  
               char ch_array[1];
               int n = sprintf(ch_array, "%d", led_state);
               for(int i = 0; i < n; i++)
                 sg_serial.payload[i+2] = ch_array[i];
               
+              // DEBUG code
               //led_state = 1;
-              //code for TESTING
-              Serial.write("led: ");
-              Serial.println(led_state);
-              digitalWrite(SWITCH_LED, HIGH); // turn LED on
-              delay(50);
+              //Serial.write("led: ");
+              //Serial.println(led_state);
+              //digitalWrite(SWITCH_LED, HIGH); // turn LED on
             }
-          //if switch is off, send code to server to tell it to turn led on on other arduino 
+          // if switch is off, send code to server to tell it to turn 
+          // led on on other sensor 
             else {
       
-              //zero out the payload to ensure no unwanted data
+              // zero out the payload to ensure no unwanted data
               for(int x = 0; x < DATA_SIZE; x++)
                 sg_serial.payload[x+2] = (uint8_t) 0x0;
               char ch_array[1];
+              // put a 0 in payload data to send to server
               int n = sprintf(ch_array, "%d", led_state);
               for(int j = 0; j < n; j++)
                 sg_serial.payload[j+2] = ch_array[j];
               
+              // DEBUG code
               //led_state = 0;
-              //code for TESTING
-              Serial.write("led: ");
-              Serial.println(led_state);
-              digitalWrite(SWITCH_LED, LOW); // turn LED off
-              delay(50); 
+              //Serial.write("led: ");
+              //Serial.println(led_state);
+              //digitalWrite(SWITCH_LED, LOW); // turn LED off
             }
-            // Transmit Payload over SPI  
+            // transmit payload over SPI  
             sgSerialSend( &sg_serial , 1 );
-        }// End of Send Chirp
-    }// End of Nested
+        }// end of send Chirp
+        
+        // increment time so chirp is only sent every so often
+        time++;
+        // chirp sent approx. every 10s
+        if (time >= 3000000)
+          time = 0;
+          
+    }// end of Nested
 }
 
-/*void receive(){
+void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, set received flag to initiate
     // processing SPI packet
-    Serial.println( "Interrupt Service Routine" );
+    //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
-    // Display value of received
-    Serial.println( "Received flag set to true" );
-}*/
+}
 
-void dipswitch(){
+void dipSwitch(){
   
+  // debouncing code
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  // If interrupts come faster than 200ms, assume it's a 
+  // bounce and ignore
   if (interrupt_time - last_interrupt_time > 200) 
   {
-    //led_state = !digitalRead(3);
-    //digitalWrite(4, !digitalRead(4));
+    // sets switch state to opposite of whatever it just was
     led_state = !led_state;
+    
+    //DEBUG code
     //Serial.println("led_state: ");
     //Serial.println(led_state);
+    
+    // determines state of switch so it is known if a
+    // 1 or a 0 should be sent to turn the led on the
+    // other sensor on/off
     switch_state = led_state;
     }
  

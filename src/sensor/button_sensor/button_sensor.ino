@@ -1,4 +1,5 @@
-/* Sensor Payload Handler Implementation
+/* System Test Sensor 1
+ * Ashley Murray
  * Specific to the Arduino Platform
  *
  * Copyright (C) 2013 SansGrid
@@ -20,62 +21,80 @@
  *
  */
 
-//libraries made by Matt to allow sensor code to work with Sangride protocol
+// libraries made to allow sensor code to work with Sangride protocol
 #include <sgSerial.h>
 #include <sensorPayloads.h>
 #include <sensorPayloadHandler.h>
 #include <sensorParse.h>
 #include <SPI.h>
 
-// This is the code for a sensor that takes a poteniometer's value in, sets an led's brightness accordingly,
-// and sends out a mapped value from 1-100 to the server to be displayed. shows the capabilities of the mating 
-// sansgrid data type in the eyeball phase. In order to
-// the button must be pressed. Button not pressed = not ready to mate.
+// This is the code for a sensor that has a potentiometer, 3 LEDs, and a push button. 
+// The poteniometer's value is taken in, and mapped from 0-100. The mapped value is sent 
+// to the server to be displayed. The potentiometer's value is also mapped from 0-255 to 
+// set the brightness of an LED accordingly. The push button is used to demonstrate the 
+// mating capabilities of the SansGrid protocol. An LED is turned on when mate is ready.
+// Off when mate is not ready. The yellow LED is used to for showcasing the trigger 
+// system. Turns on when it gets a 1, off when it gets a 0. 
 
-// sets led to pin 6 and slave ready to interrupt pin 2
-#define MATE_LED 6 //active low
-#define SLAVE_READY 2
+// sets led to pin 6, active low
+#define MATE_LED 6
+//yellow led set to pin 5, used to demonstrate trigger system
+#define LED 5 
 
 // state of the mating led initialized
 boolean led_state = true;
 
-const int analog_in_pin = A0;  // Analog input pin that the potentiometer is attached to
-const int analog_out_pin = 9; // Analog output pin that the LED is attached to
+// analog input pin that the potentiometer is attached to
+const int analog_in_pin = A0; 
+// analog output pin that the LED is attached to
+const int analog_out_pin = 9; 
 
-int sensor_value = 0;        // value read from the pot
-int output_value = 0;        // value read from led
-int percent_value = 0;       // value sent to server
+// value read from the pot
+int sensor_value = 0; 
+// value read from led
+int output_value = 0; 
+// value sent to server
+int percent_value = 0;       
 
+// local instances of functions
 SensorConfig sg_config;
 SansgridSerial sg_serial;
+boolean Send = false;
 
-//setting up the pins to proper i/o
+// variable for how often to send a chirp 
+int32_t time = 0;
+
+// setting up the pins to proper i/o
 void setup() {
-  // initialize the button led as output:
-  pinMode(MATE_LED, OUTPUT); 
-  pinMode(SLAVE_SELECT, OUTPUT);
-  digitalWrite(SLAVE_SELECT, LOW);  
-  // initialize led to off
-  digitalWrite(MATE_LED, HIGH); 
+  // This allows for debugging by displaying information 
+  // in Arduino IDE terminal, just click the eyeglass top
+  // right to see output after programming.
   Serial.begin(9600);
-  //Initialize interrupt for Slave Ready pin
-  //#ifdef DUE 
-  //attachInterrupt( SLAVE_READY , receive , RISING );
-  //#else
-  //attachInterrupt( 0 , receive , FALLING );
-  //#endif // end of DUE
-  attachInterrupt( 1 , buttonPress , RISING );
   
-  // Set Mate, true is automatic, false is push button based
+  // initialize the button led as output and turned off
+  pinMode(MATE_LED, OUTPUT); 
+  digitalWrite(MATE_LED, LOW); 
+  
+  // initialize slave select as output
+  pinMode(SLAVE_SELECT, OUTPUT);
+  digitalWrite(SLAVE_SELECT, HIGH);  
+  
+  // yellow led signal, initialized as output and turned off
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW);
+ 
+  // initialize interrupt for Slave Ready pin
+  #ifdef DUE 
+  attachInterrupt(SLAVE_READY, receive, FALLING);
+  #else
+  attachInterrupt(0, receive, FALLING);
+  #endif // end of DUE
+  
+  // button interrupt
+  attachInterrupt(1, buttonPress, RISING);
+   
+  // set mate, true is automatic, false is push button based
   sg_config.mate = false; 
-  
-  // Set SansgridSerial data_out control byte
-  sg_serial.control[0] = 0xAD;
-    
-  // Call Sensor Configuration which sets the:
-  // Serial Number, Model Number, Manufacture ID, Sensor Public Key
-  // Sensor signal A and B
-  //configureSensor( &sg_config );     **Said it was not declared in this scope so commented out for right now**
    
   // Commenting and Uncommenting these will intiate 
   // sending Test Packets, these will not be needed in final
@@ -85,132 +104,167 @@ void setup() {
   // either false or true.
   //sg_config.mate = false;
   //sg_config.nest = true;
-  sg_config.fly = true;
+  //sg_config.fly = true;
   //sg_config.sing = true;
   //sg_config.mock = true;
   //sg_config.squawk = true;
   //sg_config.chirp = true;
-  //sg_config.nokey = true;
+  sg_config.nokey = true;
   //sg_config.challenge = true;
 }
 
 void loop(){
   
-  // If not connected to network, nest will be false.
+    // If not connected to network, nest will be false.
     // Attempt to connect to network untill nested and
     // nest flag is true.
-    while( sg_config.nest == false ){
-        sensorConnect( &sg_config , &sg_serial );  
+    while(sg_config.nest == false){
+        sensorConnect(&sg_config, &sg_serial);  
     }
   
     // DEBUG message
-    Serial.println( "Connected to Network" );
+    Serial.println("Connected to Network");
+    
     // Signal Input Code goes here in this loop
-    while(sg_config.nest == true ){  
-        // Delay between sending Packets atleast 1 second
-        delay(1000);
-        // Received packet over SPI
-        if ( sg_config.received == true ){
-            // Received Packet
-            Serial.println( "RECEIVING SPI PACKET" );
-            sgSerialReceive( &sg_serial , 1 );
-            // Process packet to verify Chirp received
-            payloadHandler( &sg_config , &sg_serial);
-            Serial.println( "setting received to false");
-            // Reset received to default value
+    while(sg_config.nest == true){  
+        
+        // received packet over SPI
+        if (sg_config.received == true){
+            // received packet
+            sgSerialReceive(&sg_serial, 1);
+            // process packet to verify Chirp received
+            payloadHandlerB(&sg_config, &sg_serial);
+            // reset received to default value
             sg_config.received = false;
-            // Process received Chirp packet
-            if( sg_config.chirp == true ){
-                // if (sg_serial.payload[0] == 0x20){
-                //blah blah blah}
-                //check for sid at [1]
-                //last position is at [2]
-                //Received Chirp from Sensor
+            
+            // process received Chirp packet
+            if(sg_config.chirp == true){
+                Serial.println("Chirp Received");      
+                
+                // Received Chirp from Sensor
                 // Need to process payload to perform action
                 // on Signal. Put code in here.
-              
-                // Reset Chirp to false
-                sg_config.chirp = false; 
-            }// End of received Chirp
+                // data coming from server
+                if(sg_serial.payload[0] == 0x20){       
+                  //sensor id = b  
+                  if(sg_serial.payload[1] == 0x02){     
+                    //if data = 1, turn on led    
+                    if(sg_serial.payload[2] == 0x31)   
+                            digitalWrite(LED, HIGH);      
+                    else
+                            digitalWrite(LED, LOW); //turn led off
+                  }
+                }
+                // reset Chirp to false
+                sg_config.chirp = false;
+                Send = true; 
+            }// end of received Chirp
         }
-        // Code to Send Chirp
-        else{
-            // Set control byte to valid data
+        
+        // code to send Chirp
+        if (time == 0){
+            // set control byte to valid data
             sg_serial.control[0] = (uint8_t) 0xAD;
-            // Set IP address to router ip
-            memcpy( sg_serial.ip_addr , sg_config.router_ip , IP_ADDRESS );
-            // Set Datatype to 0x21, Sensor to Server Chirp
+            // set ip address to router ip
+            memcpy( sg_serial.ip_addr, sg_config.router_ip, IP_ADDRESS);
+            // data from sensor to server
             sg_serial.payload[0] = (uint8_t) 0x21;
-            // Copy data into Payload
-            // Which Signal Id are you using?
+            // signal id = a
             sg_serial.payload[1] = (uint8_t) 0x01;
-            // read the analog in value:
+            
+            // read the analog in value
             sensor_value = analogRead(analog_in_pin);            
-            // map it to the range of the analog out:
-            output_value = map(sensor_value, 0, 681, 0, 255); 
-            percent_value = map(sensor_value, 0, 681, 0, 100);
-            // change the analog out value:
+            // map it to the range of the analog out
+            output_value = map(sensor_value, 0, 1023, 0, 255);
+            // map it to a percantage range 
+            percent_value = map(sensor_value, 0, 1023, 0, 100);
+            // change brightness of led
             analogWrite(analog_out_pin, output_value);
-            //zero out the payload to ensure no unwanted data
+            // zero out the payload to ensure no unwanted data
             for(int j = 0; j < DATA_SIZE; j++)
               sg_serial.payload[j+2] = 0;
-            //code to setup value to send to server  
+            // code to setup percantage value to send to server  
             int analog_size = sizeof(percent_value);
             char ch_array[analog_size];
-            int j;
+            int n;
             n = sprintf(ch_array, "%d", percent_value);
             for(int i = 0; i < n; i++)
               sg_serial.payload[i+2] = ch_array[i];
+
+            // print the results to the serial monitor for TESTING:
+            //Serial.println(ch_array);     
+            //Serial.print("percent lit up = ");
+            //Serial.println(percent_value);
             
-            
-            
-            
-            //print the results to the serial monitor for TESTING:
-            Serial.println(ch_array);     
-            Serial.print("percent lit up = ");
-            Serial.println(percent_value);
-            // Transmit Payload over SPI
-            delay (10000);  
-            sgSerialSend( &sg_serial , 1 );
-        }// End of Send Chirp
-    }// End of Nested
+            // transmit payload over SPI
+            sgSerialSend(&sg_serial, 1);
+        }// end of send Chirp
+        
+        // increment time so chirp is only sent every so often
+        time++;
+        // chirp sent approx. every 10s
+        if (time >= 3000000)
+          time = 0;
+          
+    }// end of Nested
 
 }
 
-/*void receive(){
+void receive(){
     // Interrupt was initiated when SLAVE_READY was
     // asserted low, set received flag to initiate
     // processing SPI packet
-    Serial.println( "Interrupt Service Routine" );
+    //Serial.println( "Interrupt Service Routine" );
     sg_config.received = true;
-    // Display value of received
-    Serial.println( "Received flag set to true" );
-}*/
+}
 
 void buttonPress(){
   
+  // debouncing code
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  // If interrupts come faster than 200ms, assume it's
+  // a bounce and ignore
+  
   if (interrupt_time - last_interrupt_time > 200) 
   {
+    // set mate flag according to button press, mate flag 
+    // is initialized to false earlier
+    // led_state true means led is off and will be turned on with
+    // this button press
     if(led_state){
-      digitalWrite( MATE_LED, LOW );
+      digitalWrite(MATE_LED, HIGH);
       led_state = false;
-      //Serial.println("led is on");
+      // sets mate flag to true which in turn sets mode in
+      // eyeball to 0x01
       sg_config.mate = true;
+      // DEBUG statements
       //Serial.println("mating state: ");
       //Serial.println(sg_config.mate);
-    } else{
-      digitalWrite( MATE_LED, HIGH );
+      
+      // led is on and will now be turned off
+    } 
+    else {
+      digitalWrite(MATE_LED, LOW);
       led_state = true;
-      //Serial.println("led is off");
+      // sets mate flag to true which in turn sets mode in
+      // eyeball to 0x01
       sg_config.mate = false;
+      // DEBUG statements
       //Serial.println("mating state: ");
       //Serial.println(sg_config.mate);
     }
   }
   last_interrupt_time = interrupt_time;
   
+  // if router is looping through flys every so often, flags
+  // need to be reset so process does not get stuck in middle
+  // of protocol if button mate is pressed any time after the
+  // first fly is sent
+  sg_config.fly = false;
+  sg_config.sing = false;
+  sg_config.mock = false;
+  sg_config.connecting = false;
+  sg_config.squawk = false;
 }
 
